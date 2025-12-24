@@ -1,0 +1,25 @@
+2025-12-24 16:48:43,674 - sqlalchemy.engine.Engine - INFO - SELECT DATABASE()
+2025-12-24 16:48:43,675 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,677 - sqlalchemy.engine.Engine - INFO - SELECT @@sql_mode
+2025-12-24 16:48:43,678 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,678 - sqlalchemy.engine.Engine - INFO - SELECT @@lower_case_table_names
+2025-12-24 16:48:43,679 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,680 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-12-24 16:48:43,680 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`user`
+2025-12-24 16:48:43,680 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,727 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`feedback`
+2025-12-24 16:48:43,727 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,731 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`music`
+2025-12-24 16:48:43,731 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,732 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`scene`
+2025-12-24 16:48:43,733 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,734 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`system_stats`
+2025-12-24 16:48:43,734 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,736 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`user_session`
+2025-12-24 16:48:43,736 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,740 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`user_preference`
+2025-12-24 16:48:43,740 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,742 - sqlalchemy.engine.Engine - INFO - DESCRIBE `wavetune`.`operation_log`
+2025-12-24 16:48:43,743 - sqlalchemy.engine.Engine - INFO - [raw sql] {}
+2025-12-24 16:48:43,746 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-12-24 16:48:43,747 - root - INFO - 数据库表创建完成
