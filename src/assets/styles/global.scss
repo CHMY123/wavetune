@@ -1,0 +1,314 @@
+/* 全局样式文件 - WaveTune 现代设计系统 */
+
+// 导入统一的CSS变量
+@use './_variables.scss' as *;
+
+/* 全局重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--font-size-base);
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  height: 100%;
+  font-family: var(--font-family-display);
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  background-image: radial-gradient(rgba(24, 144, 255, 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: 0 0, 12px 12px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 链接样式 */
+a {
+  color: var(--brand-primary);
+  text-decoration: none;
+  transition: var(--transition-base);
+  position: relative;
+  &:hover {
+    color: var(--brand-secondary);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: -2px;
+    left: 0;
+    background-color: var(--brand-primary);
+    transition: var(--transition-base);
+  }
+  &:hover::after {
+    width: 100%;
+  }
+}
+
+/* 按钮基础样式 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-button);
+  background-color: var(--brand-primary);
+  color: white;
+  font-size: var(--font-scale-3);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+
+  overflow: hidden;
+  &:hover {
+    background-color: var(--brand-primary);
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-1);
+  }
+  &:active {
+    transform: translateY(0);
+  }
+  &:disabled {
+    background-color: var(--muted);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: var(--transition-base);
+  }
+  &:hover::before {
+    left: 100%;
+  }
+}
+
+/* 卡片样式 */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-1);
+  transition: var(--transition-base);
+  overflow: hidden;
+  position: relative;
+  &:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-4px);
+  }
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--wave-blue), var(--wave-purple), var(--wave-pink));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: var(--transition-base);
+  }
+  &:hover::before {
+    transform: scaleX(1);
+  }
+}
+
+/* 布局容器 */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-lg);
+}
+
+/* 音乐卡片样式 */
+.music-card {
+  background-color: var(--bg-card);
+  overflow: hidden;
+  transition: var(--transition-base);
+  position: relative;
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover);
+  }
+  .cover-section {
+    position: relative;
+    overflow: hidden;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.7));
+      opacity: 0;
+      transition: var(--transition-base);
+    }
+  }
+  &:hover .cover-section::before {
+    opacity: 1;
+  }
+  .play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+    transition: var(--transition-base);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &:hover {
+      transform: translate(-50%, -50%) scale(0.9);
+      background-color: white;
+    }
+  }
+  &:hover .play-button {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+// 业务特色卡片样式
+.business-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// 响应式断点
+@media (max-width: 767px) {
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  .mobile-padding {
+    padding: 16px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .tablet-stack {
+    flex-direction: column !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .desktop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--spacing-component);
+  }
+}
+
+// 图表容器样式
+.chart-container {
+  width: 100%;
+  height: 300px;
+  min-height: 200px;
+}
+
+// 文本样式
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-regular {
+  color: var(--text-regular);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+// 数值显示样式
+.number-display {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-weight: bold;
+}
+
+// 状态指示器
+.status-normal {
+  color: var(--el-color-success);
+}
+
+.status-warning {
+  color: var(--el-color-warning);
+}
+
+.status-danger {
+  color: var(--el-color-danger);
+}
+
+// 解决 ResizeObserver 相关的样式问题
+* {
+  // 确保元素有明确的尺寸，避免 ResizeObserver 循环
+  box-sizing: border-box;
+}
+
+// 为可能触发 ResizeObserver 的元素添加稳定尺寸
+.el-card,
+.el-container,
+.el-main,
+.el-header,
+.el-footer {
+  min-height: 0;
+  overflow: hidden;
+}
+
+// 图表容器特殊处理
+.chart-container {
+  position: relative;
+  overflow: hidden;
+  
+  // 防止图表容器触发不必要的重排
+  &::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+}

@@ -1,0 +1,172 @@
+// Element Plus 主题变量覆盖 - WaveTune 风格
+
+// 导入自定义设计令牌
+@use './_design_tokens.scss' as *;
+
+// 颜色变量 - 基于设计令牌 - 蓝白配色
+$--color-primary: #1890ff;
+$--color-primary-light: #69c0ff;
+$--color-primary-dark: #096dd9;
+$--color-success: $success;
+$--color-warning: $warning;
+$--color-danger: $danger;
+$--color-error: $danger; // 错误色与危险色一致
+$--color-info: $info;
+
+// 文本色配置
+$--color-text-primary: $text-primary;
+$--color-text-regular: $text-regular;
+$--color-text-secondary: $text-secondary;
+$--color-text-placeholder: $text-placeholder;
+
+// 背景色配置
+$--color-white: #ffffff;
+$--color-black: #000000;
+$--color-background: $background-color;
+$--color-bg-base: $background-color-light;
+$--color-bg-extra: $background-color-dark;
+
+// 边框色配置
+$--border-color-base: $border-base;
+$--border-color-light: $border-light;
+$--border-color-lighter: $border-lighter;
+$--border-color-extra-light: $border-extra-light;
+
+// 组件尺寸
+$--component-size-large: 40px;
+$--component-size: 32px;
+$--component-size-small: 24px;
+
+// 圆角配置
+$--border-radius-base: $border-radius-base;
+$--border-radius-small: $border-radius-small;
+$--border-radius-round: $border-radius-round;
+$--border-radius-circle: $border-radius-circle;
+
+// 阴影配置
+$--box-shadow-base: $shadow-base;
+$--box-shadow-dark: $shadow-dark;
+$--box-shadow-light: $shadow-light;
+$--box-shadow-extra-light: $shadow-soft;
+$--box-shadow-none: none;
+
+// 字体配置
+$--font-size-extra-large: $font-size-extra-large;
+$--font-size-large: $font-size-large;
+$--font-size-medium: $font-size-medium;
+$--font-size-base: $font-size-base;
+$--font-size-small: $font-size-small;
+$--font-size-extra-small: $font-size-extra-small;
+
+$--font-weight-primary: $font-weight-medium;
+$--font-weight-secondary: 100;
+
+// 间距配置
+$--spacing-base: $spacing-md;
+$--spacing-small: $spacing-sm;
+$--spacing-large: $spacing-lg;
+$--spacing-extra-large: $spacing-xl;
+
+// 动画配置
+$--transition-base: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+$--transition-fade: opacity 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+$--transition-md-fade: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+$--transition-slow-fade: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+
+// 层级配置
+$--index-normal: 1;
+$--index-top: 1000;
+$--index-popper: 2000;
+
+// 组件特定配置
+
+// 按钮
+$--button-font-weight: $font-weight-medium;
+$--button-border-radius: $border-radius-button;
+$--button-padding-vertical: 12px;
+$--button-padding-horizontal: 24px;
+$--button-hover-shadow: $shadow-light;
+
+// 输入框
+$--input-border-radius: $border-radius-button;
+$--input-hover-border-color: $primary-light;
+$--input-focus-border-color: $primary;
+$--input-font-size: $font-size-base;
+
+// 卡片
+$--card-border-radius: $border-radius-card;
+$--card-box-shadow: $shadow-light;
+$--card-hover-box-shadow: $shadow-hover;
+
+// 表格
+$--table-border-radius: $border-radius-small;
+$--table-font-size: $font-size-base;
+$--table-header-bg-color: $background-color-dark;
+
+// 标签页
+$--tabs-border-radius: $border-radius-base;
+$--tabs-active-color: $primary;
+
+// 表单
+$--form-label-font-size: $font-size-base;
+$--form-label-font-weight: $font-weight-medium;
+$--form-item-margin-bottom: 20px;
+
+// 对话框
+$--dialog-border-radius: $border-radius-card;
+$--dialog-box-shadow: $shadow-dark;
+
+// 导入Element Plus样式
+@import 'element-plus/packages/theme-chalk/src/index';
+
+// 自定义 Element Plus 组件样式覆盖
+.el-button {
+  transition: $transition-base;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: $shadow-light;
+  }
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.el-input__wrapper {
+  border-radius: $border-radius-button;
+  transition: $transition-base;
+  &:hover {
+    box-shadow: 0 0 0 2px rgba($primary, 0.1);
+  }
+  &.is-focus {
+    box-shadow: 0 0 0 2px rgba($primary, 0.2);
+  }
+}
+
+.el-card {
+  transition: $transition-base;
+  border-radius: $border-radius-card;
+  &:hover {
+    box-shadow: $shadow-hover;
+  }
+}
+
+.el-select .el-input__wrapper {
+  border-radius: $border-radius-button;
+}
+
+.el-date-editor .el-input__wrapper {
+  border-radius: $border-radius-button;
+}
+
+.el-tag {
+  border-radius: $border-radius-round;
+  padding: 2px 12px;
+}
+
+
+
+
+
+
+
+

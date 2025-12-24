@@ -1,0 +1,516 @@
+// 响应式断点配置
+$breakpoint-xs: 480px;    // 移动设备横屏
+$breakpoint-sm: 768px;    // 平板设备
+$breakpoint-md: 992px;    // 笔记本电脑
+$breakpoint-lg: 1200px;   // 桌面显示器
+$breakpoint-xl: 1600px;   // 大屏幕显示器
+$breakpoint-xxl: 1920px;  // 超大屏幕
+
+// 全局 CSS 变量定义
+:root {
+  --spacing-component: 20px;
+  --bg-card: #ffffff;
+  --bg-card-dark: #1e293b;
+  --primary-color: #10b981;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+// 媒体查询混入 - 精确断点匹配
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: #{$breakpoint-xs - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == sm {
+    @media (min-width: #{$breakpoint-xs}) and (max-width: #{$breakpoint-sm - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: #{$breakpoint-md}) and (max-width: #{$breakpoint-lg - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: #{$breakpoint-lg}) and (max-width: #{$breakpoint-xxl - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xxl {
+    @media (min-width: #{$breakpoint-xxl}) {
+      @content;
+    }
+  }
+}
+
+// 向上兼容的媒体查询 - 包含所有更大屏幕
+@mixin respond-up($breakpoint) {
+  @if $breakpoint == xs {
+    @media (min-width: #{$breakpoint-xs}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == sm {
+    @media (min-width: #{$breakpoint-sm}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: #{$breakpoint-md}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: #{$breakpoint-lg}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: #{$breakpoint-xl}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xxl {
+    @media (min-width: #{$breakpoint-xxl}) {
+      @content;
+    }
+  }
+}
+
+// 向下兼容的媒体查询 - 包含所有更小屏幕
+@mixin respond-down($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: #{$breakpoint-xs - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == sm {
+    @media (max-width: #{$breakpoint-sm - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == md {
+    @media (max-width: #{$breakpoint-md - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == lg {
+    @media (max-width: #{$breakpoint-lg - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xl {
+    @media (max-width: #{$breakpoint-xl - 1px}) {
+      @content;
+    }
+  }
+  @else if $breakpoint == xxl {
+    @media (max-width: #{$breakpoint-xxl - 1px}) {
+      @content;
+    }
+  }
+}
+
+// 布局混入 - 简化设备类型调用
+@mixin mobile-layout {
+  @include respond-down(sm) {
+    @content;
+  }
+}
+
+@mixin tablet-layout {
+  @include respond-to(sm) {
+    @content;
+  }
+}
+
+@mixin tablet-desktop-layout {
+  @include respond-up(sm) {
+    @content;
+  }
+}
+
+@mixin desktop-layout {
+  @include respond-up(lg) {
+    @content;
+  }
+}
+
+@mixin large-desktop-layout {
+  @include respond-up(xl) {
+    @content;
+  }
+}
+
+@mixin extra-large-desktop-layout {
+  @include respond-up(xxl) {
+    @content;
+  }
+}
+
+// 容器混入 - 响应式最大宽度
+@mixin container($fluid: false) {
+  @if $fluid {
+    width: 100%;
+    padding: 0 var(--spacing-component);
+  } @else {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-component);
+    
+    @include respond-up(xl) {
+      max-width: 1400px;
+    }
+    
+    @include respond-up(xxl) {
+      max-width: 1600px;
+    }
+  }
+  
+  @include mobile-layout {
+    padding: 0 16px;
+  }
+}
+
+// 网格系统混入 - 修复语法错误并优化逻辑
+@mixin grid($columns: 12, $gap: 20px, $responsive: true) {
+  display: grid;
+  grid-template-columns: repeat($columns, 1fr);
+  gap: $gap;
+  
+  @if $responsive {
+    @include respond-up(xl) {
+      grid-template-columns: repeat($columns, 1fr);
+    }
+    
+    // 修复：合并媒体查询条件（lg 以下且 md 以上）
+    @media (min-width: #{$breakpoint-md}) and (max-width: #{$breakpoint-lg - 1px}) {
+      grid-template-columns: repeat(max(6, $columns / 2), 1fr);
+      gap: $gap - 4px;
+    }
+    
+    // 修复：合并媒体查询条件（md 以下且 sm 以上）
+    @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+      grid-template-columns: repeat(max(3, $columns / 4), 1fr);
+      gap: $gap - 6px;
+    }
+    
+    @include mobile-layout {
+      grid-template-columns: repeat(1, 1fr);
+      gap: 16px;
+    }
+  }
+}
+
+// 弹性网格系统 - 更灵活的布局（优化列宽计算）
+@mixin flex-grid($gap: 20px, $columns: 4) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $gap;
+  
+  > * {
+    flex: 1 0 calc((100% - $gap * ($columns - 1)) / $columns);
+    min-width: 200px; // 防止列宽过小
+  }
+  
+  @include respond-down(lg) {
+    > * {
+      flex: 1 0 calc((100% - $gap * ($columns - 2)) / ($columns - 1));
+    }
+  }
+  
+  @include respond-down(md) {
+    > * {
+      flex: 1 0 calc((100% - $gap) / 2);
+    }
+  }
+  
+  @include mobile-layout {
+    > * {
+      flex: 1 0 100%;
+    }
+  }
+}
+
+// 弹性布局混入 - 响应式方向切换
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+@mixin flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@mixin flex-responsive($direction: 'row', $mobile-direction: 'column', $gap: 16px) {
+  display: flex;
+  flex-direction: $direction;
+  gap: $gap;
+  
+  @include mobile-layout {
+    flex-direction: $mobile-direction;
+    gap: $gap - 4px;
+  }
+}
+
+// 卡片混入 - 响应式内边距（增加暗黑模式支持）
+@mixin card($padding: 20px, $border-radius: 8px, $shadow: var(--shadow-sm)) {
+  background: var(--bg-card);
+  border-radius: $border-radius;
+  box-shadow: $shadow;
+  padding: $padding;
+  transition: box-shadow 0.3s ease;
+  
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+  
+  @include respond-up(xl) {
+    padding: $padding + 4px;
+  }
+  
+  @include respond-down(md) {
+    padding: $padding - 4px;
+  }
+  
+  @include mobile-layout {
+    padding: 16px;
+    border-radius: 12px; // 在移动设备上使用更大的圆角
+  }
+  
+  // 暗黑模式适配
+  @include dark-mode {
+    background: var(--bg-card-dark);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+  }
+  
+  // 无障碍焦点样式
+  &:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// 按钮混入（优化交互效果）
+@mixin button-variant($color, $background, $border) {
+  color: $color;
+  background-color: $background;
+  border-color: $border;
+  transition: all 0.2s ease;
+  
+  &:hover,
+  &:focus-visible {
+    background-color: lighten($background, 10%);
+    border-color: lighten($border, 10%);
+    color: $color;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    background-color: darken($background, 5%);
+    border-color: darken($border, 5%);
+    transform: translateY(0);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// 文本截断混入
+@mixin text-ellipsis($lines: 1) {
+  @if $lines == 1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+}
+
+// 隐藏滚动条混入
+@mixin hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 响应式字体混入 - 优化默认值（修复媒体查询语法）
+@mixin responsive-font($desktop-size, $tablet-size: $desktop-size * 0.9, $mobile-size: $desktop-size * 0.8, $large-desktop-size: $desktop-size * 1.1) {
+  font-size: $desktop-size;
+  
+  @if $large-desktop-size {
+    @include respond-up(xl) {
+      font-size: $large-desktop-size;
+    }
+  }
+  
+  @if $tablet-size {
+    // 合并媒体查询条件，直接使用断点变量
+    @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+      font-size: $tablet-size;
+    }
+  }
+  
+  @if $mobile-size {
+    @include mobile-layout {
+      font-size: $mobile-size;
+    }
+  }
+}
+
+// 响应式间距混入（修复媒体查询语法）
+@mixin responsive-spacing($desktop: 24px, $tablet: 16px, $mobile: 12px) {
+  margin: $desktop;
+  
+  // 合并媒体查询条件
+  @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+    margin: $tablet;
+  }
+  
+  @include mobile-layout {
+    margin: $mobile;
+  }
+}
+
+@mixin responsive-padding($desktop: 24px, $tablet: 16px, $mobile: 12px) {
+  padding: $desktop;
+  
+  // 合并媒体查询条件
+  @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+    padding: $tablet;
+  }
+  
+  @include mobile-layout {
+    padding: $mobile;
+  }
+}
+
+// 响应式最大宽度
+@mixin responsive-max-width($desktop: 100%, $tablet: 100%, $mobile: 100%) {
+  max-width: $desktop;
+  
+  @media (min-width: #{$breakpoint-sm}) and (max-width: #{$breakpoint-md - 1px}) {
+    max-width: $tablet;
+  }
+  
+  @include mobile-layout {
+    max-width: $mobile;
+  }
+}
+
+// 响应式图片
+@mixin responsive-image($width: 100%, $height: auto) {
+  width: $width;
+  height: $height;
+  object-fit: cover;
+  max-width: 100%;
+  display: block;
+  
+  // 图片加载过渡
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  
+  &:loaded {
+    opacity: 1;
+  }
+}
+
+// 移动端隐藏/显示
+@mixin mobile-hide {
+  display: block;
+  
+  @include mobile-layout {
+    display: none !important;
+  }
+}
+
+@mixin mobile-show {
+  display: none;
+  
+  @include mobile-layout {
+    display: block !important;
+  }
+}
+
+// 高对比度模式支持
+@mixin high-contrast {
+  @media (prefers-contrast: high) {
+    @content;
+  }
+}
+
+// 减少动画模式支持
+@mixin reduce-motion {
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.001s !important;
+      transition-duration: 0.001s !important;
+    }
+    @content;
+  }
+}
+
+// 暗色模式支持
+@mixin dark-mode {
+  @media (prefers-color-scheme: dark) {
+    @content;
+  }
+}
+
+// 触摸设备优化
+@mixin touch-device {
+  @media (hover: none) and (pointer: coarse) {
+    @content;
+  }
+}
+
+// 打印样式
+@mixin print {
+  @media print {
+    @content;
+  }
+}
+
+// 无障碍焦点样式混入
+@mixin focus-visible {
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    z-index: 1;
+  }
+}

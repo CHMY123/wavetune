@@ -1,0 +1,37 @@
+# WaveTune 项目顶层 Python 依赖（基于 Python 3.11.14）
+
+# Web / API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# ORM / DB
+sqlalchemy==2.0.23
+pymysql==1.1.0
+
+# 安全 / 加密
+cryptography==44.0.1
+
+# 数据验证 / 表单
+pydantic==2.5.0
+python-multipart==0.0.6
+
+# 配置 / 日志
+python-dotenv==1.0.0
+loguru==0.7.2
+
+# HTTP clients / 测试
+httpx==0.25.2
+requests==2.31.0
+
+# 数据科学 / 检测模型
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# 深度学习（注意：GPU/OS 需要单独根据平台选择合适的 wheel）
+torch>=2.0.0
+
+# 测试
+pytest==7.4.3
+pytest-asyncio==0.21.1
