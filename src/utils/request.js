@@ -3,38 +3,33 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import Cookies from 'js-cookie'
 
 // 1. 创建Axios实例
-// 兼容 Vite 和 Vue-CLI（webpack）两种环境变量写法：
-// - Vite 使用 import.meta.env.VITE_API_BASE_URL
-// - Vue CLI 使用 process.env.VUE_APP_API_BASE_URL
+// 彻底兼容 Vue CLI（webpack），消除 process is not defined 报错
 let baseURL = '/api'
+
+// 核心修复：所有 process 访问都包裹在 try/catch + window 兜底
 try {
-  // 在支持 import.meta.env 的环境（例如 Vite）中使用
-  if (import.meta && import.meta.env && import.meta.env.VITE_API_BASE_URL) {
-    baseURL = import.meta.env.VITE_API_BASE_URL
+  // 优先读取 Vue CLI 注入的 process.env（通过 window 访问，避免裸引用）
+  const env = window.process?.env || {};
+  // 读取 VUE_APP_API_BASE_URL（你的环境变量）
+  if (env.VUE_APP_API_BASE_URL) {
+    baseURL = env.VUE_APP_API_BASE_URL;
+  }
+  // 本地开发环境兜底（避免未配置时请求404）
+  else if (env.NODE_ENV === 'development' && baseURL === '/api') {
+    baseURL = 'http://127.0.0.1:8000/api';
+    console.warn('[request] 本地开发模式，默认API地址：', baseURL);
   }
 } catch (e) {
-  // ignore
-}
-// Vue CLI / webpack 环境变量回退
-if (!baseURL || baseURL === '/api') {
-  baseURL = process.env.VUE_APP_API_BASE_URL || process.env.VITE_API_BASE_URL || baseURL
-  // 如果是本地开发环境且未配置代理或显式 BASE URL，则回退到后端默认地址，避免请求落到前端静态服务（产生 404）
-  try {
-    if (process && process.env && process.env.NODE_ENV !== 'production' && (baseURL === '/api' || !baseURL)) {
-      baseURL = 'http://127.0.0.1:8000/api'
-      // eslint-disable-next-line no-console
-      console.warn('[request] no API base configured, defaulting to', baseURL)
-    }
-  } catch (e) {
-    // ignore in browser contexts where process may be undefined
-  }
+  // 浏览器环境无 process 时，直接用代理地址 /api（依赖 vue.config.js 代理）
+  baseURL = '/api';
+  console.warn('[request] 环境变量读取失败，使用代理地址：', baseURL);
 }
 
 const request = axios.create({
-  baseURL, // 从环境变量获取基础URL
-  timeout: 10000,  // 超时时间（10秒）
+  baseURL, // 从环境变量/兜底获取基础URL
+  timeout: 10000,
   headers: {
-    'Content-Type': 'application/json;charset=utf-8'  // 默认请求头
+    'Content-Type': 'application/json;charset=utf-8'
   }
 })
 

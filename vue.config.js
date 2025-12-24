@@ -1,4 +1,6 @@
 const { defineConfig } = require('@vue/cli-service')
+const webpack = require('webpack') // 引入 webpack 核心模块
+
 module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
@@ -6,9 +8,8 @@ module.exports = defineConfig({
     client: {
       overlay: {
         warnings: false,
-        errors: false, // 关闭错误覆盖层
+        errors: false,
         runtimeErrors: (error) => {
-          // 忽略 ResizeObserver 错误
           if (error.message && error.message.includes('ResizeObserver loop completed with undelivered notifications')) {
             return false
           }
@@ -16,29 +17,35 @@ module.exports = defineConfig({
         }
       }
     },
-    // 本地开发时将 API 和静态文件请求转发到后端 FastAPI 服务
     proxy: {
-      // API 接口代理（已存在）
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         pathRewrite: { '^/api': '/api' }
       },
-      // 新增：静态文件（头像等）代理
       '/static': {
-        target: 'http://localhost:8000', // 转发到后端服务器
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false
-        // 不需要 pathRewrite，因为前端请求 /static/... 和后端路径一致
       }
     }
   },
   configureWebpack: {
     resolve: {
-      alias: {
-        // 别名配置（保持不变）
-      }
-    }
+      alias: {} // 保持你的别名配置
+    },
+    // 关键：注入 process 到 window，彻底解决未定义问题
+    plugins: [
+      new webpack.DefinePlugin({
+        'window.process': JSON.stringify({
+          env: {
+            // 注入你的环境变量（和 .env 文件一致）
+            VUE_APP_API_BASE_URL: process.env.VUE_APP_API_BASE_URL || 'http://127.0.0.1:8000/api',
+            NODE_ENV: process.env.NODE_ENV || 'development'
+          }
+        })
+      })
+    ]
   }
 })
