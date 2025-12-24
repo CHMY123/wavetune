@@ -18,6 +18,8 @@ os.makedirs("static/music_cover", exist_ok=True)
 
 if __name__ == "__main__":
     # 启动 FastAPI 应用
+    port = int(os.getenv("PORT", 8000))
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
