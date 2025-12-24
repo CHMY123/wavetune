@@ -117,14 +117,19 @@ async def startup_event():
 
 if __name__ == "__main__":
     # 配置日志
+    # logging.basicConfig(
+    #     level=logging.INFO,
+    #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    #     handlers=[
+    #         logging.FileHandler('logs/app.log', encoding='utf-8'),
+    #         logging.StreamHandler()
+    #     ]
+    # )
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler('logs/app.log', encoding='utf-8'),
-            logging.StreamHandler()
-        ]
-    )
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+
     
     port = int(os.getenv("PORT", 8000))
 
