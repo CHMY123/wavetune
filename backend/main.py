@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
 import logging
+import os
 from datetime import datetime
 
 # 导入路由
@@ -33,6 +34,7 @@ app.add_middleware(
         "http://localhost:5173",  # Vue 开发服务器
         "http://127.0.0.1:5173",
         "http://localhost:3000",  # 备用端口
+        "*"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -124,12 +126,14 @@ if __name__ == "__main__":
         ]
     )
     
+    port = int(os.getenv("PORT", 8000))
+
     # 启动服务
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=port,
+        reload=False,
         log_level="info"
     )
 
