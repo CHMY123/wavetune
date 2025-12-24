@@ -55,27 +55,41 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is required!")
 
-# 不再在顶层创建 engine！
-_engine = None
-_SessionLocal = None
+# 1. 定义 Base（保持不变，已导出）
 Base = declarative_base()
 
+# 2. 初始化 engine（直接导出，兼容 main.py 导入）
+_engine = None
 def get_engine():
     global _engine
     if _engine is None:
+        # 区分本地/线上环境的连接参数
+        connect_args = {}
+        if "render.com" in os.getenv("RENDER_EXTERNAL_URL", "") or "onrender.com" in os.getenv("RENDER_EXTERNAL_URL", ""):
+            # Render 线上环境：启用 SSL
+            connect_args = {"ssl": {"ssl_mode": "REQUIRED"}}
+        else:
+            # 本地环境：关闭 SSL
+            connect_args = {}
+        
         _engine = create_engine(
             DATABASE_URL,
             echo=True,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"ssl": {"ssl_mode": "REQUIRED"}},  # 先用 REQUIRED 避免证书问题
+            connect_args=connect_args
         )
     return _engine
 
+# 关键：导出 engine 变量（main.py 直接导入的就是这个）
+engine = get_engine()
+
+# 3. 会话相关函数（保持不变）
+_SessionLocal = None
 def get_session_local():
     global _SessionLocal
     if _SessionLocal is None:
-        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return _SessionLocal
 
 def get_db():
