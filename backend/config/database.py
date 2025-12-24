@@ -43,7 +43,6 @@
 #     finally:
 #         db.close()
 
-# database.py
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -52,32 +51,35 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 从环境变量读取 DATABASE_URL（Render 会注入）
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is required!")
 
-# TiDB Cloud 必须使用 SSL
-# SQLAlchemy + PyMySQL 的 SSL 配置方式
-engine = create_engine(
-    DATABASE_URL,
-    echo=True,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    connect_args={
-        "ssl": {
-            "ssl_mode": "VERIFY_IDENTITY",  # 或 "REQUIRED"（若证书验证失败可降级）
-            # 注意：PyMySQL 不支持 ssl_ca 直接传路径（Render 是 Linux 环境，系统信任根证书）
-        }
-    },
-)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# 不再在顶层创建 engine！
+_engine = None
+_SessionLocal = None
 Base = declarative_base()
 
+def get_engine():
+    global _engine
+    if _engine is None:
+        _engine = create_engine(
+            DATABASE_URL,
+            echo=True,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            connect_args={"ssl": {"ssl_mode": "REQUIRED"}},  # 先用 REQUIRED 避免证书问题
+        )
+    return _engine
+
+def get_session_local():
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+    return _SessionLocal
+
 def get_db():
-    db = SessionLocal()
+    db = get_session_local()()
     try:
         yield db
     finally:

@@ -2,6 +2,8 @@
 WaveTune 后端主入口文件
 基于 FastAPI 框架实现脑疲劳检测与音乐干预系统的后端服务
 """
+import pymysql
+pymysql.install_as_MySQLdb()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
