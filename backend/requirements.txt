@@ -14,6 +14,7 @@ cryptography==44.0.1
 # 数据验证 / 表单
 pydantic==2.5.0
 python-multipart==0.0.6
+email-validator>=2.0.0
 
 # 配置 / 日志
 python-dotenv==1.0.0
