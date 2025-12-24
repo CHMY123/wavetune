@@ -14,7 +14,8 @@ import os
 import sys
 
 # ---------------- 模型加载（零依赖） ----------------
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 scaler = joblib.load('scaler.pkl')
 model = None
 
