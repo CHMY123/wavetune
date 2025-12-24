@@ -30,7 +30,8 @@ scikit-learn==1.3.2
 joblib==1.3.2
 
 # 深度学习（注意：GPU/OS 需要单独根据平台选择合适的 wheel）
-torch>=2.0.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.9.1
 
 # 测试
 pytest==7.4.3
