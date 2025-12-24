@@ -13,6 +13,7 @@ import uvicorn
 import logging
 import os
 from datetime import datetime
+from contextlib import asynccontextmanager  # 新增：导入生命周期上下文管理器
 
 # 导入路由
 from routers import system, user, feedback, music, scene, auth, detection
@@ -20,13 +21,34 @@ from routers import system, user, feedback, music, scene, auth, detection
 # 导入数据库配置
 from config.database import engine, Base
 
-# 创建 FastAPI 应用实例
+# ========== 核心修改：替换 on_event 为 lifespan ==========
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI 生命周期函数（替代废弃的 on_event）
+    - 启动时：创建数据库表
+    - 关闭时：可添加清理逻辑（如关闭连接池）
+    """
+    # 启动逻辑（原 startup_event 内容）
+    try:
+        Base.metadata.create_all(bind=engine)
+        logging.info("数据库表创建完成")
+    except Exception as e:
+        logging.error(f"数据库表创建失败：{str(e)}")
+    
+    yield  # 应用运行中（yield 之前是启动逻辑，之后是关闭逻辑）
+    
+    # 可选：应用关闭时的清理逻辑（如关闭数据库连接池、释放资源等）
+    logging.info("WaveTune API 服务已关闭")
+
+# 创建 FastAPI 应用实例（绑定 lifespan）
 app = FastAPI(
     title="WaveTune API",
     description="脑疲劳检测与音乐干预系统后端API",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan  # 新增：绑定生命周期函数，消除警告
 )
 
 # 配置 CORS 中间件
@@ -109,29 +131,12 @@ async def health_check():
         }
     }
 
-# 创建数据库表
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时执行"""
-    # 创建数据库表
-    Base.metadata.create_all(bind=engine)
-    logging.info("数据库表创建完成")
-
 if __name__ == "__main__":
     # 配置日志
-    # logging.basicConfig(
-    #     level=logging.INFO,
-    #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    #     handlers=[
-    #         logging.FileHandler('logs/app.log', encoding='utf-8'),
-    #         logging.StreamHandler()
-    #     ]
-    # )
     logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     
     port = int(os.getenv("PORT", 8000))
 
@@ -143,5 +148,3 @@ if __name__ == "__main__":
         reload=False,
         log_level="info"
     )
-
-
