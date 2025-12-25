@@ -40,3 +40,8 @@ pytest-asyncio==0.21.1
 
 # 千牛云存储 SDK
 qiniu==7.17.0
+
+# sklearn 库依赖
+scikit-learn==1.8.0 
+scipy==1.16.3 
+threadpoolctl==3.6.0
