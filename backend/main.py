@@ -64,30 +64,10 @@ app = FastAPI(
 # ========== 配置 CORS 跨域（适配前端请求） ==========
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # 生产环境建议替换为前端域名（如 https://xxx.onrender.com）
+    allow_origins=["https://wavetune-6xb1.onrender.com", "https://localhost:5173"],       # 生产环境建议替换为前端域名（如 https://xxx.onrender.com）
     allow_credentials=True,
     allow_methods=["*"],       # 允许所有请求方法（GET/POST/PUT/DELETE 等）
     allow_headers=["*"],       # 允许所有请求头
-)
-
-# ========== 挂载静态文件 ==========
-# 1. 优先挂载 Vue 前端静态文件（覆盖根路径 /）
-if FRONTEND_DIR.exists():
-    app.mount(
-        "/", 
-        StaticFiles(directory=FRONTEND_DIR, html=True),  # html=True 支持前端路由 history 模式
-        name="frontend"
-    )
-    logging.info(f"✅ 成功挂载前端静态文件：{FRONTEND_DIR}")
-else:
-    logging.error(f"❌ 前端目录不存在：{FRONTEND_DIR}")
-    logging.warning("⚠️ 请确认 Vue 打包后的 dist 文件夹在项目根目录下")
-
-# 2. 挂载后端静态文件（如上传的图片/音频，路径：/backend-static/xxx）
-app.mount(
-    "/backend-static", 
-    StaticFiles(directory=BACKEND_DIR / "static"),  # 后端 static 文件夹在 backend 目录下
-    name="backend_static"
 )
 
 # ========== 注册后端 API 路由（统一前缀 /api，避免和前端路由冲突） ==========
@@ -138,6 +118,26 @@ async def health_check():
             "service": "WaveTune API"
         }
     }
+
+# ========== 挂载静态文件 ==========
+# 1. 优先挂载 Vue 前端静态文件（覆盖根路径 /）
+if FRONTEND_DIR.exists():
+    app.mount(
+        "/", 
+        StaticFiles(directory=FRONTEND_DIR, html=True),  # html=True 支持前端路由 history 模式
+        name="frontend"
+    )
+    logging.info(f"✅ 成功挂载前端静态文件：{FRONTEND_DIR}")
+else:
+    logging.error(f"❌ 前端目录不存在：{FRONTEND_DIR}")
+    logging.warning("⚠️ 请确认 Vue 打包后的 dist 文件夹在项目根目录下")
+
+# 2. 挂载后端静态文件（如上传的图片/音频，路径：/backend-static/xxx）
+app.mount(
+    "/backend-static", 
+    StaticFiles(directory=BACKEND_DIR / "static"),  # 后端 static 文件夹在 backend 目录下
+    name="backend_static"
+)
 
 # ========== 启动服务 ==========
 if __name__ == "__main__":
