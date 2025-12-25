@@ -18,6 +18,8 @@ except Exception:
 
 from config.database import get_db
 from models.music import Music
+from utils import qiniu_helper
+import tempfile
 
 router = APIRouter()
 
@@ -177,6 +179,20 @@ async def delete_music(music_id: int, delete_files: Optional[bool] = Query(False
                             from urllib.parse import urlparse
                             parsed = urlparse(url)
                             path = parsed.path
+                            # 如果属于七牛域名，尝试删除七牛上的对象
+                            # 七牛域名应配置在 qiniu_helper.QINIU_DOMAIN
+                            try:
+                                domain = parsed.netloc
+                                if qiniu_helper.QINIU_DOMAIN and domain.endswith(qiniu_helper.QINIU_DOMAIN):
+                                    # path 以 /key 开头，去掉前导 /
+                                    key = parsed.path.lstrip('/')
+                                    try:
+                                        qiniu_helper.delete_key(key)
+                                    except Exception:
+                                        pass
+                                    return
+                            except Exception:
+                                pass
                     except Exception:
                         pass
 
@@ -213,82 +229,111 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
     简易实现：不做复杂校验，直接保存并返回相对路径
     """
     try:
-        # 确保静态目录存在（基于项目根目录的 static/music）
-        root_dir = os.path.dirname(os.path.dirname(__file__))
-        # try backend/../static/music then project root static/music
-        static_music_dir = os.path.abspath(os.path.join(root_dir, '..', 'static', 'music'))
-        if not os.path.isdir(static_music_dir):
-            static_music_dir = os.path.abspath(os.path.join(root_dir, '..', '..', 'static', 'music'))
-        os.makedirs(static_music_dir, exist_ok=True)
-
-        filename = file.filename
-        # 生成安全的文件名（简单处理，实际可加入 uuid 防重名）
-        save_path = os.path.join(static_music_dir, filename)
-        # 如果存在，尝试添加后缀
-        base, ext = os.path.splitext(filename)
-        counter = 1
-        while os.path.exists(save_path):
-            filename = f"{base}_{counter}{ext}"
-            save_path = os.path.join(static_music_dir, filename)
-            counter += 1
-
-        with open(save_path, 'wb') as out_file:
-            shutil.copyfileobj(file.file, out_file)
-
-        # 返回客户端可访问的相对路径（前端通过 baseURL 拼接）
-        src_path = f"/static/music/{filename}"
-        # 构造可访问的完整 URL（使用请求的 base_url）
+        # 先把文件写到临时文件，便于 mutagen 处理
         try:
-            base = str(request.base_url).rstrip('/')
-            full_src = f"{base}{src_path}"
-        except Exception:
-            full_src = src_path
+            original_filename = file.filename
+            base, ext = os.path.splitext(original_filename)
+            # 生成唯一文件名以避免冲突
+            import uuid
+            filename = f"{base}_{uuid.uuid4().hex}{ext}"
 
-        # 尝试使用 mutagen 提取一些元数据（如果可用）
-        meta = {}
-        try:
-            if HAS_MUTAGEN:
-                m = MutagenFile(save_path, easy=True)
-                if m:
-                    # title/artist
-                    title = None
-                    artist = None
-                    if 'title' in m and m['title']:
-                        title = m['title'][0]
-                    if 'artist' in m and m['artist']:
-                        artist = m['artist'][0]
-                    # duration
-                    duration = None
-                    try:
-                        d = int(m.info.length)
-                        mm = str(d // 60).zfill(2)
-                        ss = str(d % 60).zfill(2)
-                        duration = f"{mm}:{ss}"
-                    except Exception:
-                        duration = None
-                    meta.update({k: v for k, v in [('title', title), ('artist', artist), ('duration', duration)] if v})
+            tmp = tempfile.NamedTemporaryFile(delete=False)
+            try:
+                shutil.copyfileobj(file.file, tmp)
+                tmp.flush()
+                tmp_path = tmp.name
+            finally:
+                tmp.close()
 
-                # 尝试读取封面（ID3 APIC）
+            # 优先上传到七牛
+            meta = {}
+            if qiniu_helper.QINIU_BUCKET:
+                with open(tmp_path, 'rb') as fobj:
+                    data = fobj.read()
+                key = f"music/{filename}"
+                ret, info = qiniu_helper.upload_bytes(data, key)
+                if info.status_code == 200:
+                    full_src = qiniu_helper.make_url(key)
+                    src_path = f"/{key}"
+                else:
+                    full_src = f"/static/music/{filename}"
+                    src_path = full_src
+            else:
+                # 回退到本地静态目录
+                root_dir = os.path.dirname(os.path.dirname(__file__))
+                static_music_dir = os.path.abspath(os.path.join(root_dir, '..', 'static', 'music'))
+                if not os.path.isdir(static_music_dir):
+                    static_music_dir = os.path.abspath(os.path.join(root_dir, '..', '..', 'static', 'music'))
+                os.makedirs(static_music_dir, exist_ok=True)
+                save_path = os.path.join(static_music_dir, filename)
+                shutil.move(tmp_path, save_path)
+                tmp_path = None
+                src_path = f"/static/music/{filename}"
                 try:
-                    id3 = ID3(save_path)
-                    pics = [v for k, v in id3.items() if isinstance(v, APIC)]
-                    if pics:
-                        pic = pics[0]
-                        cover_name = f"cover_{os.path.splitext(filename)[0]}.jpg"
-                        cover_path = os.path.join(static_music_dir, cover_name)
-                        with open(cover_path, 'wb') as cf:
-                            cf.write(pic.data)
-                        meta['cover'] = f"/static/music/{cover_name}"
+                    base_url = str(request.base_url).rstrip('/')
+                    full_src = f"{base_url}{src_path}"
                 except Exception:
-                    pass
-        except Exception:
-            # 如果 mutagen 抛出错误，忽略，不影响上传成功
-            pass
+                    full_src = src_path
 
-        resp = {"code": 200, "msg": "上传成功", "data": {"src": full_src, "src_rel": src_path}}
-        if meta:
-            resp['data'].update(meta)
-        return resp
+            # 提取元数据与封面（如果可用）
+            try:
+                if HAS_MUTAGEN and tmp_path:
+                    m = MutagenFile(tmp_path, easy=True)
+                    if m:
+                        title = m.get('title', [None])[0] if 'title' in m else None
+                        artist = m.get('artist', [None])[0] if 'artist' in m else None
+                        duration = None
+                        try:
+                            d = int(m.info.length)
+                            mm = str(d // 60).zfill(2)
+                            ss = str(d % 60).zfill(2)
+                            duration = f"{mm}:{ss}"
+                        except Exception:
+                            duration = None
+                        meta.update({k: v for k, v in [('title', title), ('artist', artist), ('duration', duration)] if v})
+
+                    try:
+                        id3 = ID3(tmp_path)
+                        pics = [v for k, v in id3.items() if isinstance(v, APIC)]
+                        if pics:
+                            pic = pics[0]
+                            cover_bytes = pic.data
+                            cover_key = f"music_cover/cover_{os.path.splitext(filename)[0]}.jpg"
+                            if qiniu_helper.QINIU_BUCKET:
+                                ret2, info2 = qiniu_helper.upload_bytes(cover_bytes, cover_key)
+                                if info2.status_code == 200:
+                                    meta['cover'] = qiniu_helper.make_url(cover_key)
+                            else:
+                                # 保存为本地静态文件（music_cover 目录）
+                                root_dir = os.path.dirname(os.path.dirname(__file__))
+                                static_cover_dir = os.path.abspath(os.path.join(root_dir, '..', 'static', 'music_cover'))
+                                if not os.path.isdir(static_cover_dir):
+                                    static_cover_dir = os.path.abspath(os.path.join(root_dir, '..', '..', 'static', 'music_cover'))
+                                cover_name = f"cover_{os.path.splitext(filename)[0]}.jpg"
+                                cover_path = os.path.join(static_cover_dir, cover_name)
+                                with open(cover_path, 'wb') as cf:
+                                    cf.write(cover_bytes)
+                                meta['cover'] = f"/static/music_cover/{cover_name}"
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            # 清理临时文件（若存在）
+            try:
+                if tmp_path and os.path.exists(tmp_path):
+                    os.remove(tmp_path)
+            except Exception:
+                pass
+
+            resp = {"code": 200, "msg": "上传成功", "data": {"src": full_src, "src_rel": src_path}}
+            if meta:
+                resp['data'].update(meta)
+            return resp
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"上传失败: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
@@ -317,6 +362,23 @@ async def upload_cover_file(request: Request, file: UploadFile = File(...)):
             filename = f"{base}_{counter}{ext}"
             save_path = os.path.join(cover_dir, filename)
             counter += 1
+
+        # 如果配置了七牛，优先上传到七牛
+        try:
+            # 读取流到内存（通常为图片，大小可控）
+            file.file.seek(0)
+            content = file.file.read()
+            if qiniu_helper.QINIU_BUCKET:
+                key = f"music_cover/{filename}"
+                ret, info = qiniu_helper.upload_bytes(content, key)
+                if info.status_code == 200:
+                    full = qiniu_helper.make_url(key)
+                    rel = f"/{key}"
+                    return {"code": 200, "msg": "上传成功", "data": {"cover": full, "cover_rel": rel}}
+                # 若七牛上传失败，回退到本地保存继续下面流程
+        except Exception:
+            # 忽略并回退到本地保存
+            pass
 
         with open(save_path, 'wb') as out_file:
             shutil.copyfileobj(file.file, out_file)

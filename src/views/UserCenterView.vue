@@ -13,9 +13,14 @@
         <template #header>
           <div class="card-header">
             <h2>个人信息</h2>
-            <el-button type="primary" @click="editMode = !editMode">
-              {{ editMode ? '取消编辑' : '编辑资料' }}
-            </el-button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <el-button type="primary" @click="editMode = !editMode">
+                {{ editMode ? '取消编辑' : '编辑资料' }}
+              </el-button>
+              <el-button type="danger" plain @click="handleDeleteAccount">
+                删除账户
+              </el-button>
+            </div>
           </div>
         </template>
         
@@ -24,7 +29,7 @@
           <div class="avatar-section">
             <el-avatar
               :size="120"
-              :src="userInfo.avatar || '/static/avatar/default.jpg'"
+              :src="userInfo.avatar || resolveMedia('/static/avatar/default.jpg')"
               class="user-avatar"
             >
               <el-icon><User /></el-icon>
@@ -335,6 +340,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requestMethod } from '@/utils/request'
+import { resolveMedia } from '@/utils/media'
 import { User, Upload } from '@element-plus/icons-vue'
 
 export default {
@@ -438,7 +444,10 @@ export default {
         const uid = getCurrentUserId()
         const result = await requestMethod.get('/auth/profile', { user_id: uid })
         if (result && result.code === 200) {
-          userInfo.value = result.data
+          // 解析 avatar 字段为可访问 URL
+          const data = result.data || {}
+          if (data.avatar) data.avatar = resolveMedia(data.avatar)
+          userInfo.value = data
           // 同步表单数据
           Object.assign(userForm, {
             username: result.data.username,
@@ -644,6 +653,45 @@ export default {
         }
       }
     }
+
+    // 删除账户（不可逆操作）
+    const handleDeleteAccount = async () => {
+      try {
+        await ElMessageBox.confirm('删除账户将永久清除您的所有个人数据，且不可恢复。确定要继续吗？', '确认删除', {
+          type: 'warning',
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消'
+        })
+
+        const uid = getCurrentUserId()
+        const token = localStorage.getItem('session_token')
+        if (!token) {
+          ElMessage.error('未检测到登录状态，请先登录')
+          return
+        }
+
+        const res = await requestMethod.post('/auth/delete', {
+          session_token: token,
+          user_id: uid
+        })
+
+        if (res && res.code === 200) {
+          ElMessage.success('账户已删除')
+          // 清理本地数据并跳转到登录页
+          localStorage.removeItem('session_token')
+          localStorage.removeItem('user')
+          try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
+          router.push('/login')
+        } else {
+          ElMessage.error(res?.msg || '删除失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除账户失败:', error)
+          ElMessage.error('删除失败，请稍后重试')
+        }
+      }
+    }
     
     // 头像上传
     const beforeAvatarUpload = (file) => {
@@ -670,9 +718,9 @@ export default {
         const result = await requestMethod.postForm('/user/avatar/upload', formData)
         if (result && result.code === 200) {
           ElMessage.success('头像上传成功')
-          userInfo.value.avatar = result.data.avatar_url
+          userInfo.value.avatar = resolveMedia(result.data.avatar_url)
           // 更新本地存储并通知全局（使 Navbar 等组件实时刷新）
-          try { localStorage.setItem('user', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('user')||'{}'), { avatar: result.data.avatar_url }))) } catch (e) {}
+          try { localStorage.setItem('user', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('user')||'{}'), { avatar: userInfo.value.avatar }))) } catch (e) {}
           try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
         } else {
           ElMessage.error(result?.msg || '上传失败')
@@ -819,8 +867,10 @@ export default {
       handleChangePassword,
       handleRevokeSession,
       handleLogoutAll,
+      handleDeleteAccount,
       beforeAvatarUpload,
       uploadAvatar,
+      resolveMedia,
       resetForm,
       resetPasswordForm,
       formatDate,

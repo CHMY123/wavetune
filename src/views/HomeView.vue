@@ -248,6 +248,9 @@ export default {
   methods: {
     navigateTo(route) {
       this.$router.push(route)
+    },
+    resolveMedia(val) {
+      try { return resolveMedia(val) } catch (e) { return val }
     }
   }
 }

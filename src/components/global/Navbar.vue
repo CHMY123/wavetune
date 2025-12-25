@@ -7,7 +7,7 @@
       <div class="navbar-brand">
         <!-- SCNU Logo容器 -->
         <div class="brand-logo-container">
-          <img src="../../../static/logo/SCNU.png" alt="SCNU Logo" class="brand-logo-image" />
+          <img src="/static/logo/SCNU.png" alt="SCNU Logo" class="brand-logo-image" />
         </div>
         <div class="brand-text-block">
           <span class="brand-text gradient-text">WaveTune</span>
@@ -107,6 +107,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requestMethod } from '@/utils/request'
+import { resolveMedia } from '@/utils/media'
 
 export default {
   name: 'Navbar',
@@ -159,6 +160,10 @@ export default {
       // 添加时间戳以避免头像缓存问题（上传后立即刷新能生效）
       return `${this.userInfo.avatar}?t=${Date.now()}`
     }
+    ,
+    logoSrc() {
+      try { return resolveMedia('/static/logo/SCNU.png') } catch (e) { return '/static/logo/SCNU.png' }
+    }
   },
   methods: {
     checkAuthStatus() {
@@ -166,7 +171,13 @@ export default {
       const user = localStorage.getItem('user')
       this.isAuthenticated = !!token
       if (user) {
-        this.userInfo = JSON.parse(user)
+        try {
+          const u = JSON.parse(user)
+          if (u && u.avatar) u.avatar = resolveMedia(u.avatar)
+          this.userInfo = u
+        } catch (e) {
+          this.userInfo = JSON.parse(user)
+        }
       }
     },
     handleScroll() {

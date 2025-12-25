@@ -24,7 +24,7 @@
           <div class="avatar-section">
             <el-avatar 
               :size="100" 
-              :src="user.avatar || '/static/avatar/default.jpg'" 
+              :src="user.avatar || resolveMedia('/static/avatar/default.jpg')" 
               class="user-avatar" 
             />
             <div style="margin-top: 12px">{{ user.name || '未登录' }}</div>
@@ -157,6 +157,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import CardContainer from '@/components/global/CardContainer.vue'
+import { resolveMedia } from '@/utils/media'
 import { requestMethod } from '@/utils/request'
 import { ElMessage } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
@@ -203,7 +204,7 @@ const loadUser = () => {
   try {
     const u = JSON.parse(window.localStorage.getItem('user') || 'null')
     if (u) {
-      user.avatar = u.avatar || '/static/avatar/default.jpg'
+      user.avatar = resolveMedia(u.avatar || '/static/avatar/default.jpg')
       user.name = u.username || u.name || ''
       // 补充其他个人信息字段
       user.student_id = u.student_id || ''

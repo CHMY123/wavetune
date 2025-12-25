@@ -163,7 +163,7 @@
           <div class="cover-wrapper">
             <div class="cover-container">
               <el-image 
-                :src="newMusic.cover || '/static/music_cover/1.png'" 
+                :src="newMusic.cover ? resolveMediaUrl(newMusic.cover) : resolveMediaUrl('/static/music_cover/1.png')" 
                 fit="cover" 
                 class="cover-image"
               >
@@ -324,6 +324,7 @@ import MusicPlayer from '@/components/global/MusicPlayer.vue'
 import { requestMethod } from '@/utils/request'
 import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
+import { resolveMedia } from '@/utils/media'
 import { ElDialog, ElButton, ElSelect, ElOption } from 'element-plus'
 
 export default {
@@ -405,6 +406,9 @@ export default {
     }
   },
   methods: {
+    resolveMediaUrl(val) {
+      try { return resolveMedia(val) } catch (e) { return val }
+    },
     // 更新显示的音乐列表 - 优化显示逻辑
     updateDisplayedMusicList() {
       // 防御性编程：确保 musicList 是数组
@@ -419,7 +423,7 @@ export default {
         duration: music.duration || '00:00',
         match_rate: music.match_rate || 0,
         reason: music.reason || '暂无推荐理由',
-        cover: music.cover || music.cover_url || '/static/music_cover/placeholder.png'
+        cover: resolveMedia(music.cover || music.cover_url || '/static/music_cover/placeholder.png')
       }))
       
       const startIndex = (this.currentPage - 1) * this.pageSize
@@ -453,17 +457,11 @@ export default {
     // 获取封面图片URL的辅助方法
     getCoverUrl(music) {
       // 多层级检查，确保返回有效的URL
-      if (!music) return '/static/music_cover/placeholder.png'
+      if (!music) return resolveMedia('/static/music_cover/placeholder.png')
       
       const coverUrl = music.cover || music.cover_url
-      if (!coverUrl) return '/static/music_cover/placeholder.png'
-      
-      // 确保URL格式正确
-      const url = String(coverUrl)
-      if (url.startsWith('http') || url.startsWith('/')) {
-        return url
-      }
-      return `/${url}`
+      if (!coverUrl) return resolveMedia('/static/music_cover/placeholder.png')
+      return resolveMedia(coverUrl)
     },
     
     // 监听音乐卡片，用于懒加载动画 - 简化逻辑，确保不会阻止显示
@@ -523,11 +521,11 @@ export default {
     handleImageError(event, music) {
       // 如果图片加载失败，使用默认占位图
       const img = event.target
-      img.src = '/static/music_cover/placeholder.png'
+      img.src = resolveMedia('/static/music_cover/placeholder.png')
       
       // 也可以选择更新音乐对象的封面URL
       if (music) {
-        music.cover = '/static/music_cover/placeholder.png'
+        music.cover = resolveMedia('/static/music_cover/placeholder.png')
       }
     },
     // 优化的滚动检测逻辑 - 使用 Intersection Observer API
@@ -582,7 +580,7 @@ export default {
             duration: '02:34',
             match_rate: 95,
             reason: '舒缓的钢琴曲有助于缓解轻度疲劳',
-            cover: '/static/music_cover/placeholder.png'
+            cover: resolveMedia('/static/music_cover/placeholder.png')
           },
           {
             id: 2,
@@ -591,7 +589,7 @@ export default {
             duration: '05:12',
             match_rate: 88,
             reason: '自然音效能够帮助放松心情',
-            cover: '/static/music_cover/placeholder.png'
+            cover: resolveMedia('/static/music_cover/placeholder.png')
           },
           {
             id: 3,
@@ -600,7 +598,7 @@ export default {
             duration: '10:00',
             match_rate: 92,
             reason: '适合深度放松，缓解工作压力',
-            cover: '/static/music_cover/placeholder.png'
+            cover: resolveMedia('/static/music_cover/placeholder.png')
           }
         ]
         
@@ -646,21 +644,14 @@ export default {
       try {
         // 确保src或audio_url存在
         if (!track.src && track.audio_url) {
-          // 确保URL格式正确，添加http前缀如果需要
-          let url = track.audio_url
-          if (url && typeof url === 'string' && !url.startsWith('http') && !url.startsWith('/')) {
-            url = `/${url}`
-          }
-          track.src = url
+          track.src = resolveMedia(track.audio_url)
         } else if (!track.src) {
-          // 提供更可靠的备用路径
-          track.src = `/static/music/sample${track.id || 1}.mp3`
+          track.src = resolveMedia(`/static/music/sample${track.id || 1}.mp3`)
         }
         
-        // 确保封面图片URL格式正确
-        if (track.cover_url && !track.cover) {
-          track.cover = track.cover_url
-        }
+        // 封面图片优先使用 cover 字段，其次 cover_url
+        const coverVal = track.cover || track.cover_url
+        track.cover = coverVal ? resolveMedia(coverVal) : resolveMedia('/static/music_cover/placeholder.png')
         
         // 确保 duration 为数字（秒）以避免播放器使用字符串导致问题
         const parse = (val) => {

@@ -15,8 +15,9 @@ from models.user_preference import UserPreference
 from models.operation_log import OperationLog
 from schemas.auth import (
     UserRegister, UserLogin, UserLogout, ChangePassword, 
-    ResetPassword, UserProfileUpdate, UserPreferenceUpdate
+    ResetPassword, UserProfileUpdate, UserPreferenceUpdate, UserDelete
 )
+from utils import qiniu_helper
 
 router = APIRouter()
 
@@ -257,6 +258,74 @@ async def logout_user(
         db.rollback()
         log_operation(db, None, "user_logout", f"登出失败-{str(e)}", request, 500)
         raise HTTPException(status_code=500, detail=f"登出失败: {str(e)}")
+
+
+@router.post("/delete")
+async def delete_user_account(
+    delete_data: UserDelete,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """删除用户账号及其关联数据（需要会话令牌验证）"""
+    try:
+        # 验证会话
+        session = db.query(UserSession).filter(UserSession.session_token == delete_data.session_token).first()
+        if not session or session.user_id != delete_data.user_id:
+            raise HTTPException(status_code=403, detail="会话验证失败")
+
+        user_id = delete_data.user_id
+
+        # 删除关联数据：会话、偏好、反馈、场景、操作日志
+        try:
+            db.query(UserSession).filter(UserSession.user_id == user_id).delete(synchronize_session=False)
+            from models.user_preference import UserPreference as _UP
+            from models.feedback import Feedback as _FB
+            from models.scene import Scene as _SC
+            from models.operation_log import OperationLog as _OL
+
+            db.query(_UP).filter(_UP.user_id == user_id).delete(synchronize_session=False)
+            db.query(_FB).filter(_FB.user_id == user_id).delete(synchronize_session=False)
+            db.query(_SC).filter(_SC.user_id == user_id).delete(synchronize_session=False)
+            db.query(_OL).filter(_OL.user_id == user_id).delete(synchronize_session=False)
+        except Exception:
+            # 若删除关联项失败，继续尝试删除用户并回滚可能的部分删除
+            pass
+
+        # 最后删除用户记录
+        u = db.query(User).filter(User.id == user_id).first()
+        if u:
+            # 如果用户头像指向七牛域名，尝试删除七牛对象（容错，不影响主流程）
+            try:
+                avatar = (u.avatar or '').strip()
+                if avatar and avatar.startswith('http') and qiniu_helper.QINIU_DOMAIN:
+                    try:
+                        from urllib.parse import urlparse
+                        parsed = urlparse(avatar)
+                        domain = parsed.netloc
+                        if domain.endswith(qiniu_helper.QINIU_DOMAIN):
+                            key = parsed.path.lstrip('/')
+                            try:
+                                qiniu_helper.delete_key(key)
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            db.delete(u)
+
+        db.commit()
+
+        log_operation(db, user_id, "user_delete", "用户账号已删除", request, 200)
+
+        return {"code": 200, "msg": "用户已删除", "data": None}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        log_operation(db, None, "user_delete", f"删除用户失败-{str(e)}", request, 500)
+        raise HTTPException(status_code=500, detail=f"删除用户失败: {str(e)}")
 
 @router.post("/change-password")
 async def change_password(

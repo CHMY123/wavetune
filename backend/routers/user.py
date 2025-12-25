@@ -13,6 +13,7 @@ from datetime import datetime
 from config.database import get_db
 from models.user import User
 from schemas.user import UserUpdate, UserCountUpdate
+from utils import qiniu_helper
 
 router = APIRouter()
 
@@ -89,7 +90,6 @@ async def upload_avatar(
 ):
     """
     上传用户头像
-    
     上传头像文件并更新用户头像路径
     """
     try:
@@ -107,22 +107,36 @@ async def upload_avatar(
         if file_extension not in ['.jpg', '.jpeg', '.png']:
             raise HTTPException(status_code=400, detail="仅支持 jpg/png 格式")
         
-        # 创建上传目录
-        upload_dir = "static/avatar"
-        os.makedirs(upload_dir, exist_ok=True)
-        
         # 生成唯一文件名
         file_id = str(uuid.uuid4())
         filename = f"{user_id}_{file_id}{file_extension}"
-        file_path = os.path.join(upload_dir, filename)
-        
-        # 保存文件
-        with open(file_path, "wb") as buffer:
+
+        # 优先使用七牛上传（需在 .env 中配置 QINIU_BUCKET 和 QINIU_DOMAIN）
+        try:
             content = await avatar.read()
-            buffer.write(content)
-        
-        # 更新用户头像路径
-        avatar_url = f"/static/avatar/{filename}"
+            if qiniu_helper.QINIU_BUCKET:
+                key = f"avatar/{filename}"
+                ret, info = qiniu_helper.upload_bytes(content, key)
+                if info.status_code == 200:
+                    avatar_url = qiniu_helper.make_url(key)
+                else:
+                    # 七牛上传失败，回退到本地保存
+                    upload_dir = "static/avatar"
+                    os.makedirs(upload_dir, exist_ok=True)
+                    file_path = os.path.join(upload_dir, filename)
+                    with open(file_path, "wb") as buffer:
+                        buffer.write(content)
+                    avatar_url = f"/uploads/avatar/{filename}"
+            else:
+                # 未配置七牛，保存到本地
+                upload_dir = "static/avatar"
+                os.makedirs(upload_dir, exist_ok=True)
+                file_path = os.path.join(upload_dir, filename)
+                with open(file_path, "wb") as buffer:
+                    buffer.write(content)
+                avatar_url = f"/static/avatar/{filename}"
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"头像上传失败: {str(e)}")
         user.avatar = avatar_url
         user.update_time = datetime.now()
         

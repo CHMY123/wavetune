@@ -37,3 +37,6 @@ torch==2.9.1
 # 测试
 pytest==7.4.3
 pytest-asyncio==0.21.1
+
+# 千牛云存储 SDK
+qiniu==7.17.0

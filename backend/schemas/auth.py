@@ -55,6 +55,12 @@ class UserLogout(BaseModel):
     """用户登出模型"""
     session_token: str = Field(..., description="会话令牌")
 
+
+class UserDelete(BaseModel):
+    """用户删除模型"""
+    session_token: str = Field(..., description="会话令牌")
+    user_id: int = Field(..., description="用户ID")
+
 class ChangePassword(BaseModel):
     """修改密码模型"""
     old_password: str = Field(..., description="原密码")
