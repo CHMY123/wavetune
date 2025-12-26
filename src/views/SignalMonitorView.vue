@@ -266,7 +266,15 @@ export default {
         try {
           console.log('%c [SignalMonitorView] 开始上传CSV文件并执行检测，请求地址：/detection/upload', 'color: #1890ff;')
           // 使用 request.js 的 postForm 发送 multipart/form-data
-          const res = await requestMethod.postForm('/detection/upload', form)
+          const res = await requestMethod.postForm('/detection/upload', form, {
+            onUploadProgress: (progressEvent) => {
+              // 可选：添加上传进度显示
+              if (progressEvent.total) {
+                this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              }
+            },
+            timeout: 30000 // 关键：延长超时时间，解决10秒超时问题
+          });
           console.log('%c [SignalMonitorView] 上传检测请求响应成功：', 'color: #52c41a;', res)
           
           // request 的响应拦截器会返回 res（包含 code/msg/data）

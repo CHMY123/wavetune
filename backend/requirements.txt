@@ -1,5 +1,3 @@
-# WaveTune 项目顶层 Python 依赖（基于 Python 3.11.14）
-
 # Web / API
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
@@ -27,10 +25,14 @@ requests==2.31.0
 # 数据科学 / 检测模型
 numpy==1.26.4
 pandas==2.2.3
-scikit-learn==1.3.2
+# 升级到 1.7.2，匹配模型训练版本
+scikit-learn==1.7.2
 joblib==1.3.2
+# 适配 1.7.2 的 scipy 版本
+scipy==1.14.1
+threadpoolctl==3.6.0
 
-# 深度学习（注意：GPU/OS 需要单独根据平台选择合适的 wheel）
+# 深度学习
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.9.1
 
@@ -40,10 +42,6 @@ pytest-asyncio==0.21.1
 
 # 千牛云存储 SDK
 qiniu==7.17.0
-
-# sklearn 库依赖
-scipy==1.16.3 
-threadpoolctl==3.6.0
 
 # boto3
 boto3==1.42.9

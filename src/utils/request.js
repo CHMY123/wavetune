@@ -27,7 +27,7 @@ try {
 
 const request = axios.create({
   baseURL, // 从环境变量/兜底获取基础URL
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json;charset=utf-8'
   }

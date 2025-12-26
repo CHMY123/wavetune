@@ -25,12 +25,13 @@
         </template>
         
         <div class="user-info-content">
-          <!-- 头像区域 -->
+          <!-- 头像区域 - 增加错误兜底 -->
           <div class="avatar-section">
             <el-avatar
               :size="120"
-              :src="userInfo.avatar || resolveMedia('/static/avatar/default.jpg')"
+              :src="userAvatarUrl"
               class="user-avatar"
+              @error="handleAvatarError"
             >
               <el-icon><User /></el-icon>
             </el-avatar>
@@ -101,12 +102,12 @@
             <el-row :gutter="20">
               <el-col :span="12">
                 <el-form-item label="检测次数">
-                  <el-input :value="userInfo.detection_count" disabled />
+                  <el-input :value="userInfo.detection_count || 0" disabled />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="干预次数">
-                  <el-input :value="userInfo.intervention_count" disabled />
+                  <el-input :value="userInfo.intervention_count || 0" disabled />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -194,7 +195,7 @@
           </div>
         </template>
         
-        <el-table :data="sessions" style="width: 100%">
+        <el-table :data="sessions" style="width: 100%" v-loading="sessionsLoading">
           <el-table-column prop="device_display" label="设备信息" />
           <el-table-column prop="ip_address" label="IP地址" />
           <el-table-column prop="create_time" label="登录时间">
@@ -237,15 +238,15 @@
         <!-- 新反馈表单 -->
         <div v-if="showFeedbackForm" class="feedback-form-container">
           <el-form ref="feedbackFormRef" :model="feedbackForm" label-width="100px" class="feedback-form">
-            <el-form-item label="反馈类型">
-              <el-select v-model="feedbackForm.type">
+            <el-form-item label="反馈类型" prop="type">
+              <el-select v-model="feedbackForm.type" required>
                 <el-option label="功能建议" value="suggestion" />
                 <el-option label="问题反馈" value="bug" />
                 <el-option label="其他" value="other" />
               </el-select>
             </el-form-item>
-            <el-form-item label="反馈内容">
-              <el-input v-model="feedbackForm.content" type="textarea" rows="4" placeholder="请输入您的反馈内容" />
+            <el-form-item label="反馈内容" prop="content">
+              <el-input v-model="feedbackForm.content" type="textarea" rows="4" placeholder="请输入您的反馈内容" required />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="handleSubmitFeedback">提交</el-button>
@@ -255,7 +256,7 @@
         </div>
         
         <!-- 历史反馈列表 -->
-        <el-table :data="feedbackList" style="width: 100%" class="feedback-table">
+        <el-table :data="feedbackList" style="width: 100%" class="feedback-table" v-loading="feedbackLoading">
           <el-table-column prop="feedback_type" label="反馈类型">
             <template #default="{ row }">
               <el-tag :type="getFeedbackTypeTag(row.feedback_type)">
@@ -338,7 +339,7 @@
 <script>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElLoading } from 'element-plus'
 import { requestMethod } from '@/utils/request'
 import { resolveMedia } from '@/utils/media'
 import { User, Upload } from '@element-plus/icons-vue'
@@ -360,6 +361,14 @@ export default {
     const editMode = ref(false)
     const updateLoading = ref(false)
     const passwordLoading = ref(false)
+    const sessionsLoading = ref(false)
+    const feedbackLoading = ref(false)
+    
+    // 计算属性：头像URL（增加兜底）
+    const userAvatarUrl = computed(() => {
+      // 优先使用用户头像，失败则使用默认头像
+      return userInfo.value.avatar || resolveMedia('/static/avatar/default.jpg')
+    })
     
     // 用户表单数据
     const userForm = reactive({
@@ -438,47 +447,79 @@ export default {
       return 1
     }
 
-    // 获取用户信息
+    // 获取用户信息 - 增加超时和错误处理
     const fetchUserInfo = async () => {
       try {
         const uid = getCurrentUserId()
-        const result = await requestMethod.get('/auth/profile', { user_id: uid })
+        // 增加超时配置：30秒
+        const result = await requestMethod.get('/auth/profile', { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
         if (result && result.code === 200) {
           // 解析 avatar 字段为可访问 URL
           const data = result.data || {}
-          if (data.avatar) data.avatar = resolveMedia(data.avatar)
+          if (data.avatar) {
+            // 头像URL异常时自动替换为默认头像
+            try {
+              data.avatar = resolveMedia(data.avatar)
+            } catch (e) {
+              data.avatar = resolveMedia('/static/avatar/default.jpg')
+            }
+          }
           userInfo.value = data
           // 同步表单数据
           Object.assign(userForm, {
-            username: result.data.username,
-            student_id: result.data.student_id,
-            email: result.data.email || '',
-            phone: result.data.phone || ''
+            username: data.username || '',
+            student_id: data.student_id || '',
+            email: data.email || '',
+            phone: data.phone || ''
           })
 
           // 同步偏好设置
-          if (result.data.preferences) {
+          if (data.preferences) {
             Object.assign(preferencesForm, {
-              default_fatigue_level: result.data.preferences.default_fatigue_level || 'medium',
-              preferred_music_type: result.data.preferences.preferred_music_type || 'natural',
-              notification_enabled: result.data.preferences.notification_enabled === 'true',
-              auto_play: result.data.preferences.auto_play === 'true'
+              default_fatigue_level: data.preferences.default_fatigue_level || 'medium',
+              preferred_music_type: data.preferences.preferred_music_type || 'natural',
+              notification_enabled: data.preferences.notification_enabled === 'true',
+              auto_play: data.preferences.auto_play === 'true'
             })
           }
         }
       } catch (error) {
         console.error('获取用户信息失败:', error)
-        ElMessage.error('获取用户信息失败')
+        // 区分超时和404错误
+        if (error.code === 'ECONNABORTED') {
+          ElMessage.warning('获取用户信息超时，将显示默认信息')
+        } else if (error.response?.status === 404) {
+          ElMessage.warning('用户信息接口暂不可用，将显示默认信息')
+        } else {
+          ElMessage.error('获取用户信息失败，将显示默认信息')
+        }
+        // 兜底默认用户信息
+        userInfo.value = {
+          username: '默认用户',
+          student_id: '',
+          email: '',
+          phone: '',
+          detection_count: 0,
+          intervention_count: 0
+        }
+        Object.assign(userForm, userInfo.value)
       }
     }
     
-    // 获取会话列表
+    // 获取会话列表 - 增加超时和加载状态
     const fetchSessions = async () => {
+      sessionsLoading.value = true
       try {
         const uid = getCurrentUserId()
-        const result = await requestMethod.get('/auth/sessions', { user_id: uid })
+        const result = await requestMethod.get('/auth/sessions', { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
         if (result && result.code === 200) {
-          sessions.value = result.data.sessions
+          sessions.value = result.data.sessions || []
           // 找到当前会话
           const currentToken = localStorage.getItem('session_token')
           const currentSession = sessions.value.find(s => s.session_token === currentToken)
@@ -488,6 +529,10 @@ export default {
         }
       } catch (error) {
         console.error('获取会话列表失败:', error)
+        ElMessage.warning('获取会话列表失败')
+        sessions.value = []
+      } finally {
+        sessionsLoading.value = false
       }
     }
     
@@ -496,19 +541,14 @@ export default {
       if (!userFormRef.value) return
 
       try {
-        // Element Plus validate 在校验失败时会抛出错误，成功时不返回值
-        try {
-          await userFormRef.value.validate()
-        } catch (e) {
-          // 校验未通过，直接返回
-          return
-        }
+        // 表单验证
+        await userFormRef.value.validate()
 
         updateLoading.value = true
 
         const uid = getCurrentUserId()
 
-        // 构建干净的 payload：只包含后端期望的字段，且过滤掉空字符串
+        // 构建干净的 payload
         const payload = {}
         if (userForm.username !== undefined && String(userForm.username).trim() !== '') {
           payload.username = String(userForm.username).trim()
@@ -520,31 +560,20 @@ export default {
           payload.phone = String(userForm.phone).trim()
         }
 
-        // 发送请求（user_id 作为 query 参数）
-        let result
-        try {
-          result = await requestMethod.put('/auth/profile', payload, { user_id: uid })
-        } catch (err) {
-          // 如果是后端的验证错误（FastAPI 返回 422），尽可能展示详细信息
-          const detail = err.response?.data || err.response?.data?.detail
-          console.error('更新用户资料失败 (后端):', err, detail)
-          if (detail && detail.detail) {
-            // FastAPI 验证错误通常在 detail 字段里
-            const msgs = Array.isArray(detail.detail) ? detail.detail.map(d => d.msg).join('; ') : String(detail.detail)
-            ElMessage.error(msgs || '更新失败，数据校验未通过')
-          } else if (err.response?.data?.msg) {
-            ElMessage.error(err.response.data.msg)
-          } else {
-            ElMessage.error(err.message || '更新失败，请稍后重试')
-          }
-          return
-        }
+        // 发送请求（增加超时）
+        const result = await requestMethod.put('/auth/profile', payload, { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
 
         if (result && result.code === 200) {
           ElMessage.success('资料更新成功')
-          // 更新本地存储中的 user，保证 Navbar 等组件显示最新资料
-          try { localStorage.setItem('user', JSON.stringify(result.data)) } catch (e) {}
-          // 通知全局 auth 变化，以便 Navbar 刷新用户信息
+          // 更新本地存储
+          try { 
+            const localUser = JSON.parse(localStorage.getItem('user') || '{}')
+            localStorage.setItem('user', JSON.stringify({...localUser, ...result.data})) 
+          } catch (e) {}
+          // 通知全局刷新
           try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
           editMode.value = false
           await fetchUserInfo()
@@ -553,7 +582,13 @@ export default {
         }
       } catch (error) {
         console.error('更新用户资料失败:', error)
-        ElMessage.error('更新失败，请稍后重试')
+        if (error.code === 'ECONNABORTED') {
+          ElMessage.error('更新请求超时，请稍后重试')
+        } else if (error.response?.status === 404) {
+          ElMessage.error('更新接口暂不可用，请稍后重试')
+        } else {
+          ElMessage.error('更新失败，请稍后重试')
+        }
       } finally {
         updateLoading.value = false
       }
@@ -566,7 +601,10 @@ export default {
         const result = await requestMethod.put('/auth/preference', {
           preference_key: key,
           preference_value: value
-        }, { user_id: uid })
+        }, { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
         if (result && result.code === 200) {
           ElMessage.success('偏好设置已更新')
         } else {
@@ -592,7 +630,10 @@ export default {
         const result = await requestMethod.post('/auth/change-password', {
           old_password: passwordForm.old_password,
           new_password: passwordForm.new_password
-        }, { user_id: uid })
+        }, { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
         if (result && result.code === 200) {
           ElMessage.success('密码修改成功')
           resetPasswordForm()
@@ -601,7 +642,11 @@ export default {
         }
       } catch (error) {
         console.error('修改密码失败:', error)
-        ElMessage.error('修改失败，请稍后重试')
+        if (error.code === 'ECONNABORTED') {
+          ElMessage.error('修改密码请求超时，请稍后重试')
+        } else {
+          ElMessage.error('修改失败，请检查原密码是否正确')
+        }
       } finally {
         passwordLoading.value = false
       }
@@ -617,7 +662,10 @@ export default {
         })
         
         const uid = getCurrentUserId()
-        const result = await requestMethod.delete(`/auth/session/${sessionId}`, { user_id: uid })
+        const result = await requestMethod.delete(`/auth/session/${sessionId}`, { 
+          params: { user_id: uid },
+          timeout: 30000
+        })
         if (result && result.code === 200) {
           ElMessage.success('会话已撤销')
           await fetchSessions()
@@ -641,12 +689,22 @@ export default {
           cancelButtonText: '取消'
         })
         
-  // 这里应该调用退出所有设备的API
-  ElMessage.success('已退出所有设备')
-  localStorage.removeItem('session_token')
-  localStorage.removeItem('user')
-  try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
-  router.push('/login')
+        // 调用退出所有设备的API（增加超时）
+        const uid = getCurrentUserId()
+        try {
+          await requestMethod.post('/auth/logout-all', {}, { 
+            params: { user_id: uid },
+            timeout: 30000
+          })
+        } catch (e) {
+          console.warn('退出所有设备API调用失败，强制清理本地数据:', e)
+        }
+        
+        ElMessage.success('已退出所有设备')
+        localStorage.removeItem('session_token')
+        localStorage.removeItem('user')
+        try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
+        router.push('/login')
       } catch (error) {
         if (error !== 'cancel') {
           console.error('退出所有设备失败:', error)
@@ -654,14 +712,19 @@ export default {
       }
     }
 
-    // 删除账户（不可逆操作）
+    // 删除账户
     const handleDeleteAccount = async () => {
       try {
-        await ElMessageBox.confirm('删除账户将永久清除您的所有个人数据，且不可恢复。确定要继续吗？', '确认删除', {
-          type: 'warning',
-          confirmButtonText: '确定删除',
-          cancelButtonText: '取消'
-        })
+        await ElMessageBox.confirm(
+          '删除账户将永久清除您的所有个人数据，且不可恢复。确定要继续吗？', 
+          '确认删除', 
+          {
+            type: 'warning',
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            dangerMode: true
+          }
+        )
 
         const uid = getCurrentUserId()
         const token = localStorage.getItem('session_token')
@@ -673,11 +736,11 @@ export default {
         const res = await requestMethod.post('/auth/delete', {
           session_token: token,
           user_id: uid
-        })
+        }, { timeout: 30000 })
 
         if (res && res.code === 200) {
           ElMessage.success('账户已删除')
-          // 清理本地数据并跳转到登录页
+          // 清理本地数据
           localStorage.removeItem('session_token')
           localStorage.removeItem('user')
           try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
@@ -693,7 +756,16 @@ export default {
       }
     }
     
-    // 头像上传
+    // 头像加载错误处理
+    const handleAvatarError = (e) => {
+      // 替换为默认头像
+      const img = e.target
+      img.src = resolveMedia('/static/avatar/default.jpg')
+      // 防止循环报错
+      img.removeEventListener('error', handleAvatarError)
+    }
+    
+    // 头像上传前置校验
     const beforeAvatarUpload = (file) => {
       const isImage = file.type.startsWith('image/')
       const isLt2M = file.size / 1024 / 1024 < 2
@@ -709,33 +781,51 @@ export default {
       return true
     }
     
+    // 头像上传 - 增加超时和错误处理
     const uploadAvatar = async (options) => {
       try {
         const formData = new FormData()
         formData.append('avatar', options.file)
-  formData.append('user_id', String(getCurrentUserId()))
+        formData.append('user_id', String(getCurrentUserId()))
 
-        const result = await requestMethod.postForm('/user/avatar/upload', formData)
+        const result = await requestMethod.postForm('/user/avatar/upload', formData, {
+          timeout: 30000,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
         if (result && result.code === 200) {
           ElMessage.success('头像上传成功')
-          userInfo.value.avatar = resolveMedia(result.data.avatar_url)
-          // 更新本地存储并通知全局（使 Navbar 等组件实时刷新）
-          try { localStorage.setItem('user', JSON.stringify(Object.assign({}, JSON.parse(localStorage.getItem('user')||'{}'), { avatar: userInfo.value.avatar }))) } catch (e) {}
+          // 确保头像URL可访问
+          try {
+            userInfo.value.avatar = resolveMedia(result.data.avatar_url)
+          } catch (e) {
+            userInfo.value.avatar = resolveMedia('/static/avatar/default.jpg')
+          }
+          // 更新本地存储
+          try { 
+            const localUser = JSON.parse(localStorage.getItem('user') || '{}')
+            localStorage.setItem('user', JSON.stringify({...localUser, avatar: userInfo.value.avatar})) 
+          } catch (e) {}
           try { window.dispatchEvent(new Event('auth-changed')) } catch (e) {}
         } else {
           ElMessage.error(result?.msg || '上传失败')
         }
       } catch (error) {
         console.error('头像上传失败:', error)
-        ElMessage.error('上传失败，请稍后重试')
+        if (error.code === 'ECONNABORTED') {
+          ElMessage.error('头像上传超时，请稍后重试')
+        } else {
+          ElMessage.error('上传失败，请稍后重试')
+        }
       }
     }
     
     // 重置表单
     const resetForm = () => {
       Object.assign(userForm, {
-        username: userInfo.value.username,
-        student_id: userInfo.value.student_id,
+        username: userInfo.value.username || '',
+        student_id: userInfo.value.student_id || '',
         email: userInfo.value.email || '',
         phone: userInfo.value.phone || ''
       })
@@ -749,10 +839,14 @@ export default {
       })
     }
     
-    // 格式化日期
+    // 格式化日期 - 增加容错
     const formatDate = (dateString) => {
       if (!dateString) return '-'
-      return new Date(dateString).toLocaleString('zh-CN')
+      try {
+        return new Date(dateString).toLocaleString('zh-CN')
+      } catch (e) {
+        return dateString
+      }
     }
     
     // 反馈相关数据
@@ -762,28 +856,44 @@ export default {
       type: 'suggestion',
       content: ''
     })
-    // 从后端拉取的历史反馈
     const feedbackList = ref([])
-
-    // 分页参数（简单实现）
     const feedbackPage = ref(1)
     const feedbackPageSize = ref(20)
 
+    // 获取历史反馈 - 增加超时和加载状态
     const fetchFeedbacks = async (page = 1) => {
+      feedbackLoading.value = true
       try {
         const uid = getCurrentUserId()
-        const res = await requestMethod.get('/feedback/history', { user_id: uid, page: page, page_size: feedbackPageSize.value })
+        const res = await requestMethod.get('/feedback/history', { 
+          params: { 
+            user_id: uid, 
+            page: page, 
+            page_size: feedbackPageSize.value 
+          },
+          timeout: 30000
+        })
         if (res && res.code === 200) {
           feedbackList.value = res.data.list || []
           feedbackPage.value = res.data.page || page
         }
       } catch (error) {
         console.error('获取历史反馈失败:', error)
-        ElMessage.error('获取历史反馈失败')
+        // 区分404和超时
+        if (error.response?.status === 404) {
+          ElMessage.warning('反馈历史接口暂不可用')
+        } else if (error.code === 'ECONNABORTED') {
+          ElMessage.warning('获取反馈历史超时')
+        } else {
+          ElMessage.error('获取历史反馈失败')
+        }
+        feedbackList.value = []
+      } finally {
+        feedbackLoading.value = false
       }
     }
     
-    // 获取反馈类型标签样式（兼容后端 feedback_type 值）
+    // 获取反馈类型标签样式
     const getFeedbackTypeTag = (type) => {
       const tagMap = {
         accuracy: 'primary',
@@ -796,7 +906,7 @@ export default {
       return tagMap[type] || 'info'
     }
 
-    // 获取反馈类型文本（中文友好名）
+    // 获取反馈类型文本
     const getFeedbackTypeText = (type) => {
       const textMap = {
         accuracy: '检测准确性',
@@ -809,30 +919,34 @@ export default {
       return textMap[type] || (type || '未知类型')
     }
     
-    // 提交反馈（调用后端）
+    // 提交反馈
     const handleSubmitFeedback = async () => {
+      if (!feedbackForm.content.trim()) {
+        ElMessage.warning('请输入反馈内容')
+        return
+      }
+      
       try {
         const uid = getCurrentUserId()
         const payload = {
           user_id: uid,
           feedback_type: feedbackForm.type,
-          content: feedbackForm.content,
+          content: feedbackForm.content.trim(),
           score: 0
         }
-        const res = await requestMethod.post('/feedback/submit', payload)
+        const res = await requestMethod.post('/feedback/submit', payload, { timeout: 30000 })
         if (res && res.code === 200) {
           ElMessage.success('反馈提交成功')
           showFeedbackForm.value = false
           feedbackForm.type = 'suggestion'
           feedbackForm.content = ''
-          // 重新拉取第一页数据
           await fetchFeedbacks(1)
         } else {
           ElMessage.error(res?.msg || '提交失败')
         }
       } catch (error) {
         console.error('提交反馈失败:', error)
-        ElMessage.error('提交反馈失败')
+        ElMessage.error('提交反馈失败，请稍后重试')
       }
     }
     
@@ -849,9 +963,12 @@ export default {
       passwordFormRef,
       feedbackFormRef,
       userInfo,
+      userAvatarUrl, // 使用计算属性替代直接使用userInfo.avatar
       editMode,
       updateLoading,
       passwordLoading,
+      sessionsLoading,
+      feedbackLoading,
       userForm,
       preferencesForm,
       passwordForm,
@@ -868,6 +985,7 @@ export default {
       handleRevokeSession,
       handleLogoutAll,
       handleDeleteAccount,
+      handleAvatarError,
       beforeAvatarUpload,
       uploadAvatar,
       resolveMedia,
@@ -1027,6 +1145,11 @@ export default {
   gap: var(--spacing-xl);
   align-items: flex-start;
   padding: var(--spacing-md);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
 }
 
 .avatar-section {
@@ -1226,45 +1349,6 @@ export default {
   white-space: pre-wrap;
 }
 
-/* 反馈卡片样式优化 */
-.feedback-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s ease;
-  backdrop-filter: blur(8px);
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-  
-  :deep(.el-card__header) {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.8) 100%);
-    border-bottom: 1px solid var(--border-color);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    padding: var(--spacing-md) var(--spacing-lg);
-    
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      
-      h2 {
-        margin: 0;
-        color: var(--text-primary);
-        font-size: 18px;
-        font-weight: 600;
-      }
-    }
-  }
-  
-  :deep(.el-card__body) {
-    padding: var(--spacing-lg);
-  }
-}
-
 /* 按钮样式优化 */
 :deep(.el-button) {
   border-radius: var(--radius-md);
@@ -1291,11 +1375,8 @@ export default {
   }
 }
 
-// 应用响应式工具
-@import '@/assets/styles/breakpoints.scss';
-
-// 响应式适配 - 使用断点混入
-@include mobile-layout {
+/* 响应式适配 */
+@media (max-width: 768px) {
   :root {
     --spacing-page: 16px;
     --spacing-lg: 16px;
@@ -1303,153 +1384,36 @@ export default {
     --spacing-sm: 8px;
   }
   
-  .user-center-container {
+  .user-center {
     padding: var(--spacing-page);
   }
   
-  .user-info-card {
-    @include card(16px, 12px);
-    margin-bottom: var(--spacing-md);
-    
-    .avatar-section {
-      width: 100%;
-      margin-bottom: var(--spacing-md);
-      
-      .avatar-container {
-        width: 80px;
-        height: 80px;
-      }
-      
-      .user-details {
-        text-align: center;
-      }
-    }
-    
-    .user-details {
-      .user-name {
-        @include responsive-font(20px, null, 18px);
-      }
-      
-      .user-id {
-        @include responsive-font(14px, null, 13px);
-      }
-    }
-    
-    .profile-form {
-      :deep(.el-form-item__label) {
-        font-size: 13px;
-      }
-      
-      :deep(.el-input__wrapper) {
-        padding: 6px 12px;
-      }
-    }
-  }
-  
-  .sessions-card {
-    margin-top: var(--spacing-md);
-    @include card(16px, 12px);
-    
-    .card-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--spacing-sm);
-    }
-    
-    .sessions-table :deep(.el-table__header th) {
-      padding: 10px 6px;
-      font-size: 12px;
-      
-      // 隐藏某些不重要的表头
-      &:nth-child(3), // IP地址
-      &:nth-child(4) { // 设备信息
-        display: none;
-      }
-    }
-    
-    .sessions-table :deep(.el-table__body td) {
-      padding: 10px 6px;
-      font-size: 12px;
-      
-      // 隐藏对应的表格内容
-      &:nth-child(3),
-      &:nth-child(4) {
-        display: none;
-      }
-    }
-    
-    // 自定义移动端操作按钮
-    .action-buttons {
-      .el-button {
-        padding: 6px 12px;
-        font-size: 12px;
-        min-width: auto;
-      }
-    }
-  }
-}
-
-// 平板设备适配
-@include respond-to(sm) {
-  .user-info-card {
-    @include card(18px);
-    
-    .avatar-section {
-      width: 100%;
-      margin-bottom: var(--spacing-md);
-    }
-  }
-  
-  .sessions-table :deep(.el-table__header th) {
-    padding: 14px 10px;
-    font-size: 13px;
-  }
-  
-  .sessions-table :deep(.el-table__body td) {
-    padding: 14px 10px;
-    font-size: 13px;
-  }
-}
-
-// 大屏设备优化
-@include large-desktop-layout {
   .user-center-container {
-    @include container(false);
-    max-width: 1400px;
+    padding: 0;
   }
   
-  .content-wrapper {
-    display: grid;
-    grid-template-columns: 350px 1fr;
-    gap: 32px;
+  .user-info-card :deep(.el-card__body) {
+    padding: var(--spacing-md);
   }
   
-  .user-info-card {
-    @include card(24px);
+  .sessions-card :deep(.el-table th),
+  .feedback-card :deep(.el-table th) {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .sessions-card :deep(.el-table td),
+  .feedback-card :deep(.el-table td) {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .password-form {
+    max-width: 100%;
   }
 }
 
-// 超大屏设备优化
-@include extra-large-desktop-layout {
-  .user-center-container {
-    max-width: 1600px;
-  }
-}
-
-// 高对比度模式支持
-@include high-contrast {
-  .user-info-card,
-  .sessions-card {
-    border: 2px solid #000;
-    box-shadow: none;
-  }
-  
-  :deep(.el-button) {
-    border-width: 2px;
-  }
-}
-
-// 减少动画模式支持
+/* 减少动画模式支持 */
 @media (prefers-reduced-motion: reduce) {
   * {
     transition-duration: 0.01ms !important;
