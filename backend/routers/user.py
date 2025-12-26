@@ -14,6 +14,7 @@ from config.database import get_db
 from models.user import User
 from schemas.user import UserUpdate, UserCountUpdate
 from utils import qiniu_helper
+from utils import s3_helper
 
 router = APIRouter()
 
@@ -114,21 +115,41 @@ async def upload_avatar(
         # 优先使用七牛上传（需在 .env 中配置 QINIU_BUCKET 和 QINIU_DOMAIN）
         try:
             content = await avatar.read()
-            if qiniu_helper.QINIU_BUCKET:
-                key = f"avatar/{filename}"
-                ret, info = qiniu_helper.upload_bytes(content, key)
-                if info.status_code == 200:
-                    avatar_url = qiniu_helper.make_url(key)
+            # 优先使用 S3（缤纷云）配置
+            try:
+                if s3_helper.S3_ENDPOINT:
+                    key = f"avatar/{filename}"
+                    resp, info = s3_helper.upload_bytes(content, key)
+                    status = None
+                    try:
+                        status = resp.get('ResponseMetadata', {}).get('HTTPStatusCode')
+                    except Exception:
+                        pass
+                    if status == 200 or (isinstance(info, dict) and info.get('status_code') == 200):
+                        avatar_url = s3_helper.make_url(key)
+                    else:
+                        raise Exception('S3 upload failed')
+                # 否则回退到七牛（如果配置）
+                elif qiniu_helper.QINIU_BUCKET:
+                    key = f"avatar/{filename}"
+                    ret, info = qiniu_helper.upload_bytes(content, key)
+                    try:
+                        if getattr(info, 'status_code', None) == 200:
+                            avatar_url = qiniu_helper.make_url(key)
+                        else:
+                            raise Exception('Qiniu upload failed')
+                    except Exception:
+                        raise
                 else:
-                    # 七牛上传失败，回退到本地保存
+                    # 未配置任何云存储，保存到本地
                     upload_dir = "static/avatar"
                     os.makedirs(upload_dir, exist_ok=True)
                     file_path = os.path.join(upload_dir, filename)
                     with open(file_path, "wb") as buffer:
                         buffer.write(content)
-                    avatar_url = f"/uploads/avatar/{filename}"
-            else:
-                # 未配置七牛，保存到本地
+                    avatar_url = f"/static/avatar/{filename}"
+            except Exception as e:
+                # 回退到本地保存
                 upload_dir = "static/avatar"
                 os.makedirs(upload_dir, exist_ok=True)
                 file_path = os.path.join(upload_dir, filename)

@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkwavetune"]=self["webpackChunkwavetune"]||[]).push([[594],{603:function(n,u,e){e.r(u),e.d(u,{default:function(){return o}});var t=e(641);const a={class:"about"};function r(n,u){return(0,t.uX)(),(0,t.CE)("div",a,[...u[0]||(u[0]=[(0,t.Lk)("h1",null,"This is an about page",-1)])])}var s=e(6262);const c={},i=(0,s.A)(c,[["render",r]]);var o=i}}]);
+//# sourceMappingURL=about.a2eed1c5.js.map

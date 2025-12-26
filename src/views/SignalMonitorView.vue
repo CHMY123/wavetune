@@ -214,15 +214,26 @@ export default {
       timeMarks: ['00:00', '00:01', '00:02', '00:03', '00:04', '00:05']
     }
   },
-
+  created() {
+    // 日志：组件创建完成，初始化信号监测数据
+    console.log('%c [SignalMonitorView] 组件创建完成', 'color: #1890ff; font-weight: bold;')
+    console.log('%c [SignalMonitorView] 初始化信号监测模块数据：', 'color: #722ed1;', this.signalModules)
+  },
   methods: {
       chooseFile() {
+        console.log('%c [SignalMonitorView] 触发选择CSV文件操作', 'color: #52c41a;')
         // 触发隐藏的 file input
-        this.$refs.csvInput && this.$refs.csvInput.click()
+        if (this.$refs.csvInput) {
+          this.$refs.csvInput.click()
+        } else {
+          console.warn('%c [SignalMonitorView] 未找到csvInput引用，无法触发文件选择', 'color: #fa8c16;')
+        }
       },
       onFileChange(e) {
+        console.log('%c [SignalMonitorView] 触发文件选择变更事件', 'color: #52c41a;')
         const files = e.target.files || e.dataTransfer?.files
         if (!files || !files.length) {
+          console.log('%c [SignalMonitorView] 未选择任何文件，清空当前文件状态', 'color: #fa8c16;')
           this.selectedFile = null
           this.selectedFileName = ''
           return
@@ -230,21 +241,34 @@ export default {
         const f = files[0]
         this.selectedFile = f
         this.selectedFileName = f.name
+        // 日志：记录选择的文件信息
+        console.log('%c [SignalMonitorView] 成功选择CSV文件：', 'color: #1890ff;', {
+          文件名: f.name,
+          文件大小: `${(f.size / 1024).toFixed(2)} KB`,
+          文件类型: f.type
+        })
       },
       async uploadCsvForDetection() {
+        // 校验是否选择文件
         if (!this.selectedFile) {
+          console.warn('%c [SignalMonitorView] 未选择CSV文件，无法执行上传检测', 'color: #faad14;')
           ElMessage.warning('请先选择一个 CSV 文件')
           return
         }
 
+        // 构建FormData
         const form = new FormData()
         form.append('file', this.selectedFile)
+        console.log('%c [SignalMonitorView] 构建FormData完成，准备上传文件', 'color: #1890ff;')
 
         this.detecting = true
         this.detectionResult = null
         try {
+          console.log('%c [SignalMonitorView] 开始上传CSV文件并执行检测，请求地址：/detection/upload', 'color: #1890ff;')
           // 使用 request.js 的 postForm 发送 multipart/form-data
           const res = await requestMethod.postForm('/detection/upload', form)
+          console.log('%c [SignalMonitorView] 上传检测请求响应成功：', 'color: #52c41a;', res)
+          
           // request 的响应拦截器会返回 res（包含 code/msg/data）
           const payload = res.data || {}
           this.detectionResult = {
@@ -253,31 +277,44 @@ export default {
             probabilities: payload.probabilities || payload.probs || [],
             type: (payload.label_name === 'High' ? 'danger' : (payload.label_name === 'Medium' ? 'warning' : 'success'))
           }
+          
+          // 日志：记录检测结果
+          console.log('%c [SignalMonitorView] 脑疲劳检测结果解析完成：', 'color: #722ed1;', this.detectionResult)
           ElMessage.success(`检测完成：${this.detectionResult.label_name}`)
         } catch (err) {
+          // 日志：记录上传检测异常
+          console.error('%c [SignalMonitorView] 上传CSV文件或检测失败：', 'color: #f5222d;', err)
           // request 已在拦截器中显示错误消息，这里可做额外提示
-          console.error('uploadCsvForDetection error', err)
           ElMessage.error('上传或检测失败，请检查文件格式（20×20）并重试')
         } finally {
           this.detecting = false
+          console.log('%c [SignalMonitorView] 上传检测流程结束，重置detecting状态', 'color: #fa8c16;')
         }
       },
       showRecommendations() {
+        console.log('%c [SignalMonitorView] 触发查看推荐音乐操作，当前疲劳等级：', 'color: #722ed1;', this.detectionResult.label_name)
         // 占位：根据项目路由结构可跳转到推荐页或展开推荐面板
-        // 这里示例跳转到 /music-recommendation（如存在）
         try {
           // 在跳转前将当前检测等级写入 localStorage，供推荐页固定使用
           if (this.detectionResult && this.detectionResult.label_name) {
-            try { localStorage.setItem('current_fatigue_level', this.detectionResult.label_name) } catch (e) {}
+            localStorage.setItem('current_fatigue_level', this.detectionResult.label_name)
+            console.log('%c [SignalMonitorView] 已将当前疲劳等级写入localStorage：', 'color: #1890ff;', this.detectionResult.label_name)
           }
-          this.$router && this.$router.push({ path: '/music-recommendation' })
+          if (this.$router) {
+            this.$router.push({ path: '/music-recommendation' })
+            console.log('%c [SignalMonitorView] 成功跳转至音乐推荐页面', 'color: #52c41a;')
+          } else {
+            console.warn('%c [SignalMonitorView] 未找到$router实例，无法跳转', 'color: #faad14;')
+          }
         } catch (e) {
           // 如果路由不存在则提示
+          console.error('%c [SignalMonitorView] 跳转音乐推荐页面失败：', 'color: #f5222d;', e)
           ElMessage.info('请在推荐页面查看推荐列表')
         }
       }
     }
   }
+
 </script>
 
 <style lang="scss" scoped>
@@ -572,10 +609,3 @@ export default {
   }
 }
 </style>
-
-
-
-
-
-
-

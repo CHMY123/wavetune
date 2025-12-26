@@ -66,10 +66,16 @@
         <el-button class="theme-toggle" type="text" @click="toggleTheme" title="切换主题">
           <el-icon><SwitchButton /></el-icon>
         </el-button>
+        <!-- 核心修改：替换ElAvatar为原生img标签 -->
         <el-dropdown v-if="isAuthenticated" @command="handleUserCommand">
-          <el-avatar :size="36" class="user-avatar" :src="avatarSrc">
-            <el-icon><User /></el-icon>
-          </el-avatar>
+          <img 
+            :src="avatarSrc" 
+            class="user-avatar" 
+            :alt="userInfo.username + '的头像'"
+            width="36" 
+            height="36"
+            style="border-radius: 50%; cursor: pointer; border: 2px solid rgba(0,0,0,0.06);"
+          />
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">
@@ -107,7 +113,6 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requestMethod } from '@/utils/request'
-import { resolveMedia } from '@/utils/media'
 
 export default {
   name: 'Navbar',
@@ -135,10 +140,18 @@ export default {
     else document.documentElement.classList.remove('theme-dark')
   },
   mounted() {
+    // 调试日志：组件加载时的初始状态
+    // console.log('🔧 Navbar组件加载 - 初始状态：')
+    // console.log('  - token存在:', !!localStorage.getItem('session_token'))
+    // console.log('  - 本地user数据:', localStorage.getItem('user'))
+    
     this.checkAuthStatus()
     this.updateActiveIndex()
+    
     // 监听全局登录状态变化
     window.addEventListener('auth-changed', this.checkAuthStatus)
+    // 监听 localStorage 在其它窗口/标签页的变化
+    window.addEventListener('storage', this.handleStorageEvent)
     // 添加滚动事件监听
     window.addEventListener('scroll', this.handleScroll)
     // 初始化滚动状态
@@ -148,6 +161,7 @@ export default {
     // 移除事件监听
     try { window.removeEventListener('auth-changed', this.checkAuthStatus) } catch (e) {}
     try { window.removeEventListener('scroll', this.handleScroll) } catch (e) {}
+    try { window.removeEventListener('storage', this.handleStorageEvent) } catch (e) {}
   },
   watch: {
     '$route'() {
@@ -156,30 +170,77 @@ export default {
   },
   computed: {
     avatarSrc() {
-      if (!this.userInfo || !this.userInfo.avatar) return ''
-      // 添加时间戳以避免头像缓存问题（上传后立即刷新能生效）
-      return `${this.userInfo.avatar}?t=${Date.now()}`
-    }
-    ,
+      try {
+        // 1. 未登录/无头像 → 显示默认头像
+        if (!this.isAuthenticated || !this.userInfo || !this.userInfo.avatar || this.userInfo.avatar === '') {
+          // console.log('🔍 头像源：使用默认头像（未登录/无头像数据）')
+          return '/static/avatar/default.png'
+        }
+
+        const rawAvatar = this.userInfo.avatar
+        let finalUrl = rawAvatar
+
+        // ✅ 保留：非S3 URL（本地/普通URL）的防缓存逻辑
+        if (!finalUrl.includes('amz-signature') && !finalUrl.includes('s3.bitiful.net')) {
+          const timestamp = Date.now()
+          finalUrl = finalUrl.includes('?') 
+            ? `${finalUrl}&t=${timestamp}` 
+            : `${finalUrl}?t=${timestamp}`
+        }
+
+        // console.log('🔍 最终头像URL:', finalUrl)
+        return finalUrl
+      } catch (e) {
+        console.error('❌ 生成头像URL失败:', e)
+        return '/static/avatar/default.png'
+      }
+    },
     logoSrc() {
-      try { return resolveMedia('/static/logo/SCNU.png') } catch (e) { return '/static/logo/SCNU.png' }
+      try { return '/static/logo/SCNU.png' } catch (e) { return '/static/logo/SCNU.png' }
     }
   },
   methods: {
+    /**
+     * 检查登录状态（直接使用本地缓存数据）
+     */
     checkAuthStatus() {
       const token = localStorage.getItem('session_token')
-      const user = localStorage.getItem('user')
+      const userStr = localStorage.getItem('user')
+      
       this.isAuthenticated = !!token
-      if (user) {
-        try {
-          const u = JSON.parse(user)
-          if (u && u.avatar) u.avatar = resolveMedia(u.avatar)
-          this.userInfo = u
-        } catch (e) {
-          this.userInfo = JSON.parse(user)
-        }
+      
+      // 未登录 → 清空用户信息
+      if (!this.isAuthenticated || !userStr) {
+        this.userInfo = {}
+        console.log('🔓 用户未登录/无本地缓存，清空用户信息')
+        return
+      }
+
+      try {
+        // 直接解析本地缓存的用户数据
+        this.userInfo = JSON.parse(userStr)
+        // console.log('✅ 从本地缓存加载用户信息:', this.userInfo)
+        // console.log('✅ 头像地址:', this.userInfo.avatar || '无')
+      } catch (e) {
+        console.error('❌ 解析本地用户数据失败:', e)
+        this.userInfo = {}
       }
     },
+
+    /**
+     * 监听localStorage变化
+     */
+    handleStorageEvent(e) {
+      if (!e) return
+      if (e.key === 'user' || e.key === 'session_token') {
+        // console.log('🔄 localStorage变化，更新登录状态')
+        this.checkAuthStatus()
+      }
+    },
+
+    /**
+     * 处理滚动效果
+     */
     handleScroll() {
       const navbar = document.querySelector('.navbar')
       if (window.scrollY > 50) {
@@ -188,13 +249,25 @@ export default {
         navbar.classList.remove('navbar-scrolled')
       }
     },
+
+    /**
+     * 更新当前激活的菜单索引
+     */
     updateActiveIndex() {
       this.activeIndex = this.$route.path
     },
+
+    /**
+     * 处理菜单选择
+     */
     handleSelect(key) {
       this.activeIndex = key
       this.$router.push(key)
     },
+
+    /**
+     * 处理用户下拉菜单命令
+     */
     handleUserCommand(command) {
       switch (command) {
         case 'profile':
@@ -208,6 +281,10 @@ export default {
           break
       }
     },
+
+    /**
+     * 切换主题
+     */
     toggleTheme() {
       const root = document.documentElement
       const isDark = root.classList.toggle('theme-dark')
@@ -215,6 +292,10 @@ export default {
       // 触发全局事件方便其他组件响应（可选）
       try { window.dispatchEvent(new Event('theme-changed')) } catch (e) {}
     },
+
+    /**
+     * 处理退出登录
+     */
     async handleLogout() {
       try {
         await ElMessageBox.confirm('确定要退出登录吗？', '确认退出', {
@@ -226,11 +307,11 @@ export default {
         const token = localStorage.getItem('session_token')
         if (token) {
           // 调用登出API
-        try {
-          await requestMethod.post('/auth/logout', { session_token: token })
-        } catch (err) {
-          console.error('登出接口调用失败:', err)
-        }
+          try {
+            await requestMethod.post('/auth/logout', { session_token: token })
+          } catch (err) {
+            console.error('登出接口调用失败:', err)
+          }
         }
         
         // 清除本地存储
@@ -565,10 +646,10 @@ export default {
   align-items: center;
   gap: 12px;
   
+  // 原生头像样式
   .user-avatar {
     cursor: pointer;
     transition: all 0.3s ease;
-    border: 2px solid rgba(0,0,0,0.06);
     background-color: var(--bg-card);
     padding: 2px;
 
@@ -772,10 +853,3 @@ export default {
   }
 }
 </style>
-
-
-
-
-
-
-

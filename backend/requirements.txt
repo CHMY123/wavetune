@@ -44,3 +44,6 @@ qiniu==7.17.0
 # sklearn 库依赖
 scipy==1.16.3 
 threadpoolctl==3.6.0
+
+# boto3
+boto3==1.42.9

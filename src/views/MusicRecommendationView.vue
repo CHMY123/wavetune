@@ -778,7 +778,8 @@ export default {
             if (progressEvent.total) {
               this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
             }
-          }
+          },
+          timeout: 30 * 1000 // 30秒超时
         })
         if (res && res.code === 200 && res.data && res.data.src) {
           // 后端返回src和可能的元数据（标题、艺术家、时长、封面）

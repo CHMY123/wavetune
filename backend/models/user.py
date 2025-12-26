@@ -20,7 +20,7 @@ class User(Base):
     password_hash = Column(String(255), comment="密码哈希")
     email = Column(String(100), unique=True, comment="邮箱")
     phone = Column(String(20), comment="手机号")
-    avatar = Column(String(255), default="", comment="头像路径")
+    avatar = Column(Text, default="", comment="头像路径")
     detection_count = Column(Integer, default=0, comment="检测次数")
     intervention_count = Column(Integer, default=0, comment="干预次数")
     last_login_time = Column(DateTime, comment="最后登录时间")
