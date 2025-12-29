@@ -451,11 +451,7 @@ export default {
     const fetchUserInfo = async () => {
       try {
         const uid = getCurrentUserId()
-        // 增加超时配置：30秒
-        const result = await requestMethod.get('/auth/profile', { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        const result = await requestMethod.get('/auth/profile', { user_id: uid })
         if (result && result.code === 200) {
           // 解析 avatar 字段为可访问 URL
           const data = result.data || {}
@@ -514,10 +510,7 @@ export default {
       sessionsLoading.value = true
       try {
         const uid = getCurrentUserId()
-        const result = await requestMethod.get('/auth/sessions', { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        const result = await requestMethod.get('/auth/sessions', { user_id: uid })
         if (result && result.code === 200) {
           sessions.value = result.data.sessions || []
           // 找到当前会话
@@ -561,10 +554,7 @@ export default {
         }
 
         // 发送请求（增加超时）
-        const result = await requestMethod.put('/auth/profile', payload, { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        const result = await requestMethod.put('/auth/profile', payload, { user_id: uid })
 
         if (result && result.code === 200) {
           ElMessage.success('资料更新成功')
@@ -601,10 +591,7 @@ export default {
         const result = await requestMethod.put('/auth/preference', {
           preference_key: key,
           preference_value: value
-        }, { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        }, { user_id: uid })
         if (result && result.code === 200) {
           ElMessage.success('偏好设置已更新')
         } else {
@@ -630,10 +617,7 @@ export default {
         const result = await requestMethod.post('/auth/change-password', {
           old_password: passwordForm.old_password,
           new_password: passwordForm.new_password
-        }, { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        }, { user_id: uid })
         if (result && result.code === 200) {
           ElMessage.success('密码修改成功')
           resetPasswordForm()
@@ -662,10 +646,7 @@ export default {
         })
         
         const uid = getCurrentUserId()
-        const result = await requestMethod.delete(`/auth/session/${sessionId}`, { 
-          params: { user_id: uid },
-          timeout: 30000
-        })
+        const result = await requestMethod.delete(`/auth/session/${sessionId}`, { user_id: uid })
         if (result && result.code === 200) {
           ElMessage.success('会话已撤销')
           await fetchSessions()
@@ -692,10 +673,7 @@ export default {
         // 调用退出所有设备的API（增加超时）
         const uid = getCurrentUserId()
         try {
-          await requestMethod.post('/auth/logout-all', {}, { 
-            params: { user_id: uid },
-            timeout: 30000
-          })
+          await requestMethod.post('/auth/logout-all', {}, { user_id: uid })
         } catch (e) {
           console.warn('退出所有设备API调用失败，强制清理本地数据:', e)
         }
@@ -736,7 +714,7 @@ export default {
         const res = await requestMethod.post('/auth/delete', {
           session_token: token,
           user_id: uid
-        }, { timeout: 30000 })
+        })
 
         if (res && res.code === 200) {
           ElMessage.success('账户已删除')
@@ -789,7 +767,6 @@ export default {
         formData.append('user_id', String(getCurrentUserId()))
 
         const result = await requestMethod.postForm('/user/avatar/upload', formData, {
-          timeout: 30000,
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -865,14 +842,13 @@ export default {
       feedbackLoading.value = true
       try {
         const uid = getCurrentUserId()
-        const res = await requestMethod.get('/feedback/history', { 
-          params: { 
+        const res = await requestMethod.get('/feedback/history',  
+           { 
             user_id: uid, 
             page: page, 
             page_size: feedbackPageSize.value 
-          },
-          timeout: 30000
-        })
+          }
+        )
         if (res && res.code === 200) {
           feedbackList.value = res.data.list || []
           feedbackPage.value = res.data.page || page
@@ -934,7 +910,7 @@ export default {
           content: feedbackForm.content.trim(),
           score: 0
         }
-        const res = await requestMethod.post('/feedback/submit', payload, { timeout: 30000 })
+        const res = await requestMethod.post('/feedback/submit', payload)
         if (res && res.code === 200) {
           ElMessage.success('反馈提交成功')
           showFeedbackForm.value = false
