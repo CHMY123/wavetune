@@ -125,7 +125,10 @@
       @loadedmetadata="onLoaded" 
       @ended="onEnded"
       @error="handleAudioError"
+      @pause="handleUnexpectedPause"
       class="audio-element"
+      loop
+      preload="auto"
     >
       您的浏览器不支持HTML5音频播放
     </audio>
@@ -135,6 +138,8 @@
 <script>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { VideoPlay, VideoPause, Close } from '@element-plus/icons-vue'
+// 确保引入 ElMessage
+import { ElMessage } from 'element-plus'
 
 export default {
   name: 'MusicPlayer',
@@ -156,14 +161,16 @@ export default {
     const audioEl = ref(null)
     const progressSlider = ref(null)
     const isPlaying = ref(false)
-  const duration = ref(0)
+    const duration = ref(0)
     const currentTime = ref(0)
     const volume = ref(0.05)
     const isMuted = ref(false)
     const isSeeking = ref(false)
     const audioError = ref(null)
-  const isClosing = ref(false)
-  const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
+    const isClosing = ref(false)
+    const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
+    // 新增：记录是否是手动暂停，避免误恢复
+    const isManualPause = ref(false)
     
     // 检测系统暗色模式
     const isDarkMode = computed(() => {
@@ -197,6 +204,7 @@ export default {
         
         // 先重置播放状态
         isPlaying.value = false
+        isManualPause.value = false // 播放时标记为非手动暂停
         
         // 确保音频已加载
         if (audioEl.value.readyState < 2) {
@@ -240,6 +248,7 @@ export default {
         console.debug('[MusicPlayer] pause() called')
         audioEl.value.pause()
         isPlaying.value = false
+        isManualPause.value = true // 手动暂停标记
         console.info('[MusicPlayer] paused, isPlaying=', isPlaying.value)
       } catch (e) {
         console.warn('暂停音频时发生警告:', e)
@@ -248,6 +257,20 @@ export default {
 
     const togglePlay = () => {
       isPlaying.value ? pause() : play()
+    }
+
+    // 新增：处理意外暂停（浏览器自动暂停）
+    const handleUnexpectedPause = () => {
+      // 如果不是手动暂停、不是正在关闭、不是正在拖动进度条，且应该处于播放状态
+      if (!isManualPause.value && !isClosing.value && !isSeeking.value && isPlaying.value) {
+        console.debug('[MusicPlayer] 检测到意外暂停，尝试恢复播放')
+        // 延迟恢复，避免浏览器策略拦截
+        setTimeout(() => {
+          play().catch(err => {
+            console.warn('恢复播放失败:', err)
+          })
+        }, 100)
+      }
     }
 
     // 时间更新处理
@@ -382,7 +405,19 @@ export default {
     // 播放结束处理
     const onEnded = () => {
       isPlaying.value = false
+      isManualPause.value = true // 播放结束标记为手动暂停
       currentTime.value = 0
+    }
+
+    // 新增：页面可见性变化监听（核心解决切页面停止问题）
+    const handleVisibilityChange = () => {
+      // 页面从不可见变为可见
+      if (!document.hidden && isPlaying.value && !isManualPause.value && !isClosing.value) {
+        console.debug('[MusicPlayer] 页面切回，恢复播放')
+        play().catch(err => {
+          console.warn('页面切回恢复播放失败:', err)
+        })
+      }
     }
 
     // 轨道切换时重置状态
@@ -426,6 +461,7 @@ export default {
       duration.value = 0
       isPlaying.value = false
       isSeeking.value = false
+      isManualPause.value = false // 重置手动暂停标记
       audioError.value = null
     }
 
@@ -441,6 +477,7 @@ export default {
         audioEl.value.ontimeupdate = null
         audioEl.value.onloadedmetadata = null
         audioEl.value.onended = null
+        audioEl.value.onpause = null // 移除意外暂停监听
         // 清空音频源
         audioEl.value.src = ''
         // 加载空源以释放资源
@@ -468,30 +505,10 @@ export default {
       }, 50)
     }
 
-    // 组件卸载时清理
-    onBeforeUnmount(() => {
-      safelyCleanupAudio()
-      // 移除窗口大小监听
-      try { window.removeEventListener('resize', handleResize) } catch(e) {}
-    })
-
     // 窗口大小处理：用于动态计算播放器宽度
     const handleResize = () => {
       try { viewportWidth.value = window.innerWidth } catch(e) {}
     }
-    // 初始化并监听 resize
-    try { window.addEventListener('resize', handleResize) } catch(e) {}
-
-    const playerWidth = computed(() => {
-      // 宽度根据标题长度增长，但有最小/最大限制且不超过视口的 92%
-      const minW = 380
-      const maxW = Math.min(920, Math.floor(viewportWidth.value * 0.92))
-      const titleLen = props.track && props.track.title ? String(props.track.title).length : 0
-      const extra = Math.min(360, titleLen * 8) // 每个字符约 8px，限制最大扩展
-      const base = 420
-      const w = Math.max(minW, Math.min(maxW, base + extra))
-      return `${w}px`
-    })
 
     // 时间格式化工具函数
     const formatTime = (seconds) => {
@@ -522,6 +539,38 @@ export default {
       }
       return null
     }
+
+    // 组件挂载
+    onMounted(() => {
+      // 监听窗口大小变化
+      try { window.addEventListener('resize', handleResize) } catch(e) {}
+      // 新增：监听页面可见性变化
+      try { document.addEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
+      // 初始化时设置音频元素的 pause 事件监听
+      if (audioEl.value) {
+        audioEl.value.onpause = handleUnexpectedPause
+      }
+    })
+
+    // 组件卸载时清理
+    onBeforeUnmount(() => {
+      safelyCleanupAudio()
+      // 移除窗口大小监听
+      try { window.removeEventListener('resize', handleResize) } catch(e) {}
+      // 新增：移除页面可见性监听
+      try { document.removeEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
+    })
+
+    const playerWidth = computed(() => {
+      // 宽度根据标题长度增长，但有最小/最大限制且不超过视口的 92%
+      const minW = 380
+      const maxW = Math.min(920, Math.floor(viewportWidth.value * 0.92))
+      const titleLen = props.track && props.track.title ? String(props.track.title).length : 0
+      const extra = Math.min(360, titleLen * 8) // 每个字符约 8px，限制最大扩展
+      const base = 420
+      const w = Math.max(minW, Math.min(maxW, base + extra))
+      return `${w}px`
+    })
 
     return { 
       audioEl,
