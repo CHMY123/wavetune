@@ -91,7 +91,12 @@
               <button class="play-button" type="button" @click.stop="playTrack(music)" :aria-label="'播放 ' + (music.title || '歌曲')">
                 <VideoPlay class="play-svg-icon" />
               </button>
-              <el-button class="delete-music-btn" type="danger" size="small" @click.stop="deleteMusic(music.id)">删除</el-button>
+              <el-button 
+                class="delete-music-btn" 
+                type="danger" size="small" 
+                @click.stop="deleteMusic(music.id)">
+                删除
+              </el-button>
             </div>
             
             <!-- 信息区域 -->
@@ -196,8 +201,7 @@
                 @click="uploadFile" 
                 :disabled="!selectedFile"
               >
-                <el-icon v-if="!uploading"><UploadFilled /></el-icon>
-                <el-icon v-else><Loading /></el-icon>
+                <el-icon><UploadFilled /></el-icon>
                 {{ uploading ? '上传中' : '上传' }}
               </el-button>
             </div>
@@ -280,8 +284,7 @@
                   @click="uploadCover" 
                   :disabled="!selectedCoverFile"
                 >
-                  <el-icon v-if="!uploadingCover"><UploadFilled /></el-icon>
-                  <el-icon v-else><Loading /></el-icon>
+                  <el-icon><UploadFilled /></el-icon>
                   上传封面
                 </el-button>
               </div>

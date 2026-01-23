@@ -31,7 +31,7 @@
         
         <el-menu-item index="/fatigue-result">
           <el-icon><TrendCharts /></el-icon>
-          <span>检测结果</span>
+          <span>快速检测</span>
         </el-menu-item>
         
         <el-menu-item index="/music-recommendation">

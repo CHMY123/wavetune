@@ -138,8 +138,7 @@
               :loading="registerLoading"
               @click="handleRegister"
             >
-              <span v-if="!registerLoading">立即注册</span>
-              <el-icon v-else class="loading-icon"><Loading /></el-icon>
+              立即注册
             </el-button>
           </el-form-item>
           

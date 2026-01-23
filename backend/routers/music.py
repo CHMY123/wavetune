@@ -36,7 +36,6 @@ except Exception as e:
 
 from config.database import get_db
 from models.music import Music
-from utils import qiniu_helper
 from utils import s3_helper
 
 router = APIRouter()
@@ -210,21 +209,22 @@ async def delete_music(music_id: int, delete_files: Optional[bool] = Query(False
                             from urllib.parse import urlparse
                             parsed = urlparse(url)
                             path = parsed.path
-                            # 如果属于七牛域名，尝试删除七牛上的对象
-                            # 七牛域名应配置在 qiniu_helper.QINIU_DOMAIN
                             try:
                                 domain = parsed.netloc
-                                if qiniu_helper.QINIU_DOMAIN and domain.endswith(qiniu_helper.QINIU_DOMAIN):
+                                # 仅处理S3存储文件删除
+                                if s3_helper.S3_ENDPOINT and domain in s3_helper.make_url(""):
                                     # path 以 /key 开头，去掉前导 /
                                     key = parsed.path.lstrip('/')
                                     try:
-                                        qiniu_helper.delete_key(key)
-                                        logger.info(f"成功删除七牛云文件，Key：{key}")
+                                        # 补充S3删除逻辑（若s3_helper提供删除方法）
+                                        if hasattr(s3_helper, 'delete_key'):
+                                            s3_helper.delete_key(key)
+                                            logger.info(f"成功删除S3文件，Key：{key}")
                                     except Exception as e:
-                                        logger.warning(f"删除七牛云文件失败，Key：{key}，异常信息：{str(e)}")
+                                        logger.warning(f"删除S3文件失败，Key：{key}，异常信息：{str(e)}")
                                     return
                             except Exception as e:
-                                logger.warning(f"解析七牛云域名失败，URL：{url}，异常信息：{str(e)}")
+                                logger.warning(f"解析S3域名失败，URL：{url}，异常信息：{str(e)}")
                     except Exception as e:
                         logger.warning(f"解析URL失败，URL：{url}，异常信息：{str(e)}")
 
@@ -289,7 +289,7 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
         finally:
             tmp.close()
 
-        # 优先使用 S3（缤纷云），其次使用七牛，最后回退到本地静态目录
+        # 优先使用 S3，最后回退到本地静态目录
         meta = {}
         used_local_tmp = True
         full_src = ""
@@ -324,32 +324,8 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
                     logger.info(f"S3上传成功，完整URL：{full_src}，相对路径：{src_path}")
                 else:
                     raise Exception(f'S3 upload failed，状态码：{status}，响应信息：{info}')
-                
-            elif qiniu_helper.QINIU_BUCKET:
-                logger.info("开始尝试上传到七牛云")
-                with open(tmp_path, 'rb') as fobj:
-                    data = fobj.read()
-                key = f"music/{filename}"
-                logger.info(f"七牛上传Key：{key}，待上传数据大小：{len(data) / 1024 / 1024:.2f} MB")
-                
-                # 记录七牛上传耗时
-                start_qiniu_upload = time.time()
-                ret, info = qiniu_helper.upload_bytes(data, key)
-                qiniu_upload_cost = time.time() - start_qiniu_upload
-                logger.info(f"七牛上传接口调用完成，耗时：{qiniu_upload_cost:.2f} 秒，返回结果：{ret}，响应信息：{info}")
-                
-                try:
-                    if getattr(info, 'status_code', None) == 200:
-                        full_src = qiniu_helper.make_url(key)
-                        src_path = f"/{key}"
-                        used_local_tmp = False
-                        logger.info(f"七牛上传成功，完整URL：{full_src}，相对路径：{src_path}")
-                    else:
-                        raise Exception(f'Qiniu upload failed，状态码：{getattr(info, "status_code", None)}')
-                except Exception:
-                    raise
             else:
-                logger.info("未配置云存储，准备回退到本地静态目录保存")
+                logger.info("未配置S3云存储，准备回退到本地静态目录保存")
                 # 未配置云存储，回退到本地静态目录
                 root_dir = os.path.dirname(os.path.dirname(__file__))
                 static_music_dir = os.path.abspath(os.path.join(root_dir, '..', 'static', 'music'))
@@ -367,7 +343,7 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
                     full_src = src_path
                 logger.info(f"本地静态目录保存成功，保存路径：{save_path}，完整URL：{full_src}，相对路径：{src_path}")
         except Exception as e:
-            logger.warning(f"云存储上传失败，回退到本地静态目录，异常信息：{str(e)}")
+            logger.warning(f"S3云存储上传失败，回退到本地静态目录，异常信息：{str(e)}")
             # 回退到本地静态目录
             root_dir = os.path.dirname(os.path.dirname(__file__))
             static_music_dir = os.path.abspath(os.path.join(root_dir, '..', 'static', 'music'))
@@ -397,7 +373,7 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
                 full_src = src_path
             logger.info(f"本地静态目录备份保存成功，完整URL：{full_src}，相对路径：{src_path}")
         storage_cost = time.time() - start_storage_time
-        logger.info(f"存储流程（云存储/本地）总耗时：{storage_cost:.2f} 秒")
+        logger.info(f"存储流程（S3/本地）总耗时：{storage_cost:.2f} 秒")
 
         # 提取元数据与封面（如果可用）
         start_meta_extract = time.time()
@@ -438,11 +414,6 @@ async def upload_music_file(request: Request, file: UploadFile = File(...)):
                                 if status2 == 200:
                                     meta['cover'] = s3_helper.make_url(cover_key)
                                     logger.info(f"封面上传S3成功，URL：{meta['cover']}")
-                            elif qiniu_helper.QINIU_BUCKET:
-                                ret2, info2 = qiniu_helper.upload_bytes(cover_bytes, cover_key)
-                                if getattr(info2, 'status_code', None) == 200:
-                                    meta['cover'] = qiniu_helper.make_url(cover_key)
-                                    logger.info(f"封面上传七牛成功，URL：{meta['cover']}")
                             else:
                                 # 保存为本地静态文件（music_cover 目录）
                                 root_dir = os.path.dirname(os.path.dirname(__file__))
@@ -528,29 +499,30 @@ async def upload_cover_file(request: Request, file: UploadFile = File(...)):
             counter += 1
         logger.info(f"生成唯一封面文件名：{filename}（原始文件名：{file.filename}）")
 
-        # 如果配置了七牛，优先上传到七牛
-        start_qiniu_cover = time.time()
+        # 优先上传到S3
+        start_s3_cover = time.time()
         try:
             # 读取流到内存（通常为图片，大小可控）
             file.file.seek(0)
             content = file.file.read()
             logger.info(f"读取封面文件内容完成，大小：{len(content) / 1024:.2f} KB")
-            if qiniu_helper.QINIU_BUCKET:
+            if s3_helper.S3_ENDPOINT:
                 key = f"music_cover/{filename}"
-                ret, info = qiniu_helper.upload_bytes(content, key)
-                qiniu_cover_cost = time.time() - start_qiniu_cover
-                logger.info(f"七牛封面上传耗时：{qiniu_cover_cost:.2f} 秒，状态码：{info.status_code}")
-                if info.status_code == 200:
-                    full = qiniu_helper.make_url(key)
+                ret, info = s3_helper.upload_bytes(content, key)
+                s3_cover_cost = time.time() - start_s3_cover
+                status = ret.get('ResponseMetadata', {}).get('HTTPStatusCode') if ret else None
+                logger.info(f"S3封面上传耗时：{s3_cover_cost:.2f} 秒，状态码：{status}")
+                if status == 200:
+                    full = s3_helper.make_url(key)
                     rel = f"/{key}"
                     total_cost = time.time() - start_total_time
-                    logger.info(f"===== 封面图片上传（七牛）成功，总耗时：{total_cost:.2f} 秒，URL：{full} =====")
+                    logger.info(f"===== 封面图片上传（S3）成功，总耗时：{total_cost:.2f} 秒，URL：{full} =====")
                     return {"code": 200, "msg": "上传成功", "data": {"cover": full, "cover_rel": rel}}
                 else:
-                    logger.warning(f"七牛封面上传失败，状态码：{info.status_code}，回退到本地保存")
+                    logger.warning(f"S3封面上传失败，状态码：{status}，回退到本地保存")
         except Exception as e:
-            qiniu_cover_cost = time.time() - start_qiniu_cover
-            logger.warning(f"七牛封面上传异常，耗时：{qiniu_cover_cost:.2f} 秒，异常信息：{str(e)}，回退到本地保存")
+            s3_cover_cost = time.time() - start_s3_cover
+            logger.warning(f"S3封面上传异常，耗时：{s3_cover_cost:.2f} 秒，异常信息：{str(e)}，回退到本地保存")
 
         # 回退到本地保存
         start_local_cover = time.time()

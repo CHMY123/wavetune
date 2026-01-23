@@ -13,7 +13,6 @@ from datetime import datetime
 from config.database import get_db
 from models.user import User
 from schemas.user import UserUpdate, UserCountUpdate
-from utils import qiniu_helper
 from utils import s3_helper
 
 router = APIRouter()
@@ -112,44 +111,24 @@ async def upload_avatar(
         file_id = str(uuid.uuid4())
         filename = f"{user_id}_{file_id}{file_extension}"
 
-        # 优先使用七牛上传（需在 .env 中配置 QINIU_BUCKET 和 QINIU_DOMAIN）
+        # 优先使用 S3（缤纷云），失败则回退到本地存储
         try:
             content = await avatar.read()
-            # 优先使用 S3（缤纷云）配置
-            try:
-                if s3_helper.S3_ENDPOINT:
-                    key = f"avatar/{filename}"
-                    resp, info = s3_helper.upload_bytes(content, key)
-                    status = None
-                    try:
-                        status = resp.get('ResponseMetadata', {}).get('HTTPStatusCode')
-                    except Exception:
-                        pass
-                    if status == 200 or (isinstance(info, dict) and info.get('status_code') == 200):
-                        avatar_url = s3_helper.make_url(key)
-                    else:
-                        raise Exception('S3 upload failed')
-                # 否则回退到七牛（如果配置）
-                elif qiniu_helper.QINIU_BUCKET:
-                    key = f"avatar/{filename}"
-                    ret, info = qiniu_helper.upload_bytes(content, key)
-                    try:
-                        if getattr(info, 'status_code', None) == 200:
-                            avatar_url = qiniu_helper.make_url(key)
-                        else:
-                            raise Exception('Qiniu upload failed')
-                    except Exception:
-                        raise
+            # 优先使用 S3 配置上传
+            if s3_helper.S3_ENDPOINT:
+                key = f"avatar/{filename}"
+                resp, info = s3_helper.upload_bytes(content, key)
+                status = None
+                try:
+                    status = resp.get('ResponseMetadata', {}).get('HTTPStatusCode')
+                except Exception:
+                    pass
+                if status == 200 or (isinstance(info, dict) and info.get('status_code') == 200):
+                    avatar_url = s3_helper.make_url(key)
                 else:
-                    # 未配置任何云存储，保存到本地
-                    upload_dir = "static/avatar"
-                    os.makedirs(upload_dir, exist_ok=True)
-                    file_path = os.path.join(upload_dir, filename)
-                    with open(file_path, "wb") as buffer:
-                        buffer.write(content)
-                    avatar_url = f"/static/avatar/{filename}"
-            except Exception as e:
-                # 回退到本地保存
+                    raise Exception('S3 upload failed')
+            else:
+                # 未配置 S3，直接保存到本地
                 upload_dir = "static/avatar"
                 os.makedirs(upload_dir, exist_ok=True)
                 file_path = os.path.join(upload_dir, filename)
@@ -157,7 +136,15 @@ async def upload_avatar(
                     buffer.write(content)
                 avatar_url = f"/static/avatar/{filename}"
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"头像上传失败: {str(e)}")
+            # S3 上传失败，回退到本地保存
+            upload_dir = "static/avatar"
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, filename)
+            with open(file_path, "wb") as buffer:
+                buffer.write(content)
+            avatar_url = f"/static/avatar/{filename}"
+        
+        # 更新用户头像信息
         user.avatar = avatar_url
         user.update_time = datetime.now()
         
@@ -215,7 +202,3 @@ async def update_user_count(count_data: UserCountUpdate, db: Session = Depends(g
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"更新统计次数失败: {str(e)}")
-
-
-
-

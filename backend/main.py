@@ -22,20 +22,67 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# 导入路由（如果缺少这些文件，需要先创建或注释掉）
+# ========== 导入路由（修复核心：区分模块导入和 APIRouter 实例提取） ==========
+from fastapi import APIRouter
+
+# 1. 初始化空的 APIRouter 实例（用于容错，导入失败时使用）
+auth_router = APIRouter()
+system_router = APIRouter()
+user_router = APIRouter()
+feedback_router = APIRouter()
+music_router = APIRouter()
+scene_router = APIRouter()
+detection_router = APIRouter()
+
+# 2. 逐个导入路由模块，提取内部的 router 实例（避免一个模块失败影响全部）
 try:
-    from routers import system, user, feedback, music, scene, auth, detection
+    from routers import auth
+    # 提取模块内的 APIRouter 实例（每个路由文件都有 router = APIRouter()）
+    auth_router = auth.router if hasattr(auth, 'router') else APIRouter()
 except ImportError as e:
-    logging.warning(f"⚠️ 部分路由模块导入失败：{e}，请确保routers目录存在并包含对应文件")
-    # 临时创建空路由避免启动报错（实际使用时需补全routers代码）
-    from fastapi import APIRouter
-    system = user = feedback = music = scene = auth = detection = APIRouter()
+    logging.warning(f"⚠️  auth 路由模块导入失败：{e}，请确保 routers/auth.py 存在并正确")
+
+try:
+    from routers import system
+    system_router = system.router if hasattr(system, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  system 路由模块导入失败：{e}，请确保 routers/system.py 存在并正确")
+
+try:
+    from routers import user
+    user_router = user.router if hasattr(user, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  user 路由模块导入失败：{e}，请确保 routers/user.py 存在并正确")
+
+try:
+    from routers import feedback
+    feedback_router = feedback.router if hasattr(feedback, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  feedback 路由模块导入失败：{e}，请确保 routers/feedback.py 存在并正确")
+
+try:
+    from routers import music
+    music_router = music.router if hasattr(music, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  music 路由模块导入失败：{e}，请确保 routers/music.py 存在并正确")
+
+try:
+    from routers import scene
+    scene_router = scene.router if hasattr(scene, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  scene 路由模块导入失败：{e}，请确保 routers/scene.py 存在并正确")
+
+try:
+    from routers import detection
+    detection_router = detection.router if hasattr(detection, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  detection 路由模块导入失败：{e}，请确保 routers/detection.py 存在并正确")
 
 # 导入数据库配置（如果缺少，临时注释避免报错）
 try:
     from config.database import engine, Base
 except ImportError as e:
-    logging.warning(f"⚠️ 数据库配置导入失败：{e}，请确保config/database.py存在")
+    logging.warning(f"⚠️  数据库配置导入失败：{e}，请确保 config/database.py 存在")
     # 临时创建空对象避免报错
     class MockBase:
         class metadata:
@@ -63,10 +110,10 @@ async def lifespan(app: FastAPI):
             Base.metadata.create_all(bind=engine)
             logging.info("✅ 数据库表创建完成")
         else:
-            logging.warning("⚠️ 未配置数据库引擎，跳过表创建")
+            logging.warning("⚠️  未配置数据库引擎，跳过表创建")
     except Exception as e:
         logging.error(f"❌ 数据库表创建失败：{str(e)}")
-        logging.warning("⚠️ 服务将继续运行，数据库相关功能暂不可用")
+        logging.warning("⚠️  服务将继续运行，数据库相关功能暂不可用")
     
     yield
     
@@ -92,14 +139,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ========== 注册后端API路由 ==========
-app.include_router(auth.router, prefix="/api/auth", tags=["用户认证"])
-app.include_router(system.router, prefix="/api/system", tags=["系统统计"])
-app.include_router(user.router, prefix="/api/user", tags=["用户管理"])
-app.include_router(feedback.router, prefix="/api/feedback", tags=["用户反馈"])
-app.include_router(music.router, prefix="/api/music", tags=["音乐推荐"])
-app.include_router(scene.router, prefix="/api/scene", tags=["场景配置"])
-app.include_router(detection.router, prefix="/api/detection", tags=["快速检测"])
+# ========== 注册后端API路由（正确传入 APIRouter 实例） ==========
+app.include_router(auth_router, prefix="/api/auth", tags=["用户认证"])
+app.include_router(system_router, prefix="/api/system", tags=["系统统计"])
+app.include_router(user_router, prefix="/api/user", tags=["用户管理"])
+app.include_router(feedback_router, prefix="/api/feedback", tags=["用户反馈"])
+app.include_router(music_router, prefix="/api/music", tags=["音乐推荐"])
+app.include_router(scene_router, prefix="/api/scene", tags=["场景配置"])
+app.include_router(detection_router, prefix="/api/detection", tags=["快速检测"])
 
 # ========== 全局异常处理器 ==========
 @app.exception_handler(HTTPException)

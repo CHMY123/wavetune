@@ -81,8 +81,7 @@
                 :loading="loginLoading"
                 @click="handleLogin"
               >
-                <span v-if="!loginLoading">登录</span>
-                <el-icon v-else class="loading-icon"><Loading /></el-icon>
+                登录
               </el-button>
               <p class="demo-account-info" v-if="!loginLoading">
                 测试账号: <span class="account-text">20232005118</span> / <span class="password-text">123456</span>

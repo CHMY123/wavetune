@@ -17,7 +17,6 @@ from schemas.auth import (
     UserRegister, UserLogin, UserLogout, ChangePassword, 
     ResetPassword, UserProfileUpdate, UserPreferenceUpdate, UserDelete
 )
-from utils import qiniu_helper
 
 router = APIRouter()
 
@@ -259,7 +258,6 @@ async def logout_user(
         log_operation(db, None, "user_logout", f"登出失败-{str(e)}", request, 500)
         raise HTTPException(status_code=500, detail=f"登出失败: {str(e)}")
 
-
 @router.post("/delete")
 async def delete_user_account(
     delete_data: UserDelete,
@@ -294,24 +292,7 @@ async def delete_user_account(
         # 最后删除用户记录
         u = db.query(User).filter(User.id == user_id).first()
         if u:
-            # 如果用户头像指向七牛域名，尝试删除七牛对象（容错，不影响主流程）
-            try:
-                avatar = (u.avatar or '').strip()
-                if avatar and avatar.startswith('http') and qiniu_helper.QINIU_DOMAIN:
-                    try:
-                        from urllib.parse import urlparse
-                        parsed = urlparse(avatar)
-                        domain = parsed.netloc
-                        if domain.endswith(qiniu_helper.QINIU_DOMAIN):
-                            key = parsed.path.lstrip('/')
-                            try:
-                                qiniu_helper.delete_key(key)
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            # 直接删除用户记录（头像文件若存储在S3/本地，可后续批量清理）
             db.delete(u)
 
         db.commit()
@@ -623,5 +604,3 @@ async def revoke_session(
         db.rollback()
         log_operation(db, user_id, "revoke_session", f"撤销会话失败-{str(e)}", request, 500)
         raise HTTPException(status_code=500, detail=f"撤销会话失败: {str(e)}")
-
-

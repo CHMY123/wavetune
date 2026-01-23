@@ -5,7 +5,7 @@ export function resolveMedia(url) {
   if (!url) return url
   try {
     const s = String(url)
-    if (s.startsWith('https')) return s
+    if (s.startsWith('http')) return s
     // 保证以 / 开头
     const path = s.startsWith('/') ? s : `/${s}`
 
