@@ -131,7 +131,7 @@
     <div class="quick-actions">
       <h3 class="section-title">快速操作</h3>
       <div class="action-buttons">
-        <el-button class="action-btn primary-btn" size="large" @click="$router.push('/fatigue-result')">
+        <el-button class="action-btn primary-btn" size="large" @click="$router.push('/quick-detection')">
           <img src="/static/icon/result.png" class="btn-icon-large" alt="检测结果" />
           <span>查看检测结果</span>
         </el-button>
@@ -172,7 +172,7 @@ export default {
           description: '基于多模态生理信号实时监测脑疲劳状态，提供准确的疲劳等级评估',
           iconSrc: '/static/icon/result.png',
           iconClass: 'detection',
-          route: '/fatigue-result',
+          route: '/quick-detection',
           buttonText: '查看结果'
         },
         {

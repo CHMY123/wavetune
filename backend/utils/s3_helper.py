@@ -17,7 +17,7 @@ S3_REGION = os.getenv('S3_REGION')
 S3_ACCESS_KEY_ID = os.getenv('S3_ACCESS_KEY_ID') or os.getenv('S3ACCESSKEYID')
 S3_SECRET_ACCESS_KEY = os.getenv('S3_SECRET_ACCESS_KEY') or os.getenv('S3SECRETKEYID')
 S3_BUCKET = os.getenv('S3_BUCKET')  # optional; endpoint may already include bucket
-S3_PUBLIC = os.getenv('S3_PUBLIC', 'false').lower() in ('1', 'true', 'yes')
+S3_PUBLIC = os.getenv('S3_PUBLIC', 'true').lower() in ('1', 'true', 'yes')
 S3_PRESIGN_EXPIRES = int(os.getenv('S3_PRESIGN_EXPIRES', '36000'))
 
 # 日志配置

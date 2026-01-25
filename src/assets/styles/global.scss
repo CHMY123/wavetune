@@ -312,3 +312,59 @@ a {
     pointer-events: none;
   }
 }
+
+// 深色主题样式
+.theme-dark {
+  // 文字颜色
+  --text-primary: var(--dark-text-primary);
+  --text-regular: var(--dark-text-secondary);
+  --text-secondary: var(--dark-text-muted);
+  
+  // 背景颜色
+  --bg-page: #111827;
+  --bg-card: var(--dark-background-color-card);
+  --background-color-light: var(--dark-background-color-light);
+  --background-color-dark: #1f2937;
+  --background-color-input: var(--dark-background-color-input);
+  
+  // 边框颜色
+  --border-color: var(--dark-border-light);
+  --border-light: var(--dark-border-light);
+  --border-lighter: #374151;
+  --border-extra-light: #4b5563;
+  
+  // 调整阴影颜色
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  
+  // 调整其他颜色
+  body {
+    background-color: var(--bg-page);
+    background-image: radial-gradient(rgba(24, 144, 255, 0.05) 1px, transparent 1px);
+  }
+  
+  .card {
+    background-color: var(--bg-card);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .music-card {
+    background-color: var(--bg-card);
+  }
+  
+  .business-card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    
+    &:hover {
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+// 确保主题切换时的平滑过渡
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}

@@ -20,7 +20,7 @@
         <div class="link-group">
           <h4 class="link-title">功能模块</h4>
           <ul class="link-list">
-            <li><router-link to="/fatigue-result">检测结果</router-link></li>
+            <li><router-link to="/quick-detection">检测结果</router-link></li>
             <li><router-link to="/music-recommendation">音乐推荐</router-link></li>
             <li><router-link to="/signal-monitor">信号监测</router-link></li>
             <li><router-link to="/federated/status">联邦学习</router-link></li>
@@ -72,6 +72,7 @@ export default {
   flex-shrink: 0; 
   box-sizing: border-box;
   position: relative; // 确保层级，防止被遮挡
+  min-height: 200px; // 确保有足够的高度显示内容
 }
 
 .footer-content {

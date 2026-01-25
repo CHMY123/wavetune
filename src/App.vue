@@ -83,15 +83,28 @@ export default {
 // 平滑滚动
 html {
   scroll-behavior: smooth;
-  height: 100%; // 新增：确保html占满视口高度
+  height: 100%; // 确保html占满视口高度
   box-sizing: border-box;
 }
 
 body {
-  height: 100%; // 新增：确保body占满视口高度
-  margin: 0; // 新增：移除body默认margin
-  padding: 0; // 新增：移除body默认padding
+  height: 100%; // 确保body占满视口高度
+  margin: 0; // 移除body默认margin
+  padding: 0; // 移除body默认padding
   box-sizing: border-box;
+}
+
+// 响应式布局优化
+@media (max-width: 768px) {
+  .app-main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-main {
+    padding: 12px;
+  }
 }
 
 // 自定义滚动条

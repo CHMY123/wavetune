@@ -151,7 +151,7 @@
   </div>
   
   <!-- 音乐播放器组件 -->
-  <MusicPlayer v-if="showPlayer" :track="selectedTrack" :autoPlay="autoPlay" @close="showPlayer = false" />
+  <MusicPlayer />
 
   <!-- 添加音乐弹窗 -->
   <el-dialog 
@@ -329,6 +329,7 @@ import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
 import { resolveMedia } from '@/utils/media'
 import { ElDialog, ElButton, ElSelect, ElOption } from 'element-plus'
+import { usePlayerStore } from '@/stores/playerStore'
 
 export default {
   name: 'MusicRecommendationView',
@@ -360,9 +361,7 @@ export default {
       loadMoreObserver: null, // 加载更多观察器
       isLoadingMore: false, // 是否正在加载更多
       loadMoreTrigger: null, // 加载更多触发元素引用
-  selectedTrack: null,
-  showPlayer: false,
-  autoPlay: (function(){
+      autoPlay: (function(){
         try{
           const u = JSON.parse(localStorage.getItem('user')||'null')
           return u?.preferences?.auto_play === 'true'
@@ -686,8 +685,8 @@ export default {
         return
       }
 
-      this.selectedTrack = track
-      this.showPlayer = true
+      // 使用playerStore播放音乐
+      this.playerStore.playTrack(track)
     },
     async addMusic() {
       try {
@@ -854,6 +853,9 @@ export default {
     }
   },
   mounted() {
+    // 初始化playerStore
+    this.playerStore = usePlayerStore()
+    
     // 当页面挂载时，优先从路由 query 或 localStorage 读取固定的疲劳等级
     const routeLevel = this.$route?.query?.fatigue
     if (routeLevel) {

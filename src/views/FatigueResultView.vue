@@ -1,5 +1,5 @@
 <template>
-  <div class="fatigue-result-view">
+  <div class="quick-detection-view">
     <!-- 顶部区域 -->
     <div class="top-section">
       <el-page-header @back="$router.go(-1)" content="脑疲劳检测结果">
@@ -228,7 +228,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.fatigue-result-view {
+.quick-detection-view {
   max-width: 1200px;
   margin: 0 auto;
   background: var(--bg-card);

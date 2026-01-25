@@ -5,6 +5,7 @@ import 'element-plus/dist/index.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
+import axios from 'axios'
 import { setupErrorHandler } from './utils/errorHandler.js'
 import './assets/styles/_variables.scss'
 
@@ -22,6 +23,18 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(pinia)
 app.use(ElementPlus)
 app.use(router)
+
+// 创建 axios 实例
+const axiosInstance = axios.create({
+  baseURL: 'http://localhost:8000',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
+// 挂载 axios 到 Vue 原型
+app.config.globalProperties.$axios = axiosInstance
 
 // Vue 应用级别的错误处理
 app.config.errorHandler = (err, vm, info) => {

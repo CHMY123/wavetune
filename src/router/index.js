@@ -20,9 +20,19 @@ const routes = [
     meta: { requiresGuest: true }
   },
   {
-    path: '/fatigue-result',
-    name: 'fatigue-result',
+    path: '/quick-detection',
+    name: 'quick-detection',
+    component: () => import(/* webpackChunkName: "fatigue" */ '../views/QuickDetectionChoiceView.vue')
+  },
+  {
+    path: '/quick-detection/direct',
+    name: 'direct-detection',
     component: () => import(/* webpackChunkName: "fatigue" */ '../views/FatigueResultView.vue')
+  },
+  {
+    path: '/quick-detection/two-back',
+    name: 'two-back-experiment',
+    component: () => import(/* webpackChunkName: "fatigue" */ '../views/TwoBackExperimentView.vue')
   },
   {
     path: '/music-recommendation',

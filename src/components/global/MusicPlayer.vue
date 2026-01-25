@@ -1,5 +1,5 @@
 <template>
-  <div class="music-player" v-if="track" :class="{ 'dark-mode': isDarkMode }" :style="{ width: playerWidth }">
+  <div class="music-player" v-if="playerStore.showPlayer && playerStore.currentTrack" :class="{ 'dark-mode': isDarkMode }">
     <!-- 背景渐变层 -->
     <div class="bg-overlay" :style="{ backgroundImage: `linear-gradient(to top, ${getAccentColor}20, transparent)` }"></div>
     
@@ -14,7 +14,7 @@
           <!-- 唱片主体 -->
           <div class="record">
             <img 
-              :src="track.cover" 
+              :src="currentTrack.cover" 
               alt="专辑封面" 
               class="record-cover" 
               loading="lazy"
@@ -35,13 +35,13 @@
       <!-- 信息与控制区域 -->
       <div class="meta-controls">
         <div class="meta">
-          <h2 class="title" :title="track.title">
-            <span class="text" :data-text="track.title">{{ track.title }}</span>
+          <h2 class="title" :title="currentTrack.title">
+            <span class="text" :data-text="currentTrack.title">{{ currentTrack.title }}</span>
           </h2>
-          <p class="artist" :title="track.artist">{{ track.artist }}</p>
-          <p class="reason" v-if="track.reason" :title="track.reason">
+          <p class="artist" :title="currentTrack.artist">{{ currentTrack.artist }}</p>
+          <p class="reason" v-if="currentTrack.reason" :title="currentTrack.reason">
             <span class="reason-icon">♪</span>
-            {{ track.reason }}
+            {{ currentTrack.reason }}
           </p>
         </div>
         
@@ -73,16 +73,50 @@
         
         <!-- 控制按钮区域 -->
         <div class="controls">
-          <!-- 播放/暂停按钮 -->
-          <button 
-            class="play-btn" 
-            @click="togglePlay" 
-            :aria-label="isPlaying ? '暂停' : '播放'"
-            :style="{ background: getAccentGradient }"
-          >
-            <el-icon v-if="!isPlaying" class="play-icon"><VideoPlay /></el-icon>
-            <el-icon v-else class="pause-icon"><VideoPause /></el-icon>
-          </button>
+          <div class="control-group">
+            <!-- 上一首按钮 -->
+            <button 
+              class="control-btn prev-btn" 
+              @click="playPrevious" 
+              :aria-label="'上一首'"
+              :disabled="!hasPrevTrack"
+            >
+              <el-icon class="control-icon"><ArrowLeft /></el-icon>
+            </button>
+            
+            <!-- 播放/暂停按钮 -->
+            <button 
+              class="play-btn" 
+              @click="togglePlay" 
+              :aria-label="isPlaying ? '暂停' : '播放'"
+              :style="{ background: getAccentGradient }"
+            >
+              <el-icon v-if="!isPlaying" class="play-icon"><VideoPlay /></el-icon>
+              <el-icon v-else class="pause-icon"><VideoPause /></el-icon>
+            </button>
+            
+            <!-- 下一首按钮 -->
+            <button 
+              class="control-btn next-btn" 
+              @click="playNext" 
+              :aria-label="'下一首'"
+              :disabled="!hasNextTrack"
+            >
+              <el-icon class="control-icon"><ArrowRight /></el-icon>
+            </button>
+            
+            <!-- 循环模式按钮 -->
+            <button 
+              class="control-btn repeat-btn" 
+              @click="toggleRepeatMode" 
+              :aria-label="getRepeatModeLabel"
+              :class="{ 'active': repeatMode !== 'list' }"
+            >
+              <el-icon v-if="repeatMode === 'list'" class="repeat-icon"><Refresh /></el-icon>
+              <el-icon v-else-if="repeatMode === 'single'" class="repeat-icon"><RefreshLeft /></el-icon>
+              <el-icon v-else class="repeat-icon"><Rank /></el-icon>
+            </button>
+          </div>
           
           <!-- 音量控制 -->
           <div class="volume-controls">
@@ -118,491 +152,457 @@
     </div>
     
     <!-- 音频元素 -->
-    <audio 
-      ref="audioEl" 
-      :src="track.src" 
-      @timeupdate="onTimeUpdate" 
-      @loadedmetadata="onLoaded" 
-      @ended="onEnded"
-      @error="handleAudioError"
-      @pause="handleUnexpectedPause"
-      class="audio-element"
-      loop
-      preload="auto"
-    >
-      您的浏览器不支持HTML5音频播放
-    </audio>
+  <audio 
+    ref="audioEl" 
+    :src="currentTrack?.src || ''" 
+    @timeupdate="onTimeUpdate" 
+    @loadedmetadata="onLoaded" 
+    @ended="onEnded"
+    @error="handleAudioError"
+    @pause="handleUnexpectedPause"
+    class="audio-element"
+    preload="auto"
+  >
+    您的浏览器不支持HTML5音频播放
+  </audio>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { VideoPlay, VideoPause, Close } from '@element-plus/icons-vue'
-// 确保引入 ElMessage
+import { VideoPlay, VideoPause, Close, ArrowLeft, ArrowRight, Refresh, RefreshLeft, Rank } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { usePlayerStore } from '../../stores/playerStore'
 
-export default {
-  name: 'MusicPlayer',
-  components: { VideoPlay, VideoPause, Close },
-  props: {
-    track: { 
-      type: Object, 
-      required: true,
-      validator: (value) => {
-        return value && value.title && value.artist && value.src;
-      }
-    },
-    autoPlay: { type: Boolean, default: false },
-    accentColor: { type: String, default: '#10b981' }
-  },
-  emits: ['close', 'error'],
-  setup(props, { emit }) {
-    // 音频核心状态
-    const audioEl = ref(null)
-    const progressSlider = ref(null)
-    const isPlaying = ref(false)
-    const duration = ref(0)
-    const currentTime = ref(0)
-    const volume = ref(0.05)
-    const isMuted = ref(false)
-    const isSeeking = ref(false)
-    const audioError = ref(null)
-    const isClosing = ref(false)
-    const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
-    // 新增：记录是否是手动暂停，避免误恢复
-    const isManualPause = ref(false)
-    
-    // 检测系统暗色模式
-    const isDarkMode = computed(() => {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    })
-    
-    // 获取主题色
-    const getAccentColor = computed(() => {
-      return props.accentColor || (isDarkMode.value ? '#34d399' : '#10b981')
-    })
-    
-    const getAccentGradient = computed(() => {
-      const color = getAccentColor.value
-      return `linear-gradient(135deg, ${color}, ${color.replace('1)', '9)').replace('399', '81')})`
-    })
+// 使用 Pinia store
+const playerStore = usePlayerStore()
 
-    // 播放函数 - 增强错误处理和状态检查
-    const play = async () => {
-      if (!audioEl.value || !props.track) {
-        console.error('播放失败: 缺少音频元素或曲目信息')
+// 音频元素引用
+const audioEl = ref(null)
+const progressSlider = ref(null)
+const isSeeking = ref(false)
+const isClosing = ref(false)
+const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
+const isManualPause = ref(false)
+
+// 直接使用playerStore状态，不再需要computed包装
+const currentTrack = computed(() => playerStore.currentTrack)
+const isPlaying = computed(() => playerStore.isPlaying)
+const duration = computed(() => playerStore.duration)
+const currentTime = computed(() => playerStore.currentTime)
+const volume = computed({
+  get: () => playerStore.volume,
+  set: (value) => playerStore.setVolume(value)
+})
+const isMuted = computed({
+  get: () => playerStore.isMuted,
+  set: (value) => playerStore.setIsMuted(value)
+})
+const repeatMode = computed(() => playerStore.repeatMode)
+const hasNextTrack = computed(() => playerStore.hasNextTrack)
+const hasPrevTrack = computed(() => playerStore.hasPrevTrack)
+
+// 检测系统暗色模式
+const isDarkMode = computed(() => {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+})
+
+// 获取主题色
+const getAccentColor = computed(() => {
+  return isDarkMode.value ? '#34d399' : '#10b981'
+})
+
+const getAccentGradient = computed(() => {
+  const color = getAccentColor.value
+  return `linear-gradient(135deg, ${color}, ${color.replace('1)', '9)').replace('399', '81')})`
+})
+
+// 获取循环模式标签
+const getRepeatModeLabel = computed(() => {
+  switch (repeatMode.value) {
+    case 'list': return '列表循环'
+    case 'single': return '单曲循环'
+    case 'random': return '随机播放'
+    default: return '循环模式'
+  }
+})
+
+// 播放函数
+const play = async () => {
+  if (!audioEl.value || !currentTrack.value) {
+    console.error('播放失败: 缺少音频元素或曲目信息')
+    return
+  }
+  
+  try {
+    // 确保src有效
+    if (!audioEl.value.src || audioEl.value.src === '') {
+      console.error('播放失败: 音频URL无效')
+      ElMessage.error('音频URL无效')
+      return
+    }
+    
+    // 先重置播放状态
+    playerStore.setIsPlaying(false)
+    isManualPause.value = false
+    
+    // 确保音频已加载
+    if (audioEl.value.readyState < 2) {
+      try {
+        await audioEl.value.load()
+      } catch (loadError) {
+        console.error('音频加载失败:', loadError)
+        ElMessage.error('音频加载失败')
         return
       }
-      
-      try {
-        // 确保src有效
-        if (!audioEl.value.src || audioEl.value.src === '') {
-          console.error('播放失败: 音频URL无效')
-          ElMessage.error('音频URL无效')
-          return
-        }
-        
-        // 先重置播放状态
-        isPlaying.value = false
-        isManualPause.value = false // 播放时标记为非手动暂停
-        
-        // 确保音频已加载
-        if (audioEl.value.readyState < 2) {
-          try {
-            await audioEl.value.load()
-          } catch (loadError) {
-            console.error('音频加载失败:', loadError)
-            ElMessage.error('音频加载失败')
-            return
-          }
-        }
-        
-        // 尝试播放
-        const playPromise = audioEl.value.play()
-        
-        // 处理异步播放请求
-        if (playPromise && typeof playPromise.then === 'function') {
-          await playPromise
-          isPlaying.value = true
-          console.debug('音频播放成功', { title: props.track.title, url: audioEl.value.src })
-        } else {
-          // 旧浏览器兼容性处理
-          isPlaying.value = true
-        }
-      } catch (e) {
-        console.error('播放时发生错误:', e)
-        isPlaying.value = false
-        
-        // 检测是否是用户交互问题导致的播放错误
-        if (e.name === 'NotAllowedError' || e.message && e.message.includes('user gesture')) {
-          ElMessage.warning('请点击播放按钮以开始播放音频')
-        } else {
-          ElMessage.error('播放失败，请重试')
-        }
-      }
-    }
-
-    const pause = () => {
-      if (!audioEl.value) return
-      try {
-        console.debug('[MusicPlayer] pause() called')
-        audioEl.value.pause()
-        isPlaying.value = false
-        isManualPause.value = true // 手动暂停标记
-        console.info('[MusicPlayer] paused, isPlaying=', isPlaying.value)
-      } catch (e) {
-        console.warn('暂停音频时发生警告:', e)
-      }
-    }
-
-    const togglePlay = () => {
-      isPlaying.value ? pause() : play()
-    }
-
-    // 新增：处理意外暂停（浏览器自动暂停）
-    const handleUnexpectedPause = () => {
-      // 如果不是手动暂停、不是正在关闭、不是正在拖动进度条，且应该处于播放状态
-      if (!isManualPause.value && !isClosing.value && !isSeeking.value && isPlaying.value) {
-        console.debug('[MusicPlayer] 检测到意外暂停，尝试恢复播放')
-        // 延迟恢复，避免浏览器策略拦截
-        setTimeout(() => {
-          play().catch(err => {
-            console.warn('恢复播放失败:', err)
-          })
-        }, 100)
-      }
-    }
-
-    // 时间更新处理
-    const onTimeUpdate = () => {
-      if (!audioEl.value || isSeeking.value) return
-      const prev = currentTime.value
-      currentTime.value = audioEl.value.currentTime
-      // 仅在明显变化时打印，避免控制台被刷屏
-      if (Math.abs(currentTime.value - prev) > 0.5) {
-        console.debug('[MusicPlayer] timeupdate ->', currentTime.value.toFixed(2), '/', duration)
-      }
-    }
-
-    // 音频加载完成
-    const onLoaded = () => {
-      if (!audioEl.value) return
-      
-      try {
-        // 优先使用 audio 元数据，如果不可用则保留由 track.duration 解析得到的值
-        const metaDur = Number(audioEl.value.duration)
-        console.debug('[MusicPlayer] onLoaded: audio.duration=', metaDur)
-        if (!isNaN(metaDur) && metaDur > 0) {
-          duration.value = metaDur
-        }
-        audioEl.value.volume = volume.value
-        audioEl.value.muted = isMuted.value
-        
-        if (props.autoPlay) {
-          setTimeout(() => play(), 300)
-        }
-      } catch (e) {
-        console.warn('音频加载完成处理时发生警告:', e)
-      }
     }
     
-    // 音频错误处理 - 增强错误处理逻辑
-    const handleAudioError = (e) => {
-      // 在组件正在关闭或资源已被清理时，忽略错误（避免无关警告）
-      if (isClosing.value) return
-      if (!audioEl.value || audioEl.value.src === '') return
-
-      console.error('音频错误:', e, '音频URL:', audioEl.value.src)
-      audioError.value = e
-      emit('error', { type: 'audio_error', event: e, src: audioEl.value.src })
-      isPlaying.value = false
-      
-      // 提供用户友好的错误提示
-      let errorMessage = '音频播放失败'
-      if (e && e.type === 'error') {
-        // 根据不同的错误码提供更具体的错误信息
-        switch (e.target.error.code) {
-          case e.target.error.MEDIA_ERR_ABORTED:
-            errorMessage = '播放已被取消'
-            break
-          case e.target.error.MEDIA_ERR_NETWORK:
-            errorMessage = '网络错误导致播放失败'
-            break
-          case e.target.error.MEDIA_ERR_DECODE:
-            errorMessage = '音频格式不支持或已损坏'
-            break
-          case e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = '无法加载音频文件'
-            break
-          default:
-            errorMessage = '音频播放失败，请尝试其他音乐'
-        }
-      }
-      ElMessage.error(errorMessage)
-    }
-
-    // 进度条输入处理
-    const handleProgressInput = (event) => {
-      if (!audioEl.value) return
-      
-      const newTime = parseFloat(event.target.value)
-      isSeeking.value = true
-      currentTime.value = newTime
-      console.debug('[MusicPlayer] handleProgressInput newTime=', newTime, 'isSeeking=', isSeeking.value)
-    }
-
-    const handleProgressChange = async (event) => {
-      if (!audioEl.value) return
-      
-      const newTime = parseFloat(event.target.value)
-      const validTime = Math.max(0, Math.min(newTime, duration.value))
-      currentTime.value = validTime
-      console.debug('[MusicPlayer] handleProgressChange -> applying time=', validTime)
-      try {
-        audioEl.value.currentTime = validTime
-      } catch (e) {
-        console.warn('设置音频时间时发生警告:', e)
-      }
-      
-      await nextTick()
-      isSeeking.value = false
-      
-      if (isPlaying.value) {
-        try {
-          await audioEl.value.play()
-          console.debug('[MusicPlayer] resumed play after change')
-        } catch (e) {
-          console.error('恢复播放失败:', e)
-          isPlaying.value = false
-        }
-      }
-    }
-
-    // 音量控制
-    const setVolume = () => {
-      if (!audioEl.value) return
-      
-      try {
-        audioEl.value.volume = volume.value
-        if (volume.value > 0) isMuted.value = false
-        audioEl.value.muted = isMuted.value
-      } catch (e) {
-        console.warn('设置音量时发生警告:', e)
-      }
-    }
-
-    const toggleMute = () => {
-      isMuted.value = !isMuted.value
-      if (audioEl.value) {
-        try {
-          audioEl.value.muted = isMuted.value
-        } catch (e) {
-          console.warn('切换静音时发生警告:', e)
-        }
-      }
-    }
-
-    // 播放结束处理
-    const onEnded = () => {
-      isPlaying.value = false
-      isManualPause.value = true // 播放结束标记为手动暂停
-      currentTime.value = 0
-    }
-
-    // 新增：页面可见性变化监听（核心解决切页面停止问题）
-    const handleVisibilityChange = () => {
-      // 页面从不可见变为可见
-      if (!document.hidden && isPlaying.value && !isManualPause.value && !isClosing.value) {
-        console.debug('[MusicPlayer] 页面切回，恢复播放')
-        play().catch(err => {
-          console.warn('页面切回恢复播放失败:', err)
-        })
-      }
-    }
-
-    // 轨道切换时重置状态
-    watch(() => props.track, (newTrack) => {
-      // 在切换轨道时，保证 duration 是数字（如果传入的是 05:30 格式的字符串则解析）
-      resetPlayerState()
-      try {
-        if (newTrack && newTrack.duration) {
-          const parsed = parseDurationString(newTrack.duration)
-          if (parsed != null) duration.value = parsed
-        }
-      } catch (e) {}
-      setTimeout(() => {
-        if (audioEl.value) {
-          try {
-            audioEl.value.volume = volume.value
-            audioEl.value.muted = isMuted.value
-          } catch (e) {
-            console.warn('切换轨道时设置音量和静音状态发生警告:', e)
-          }
-        }
-        if (props.autoPlay && newTrack) play()
-      }, 100)
-    }, { deep: true })
+    // 尝试播放
+    const playPromise = audioEl.value.play()
     
-    // 监听音量变化
-    watch([volume, isMuted], () => {
+    // 处理异步播放请求
+    if (playPromise && typeof playPromise.then === 'function') {
+      await playPromise
+      playerStore.setIsPlaying(true)
+      console.debug('音频播放成功', { title: currentTrack.value.title, url: audioEl.value.src })
+    } else {
+      // 旧浏览器兼容性处理
+      playerStore.setIsPlaying(true)
+    }
+  } catch (e) {
+    console.error('播放时发生错误:', e)
+    playerStore.setIsPlaying(false)
+    
+    // 检测是否是用户交互问题导致的播放错误
+    if (e.name === 'NotAllowedError' || e.message && e.message.includes('user gesture')) {
+      ElMessage.warning('请点击播放按钮以开始播放音频')
+    } else {
+      ElMessage.error('播放失败，请重试')
+    }
+  }
+}
+
+const pause = () => {
+  if (!audioEl.value) return
+  try {
+    console.debug('[MusicPlayer] pause() called')
+    audioEl.value.pause()
+    playerStore.setIsPlaying(false)
+    isManualPause.value = true
+    console.info('[MusicPlayer] paused, isPlaying=', playerStore.isPlaying)
+  } catch (e) {
+    console.warn('暂停音频时发生警告:', e)
+  }
+}
+
+const togglePlay = () => {
+  isPlaying.value ? pause() : play()
+}
+
+// 播放下一首
+const playNext = () => {
+  const nextTrack = playerStore.playNext()
+  if (nextTrack) {
+    // 延迟加载新歌曲
+    setTimeout(() => {
+      play().catch(err => {
+        console.warn('播放下一首失败:', err)
+      })
+    }, 100)
+  }
+}
+
+// 播放上一首
+const playPrevious = () => {
+  const prevTrack = playerStore.playPrevious()
+  if (prevTrack) {
+    // 延迟加载新歌曲
+    setTimeout(() => {
+      play().catch(err => {
+        console.warn('播放上一首失败:', err)
+      })
+    }, 100)
+  }
+}
+
+// 切换循环模式
+const toggleRepeatMode = () => {
+  playerStore.toggleRepeatMode()
+}
+
+// 处理意外暂停
+const handleUnexpectedPause = () => {
+  // 如果不是手动暂停、不是正在关闭、不是正在拖动进度条，且应该处于播放状态
+  if (!isManualPause.value && !isClosing.value && !isSeeking.value && isPlaying.value) {
+    console.debug('[MusicPlayer] 检测到意外暂停，尝试恢复播放')
+    // 延迟恢复，避免浏览器策略拦截
+    setTimeout(() => {
+      play().catch(err => {
+        console.warn('恢复播放失败:', err)
+      })
+    }, 100)
+  }
+}
+
+// 时间更新处理
+const onTimeUpdate = () => {
+  if (!audioEl.value || isSeeking.value) return
+  playerStore.setCurrentTime(audioEl.value.currentTime)
+}
+
+// 音频加载完成
+const onLoaded = () => {
+  if (!audioEl.value) return
+  
+  try {
+    // 优先使用 audio 元数据
+    const metaDur = Number(audioEl.value.duration)
+    console.debug('[MusicPlayer] onLoaded: audio.duration=', metaDur)
+    if (!isNaN(metaDur) && metaDur > 0) {
+      playerStore.setDuration(metaDur)
+    }
+    audioEl.value.volume = volume.value
+    audioEl.value.muted = isMuted.value
+    
+    // 自动播放
+    if (isPlaying.value) {
+      setTimeout(() => play(), 300)
+    }
+  } catch (e) {
+    console.warn('音频加载完成处理时发生警告:', e)
+  }
+}
+
+// 音频错误处理
+const handleAudioError = (e) => {
+  // 在组件正在关闭或资源已被清理时，忽略错误
+  if (isClosing.value) return
+  if (!audioEl.value || audioEl.value.src === '') return
+
+  console.error('音频错误:', e, '音频URL:', audioEl.value.src)
+  playerStore.setIsPlaying(false)
+  
+  // 提供用户友好的错误提示
+  let errorMessage = '音频播放失败'
+  if (e && e.type === 'error') {
+    // 根据不同的错误码提供更具体的错误信息
+    switch (e.target.error.code) {
+      case e.target.error.MEDIA_ERR_ABORTED:
+        errorMessage = '播放已被取消'
+        break
+      case e.target.error.MEDIA_ERR_NETWORK:
+        errorMessage = '网络错误导致播放失败'
+        break
+      case e.target.error.MEDIA_ERR_DECODE:
+        errorMessage = '音频格式不支持或已损坏'
+        break
+      case e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+        errorMessage = '无法加载音频文件'
+        break
+      default:
+        errorMessage = '音频播放失败，请尝试其他音乐'
+    }
+  }
+  ElMessage.error(errorMessage)
+}
+
+// 进度条输入处理
+const handleProgressInput = (event) => {
+  if (!audioEl.value) return
+  
+  const newTime = parseFloat(event.target.value)
+  isSeeking.value = true
+  playerStore.setCurrentTime(newTime)
+  console.debug('[MusicPlayer] handleProgressInput newTime=', newTime, 'isSeeking=', isSeeking.value)
+}
+
+const handleProgressChange = async (event) => {
+  if (!audioEl.value) return
+  
+  const newTime = parseFloat(event.target.value)
+  const validTime = Math.max(0, Math.min(newTime, duration.value))
+  playerStore.setCurrentTime(validTime)
+  console.debug('[MusicPlayer] handleProgressChange -> applying time=', validTime)
+  try {
+    audioEl.value.currentTime = validTime
+  } catch (e) {
+    console.warn('设置音频时间时发生警告:', e)
+  }
+  
+  await nextTick()
+  isSeeking.value = false
+  
+  if (isPlaying.value) {
+    try {
+      await audioEl.value.play()
+      console.debug('[MusicPlayer] resumed play after change')
+    } catch (e) {
+      console.error('恢复播放失败:', e)
+      playerStore.setIsPlaying(false)
+    }
+  }
+}
+
+// 音量控制
+const setVolume = () => {
+  if (!audioEl.value) return
+  
+  try {
+    audioEl.value.volume = volume.value
+    if (volume.value > 0) playerStore.setIsMuted(false)
+    audioEl.value.muted = isMuted.value
+  } catch (e) {
+    console.warn('设置音量时发生警告:', e)
+  }
+}
+
+const toggleMute = () => {
+  playerStore.setIsMuted(!isMuted.value)
+  if (audioEl.value) {
+    try {
+      audioEl.value.muted = !isMuted.value
+    } catch (e) {
+      console.warn('切换静音时发生警告:', e)
+    }
+  }
+}
+
+// 播放结束处理
+const onEnded = () => {
+  // 根据循环模式处理
+  if (repeatMode.value === 'single') {
+    // 单曲循环，重新播放
+    audioEl.value.currentTime = 0
+    play().catch(err => {
+      console.warn('单曲循环播放失败:', err)
+    })
+  } else {
+    // 其他模式，播放下一首
+    playNext()
+  }
+}
+
+// 页面可见性变化监听
+const handleVisibilityChange = () => {
+  // 页面从不可见变为可见
+  if (!document.hidden && isPlaying.value && !isManualPause.value && !isClosing.value) {
+    console.debug('[MusicPlayer] 页面切回，恢复播放')
+    play().catch(err => {
+      console.warn('页面切回恢复播放失败:', err)
+    })
+  }
+}
+
+// 监听音量变化
+watch([volume, isMuted], () => {
+  if (audioEl.value) {
+    try {
+      audioEl.value.volume = volume.value
+      audioEl.value.muted = isMuted.value
+    } catch (e) {
+      console.warn('监听音量变化时发生警告:', e)
+    }
+  }
+})
+
+// 监听当前歌曲变化
+watch(currentTrack, (newTrack) => {
+  if (newTrack) {
+    // 重置进度
+    playerStore.setCurrentTime(0)
+    playerStore.setDuration(0)
+    
+    // 延迟设置音频源
+    setTimeout(() => {
       if (audioEl.value) {
         try {
           audioEl.value.volume = volume.value
           audioEl.value.muted = isMuted.value
         } catch (e) {
-          console.warn('监听音量变化时发生警告:', e)
+          console.warn('切换轨道时设置音量和静音状态发生警告:', e)
         }
       }
-    })
+    }, 100)
+  }
+}, { deep: true })
 
-    // 重置播放器状态
-    const resetPlayerState = () => {
-      currentTime.value = 0
-      duration.value = 0
-      isPlaying.value = false
-      isSeeking.value = false
-      isManualPause.value = false // 重置手动暂停标记
-      audioError.value = null
-    }
-
-    // 安全清理音频资源
-    const safelyCleanupAudio = () => {
-      if (!audioEl.value) return
-      
-      try {
-        // 先暂停播放
-        audioEl.value.pause()
-        // 移除事件监听器
-        audioEl.value.onerror = null
-        audioEl.value.ontimeupdate = null
-        audioEl.value.onloadedmetadata = null
-        audioEl.value.onended = null
-        audioEl.value.onpause = null // 移除意外暂停监听
-        // 清空音频源
-        audioEl.value.src = ''
-        // 加载空源以释放资源
-        audioEl.value.load()
-      } catch (e) {
-        console.warn('清理音频资源时发生警告:', e)
-      }
-    }
-
-    // 关闭播放器 - 改进关闭逻辑
-    const handleClose = () => {
-      // 标记正在关闭，后续音频错误会被忽略
-      isClosing.value = true
-      // 先停止播放
-      pause()
-      // 安全清理音频资源（会移除事件回调）
-      safelyCleanupAudio()
-      // 重置状态
-      resetPlayerState()
-      // 延迟发射关闭事件，确保清理完成
-      setTimeout(() => {
-        emit('close')
-        // 关闭完成后清除标志（防止复用组件时残留）
-        isClosing.value = false
-      }, 50)
-    }
-
-    // 窗口大小处理：用于动态计算播放器宽度
-    const handleResize = () => {
-      try { viewportWidth.value = window.innerWidth } catch(e) {}
-    }
-
-    // 时间格式化工具函数
-    const formatTime = (seconds) => {
-      if (!seconds || isNaN(seconds)) return '00:00'
-      
-      const mins = Math.floor(seconds / 60)
-      const secs = Math.floor(seconds % 60)
-      
-      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-    }
-
-    // 解析样式为 mm:ss 或 hh:mm:ss 的字符串为秒数；如果输入已经是数字则返回数字
-    const parseDurationString = (v) => {
-      if (v == null) return null
-      if (typeof v === 'number') return isNaN(v) ? null : v
-      const s = String(v).trim()
-      if (s === '') return null
-      // 如果是纯数字字符串，尝试直接解析为秒
-      if (/^\d+(\.\d+)?$/.test(s)) return Number(s)
-      // 支持 mm:ss 或 hh:mm:ss
-      const parts = s.split(':').map(p => Number(p))
-      if (parts.some(x => isNaN(x))) return null
-      if (parts.length === 2) {
-        return parts[0] * 60 + parts[1]
-      }
-      if (parts.length === 3) {
-        return parts[0] * 3600 + parts[1] * 60 + parts[2]
-      }
-      return null
-    }
-
-    // 组件挂载
-    onMounted(() => {
-      // 监听窗口大小变化
-      try { window.addEventListener('resize', handleResize) } catch(e) {}
-      // 新增：监听页面可见性变化
-      try { document.addEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
-      // 初始化时设置音频元素的 pause 事件监听
-      if (audioEl.value) {
-        audioEl.value.onpause = handleUnexpectedPause
-      }
-    })
-
-    // 组件卸载时清理
-    onBeforeUnmount(() => {
-      safelyCleanupAudio()
-      // 移除窗口大小监听
-      try { window.removeEventListener('resize', handleResize) } catch(e) {}
-      // 新增：移除页面可见性监听
-      try { document.removeEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
-    })
-
-    const playerWidth = computed(() => {
-      // 宽度根据标题长度增长，但有最小/最大限制且不超过视口的 92%
-      const minW = 380
-      const maxW = Math.min(920, Math.floor(viewportWidth.value * 0.92))
-      const titleLen = props.track && props.track.title ? String(props.track.title).length : 0
-      const extra = Math.min(360, titleLen * 8) // 每个字符约 8px，限制最大扩展
-      const base = 420
-      const w = Math.max(minW, Math.min(maxW, base + extra))
-      return `${w}px`
-    })
-
-    return { 
-      audioEl,
-      progressSlider,
-      isPlaying, 
-      duration, 
-      currentTime, 
-      volume, 
-      isMuted, 
-      isSeeking,
-      togglePlay, 
-      onTimeUpdate, 
-      onLoaded, 
-      onEnded,
-      handleProgressInput,
-      handleProgressChange,
-      formatTime,
-      setVolume, 
-      toggleMute, 
-      isDarkMode, 
-      handleClose,
-      handleAudioError,
-      getAccentColor,
-      getAccentGradient,
-      playerWidth
-    }
+// 安全清理音频资源
+const safelyCleanupAudio = () => {
+  if (!audioEl.value) return
+  
+  try {
+    // 先暂停播放
+    audioEl.value.pause()
+    // 移除事件监听器
+    audioEl.value.onerror = null
+    audioEl.value.ontimeupdate = null
+    audioEl.value.onloadedmetadata = null
+    audioEl.value.onended = null
+    audioEl.value.onpause = null
+    // 清空音频源
+    audioEl.value.src = ''
+    // 加载空源以释放资源
+    audioEl.value.load()
+  } catch (e) {
+    console.warn('清理音频资源时发生警告:', e)
   }
 }
+
+// 关闭播放器
+const handleClose = () => {
+  // 标记正在关闭
+  isClosing.value = true
+  // 先停止播放
+  pause()
+  // 安全清理音频资源
+  safelyCleanupAudio()
+  // 关闭播放器
+  playerStore.closePlayer()
+  // 延迟清除标志
+  setTimeout(() => {
+    isClosing.value = false
+  }, 50)
+}
+
+// 窗口大小处理
+const handleResize = () => {
+  try { viewportWidth.value = window.innerWidth } catch(e) {}
+}
+
+// 时间格式化工具函数
+const formatTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '00:00'
+  
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+// 组件挂载
+onMounted(() => {
+  // 监听窗口大小变化
+  try { window.addEventListener('resize', handleResize) } catch(e) {}
+  // 监听页面可见性变化
+  try { document.addEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
+  // 初始化时设置音频元素的 pause 事件监听
+  if (audioEl.value) {
+    audioEl.value.onpause = handleUnexpectedPause
+  }
+})
+
+// 组件卸载时清理
+onBeforeUnmount(() => {
+  safelyCleanupAudio()
+  // 移除窗口大小监听
+  try { window.removeEventListener('resize', handleResize) } catch(e) {}
+  // 移除页面可见性监听
+  try { document.removeEventListener('visibilitychange', handleVisibilityChange) } catch(e) {}
+})
 </script>
 
 <style scoped>
-/* 基础变量定义 - 移除响应式相关变量 */
+/* 基础变量定义 */
 :root {
   --player-width: 620px;
   --player-radius: 20px;
@@ -612,7 +612,7 @@ export default {
   --shadow-dark: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* 播放器容器 - 固定尺寸 */
+/* 播放器容器 */
 .music-player {
   position: fixed;
   right: 32px;
@@ -661,7 +661,7 @@ export default {
   padding: 24px;
   gap: 28px;
   position: relative;
-  min-height: 188px; /* 确保最小高度 */
+  min-height: 188px;
 }
 
 /* 唱片容器 */
@@ -679,10 +679,22 @@ export default {
   border-radius: 50%;
   position: relative;
   transition: var(--transition-normal);
+  animation: rotate 8s linear infinite;
+  animation-play-state: paused;
 }
 
 .record-wrapper.playing {
-  animation: rotate 8s linear infinite;
+  animation-play-state: running;
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 唱片主体 */
@@ -800,7 +812,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 0; /* 防止内容溢出 */
+  min-width: 0;
 }
 
 /* 元数据区域 */
@@ -808,7 +820,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 0; /* 防止文本溢出 */
+  min-width: 0;
 }
 
 .title {
@@ -829,7 +841,6 @@ export default {
   width: 100%;
 }
 
-/* 移除跑马灯动画，使用省略号 */
 .artist {
   font-size: 16px;
   color: var(--text-secondary, #64748b);
@@ -872,8 +883,8 @@ export default {
 
 .progress-indicator {
   position: absolute;
-  top: 0;
   left: 0;
+  top: 0;
   height: 100%;
   background: linear-gradient(90deg, #10b981, #34d399);
   border-radius: 3px;
@@ -881,9 +892,6 @@ export default {
 }
 
 .progress-slider {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
   opacity: 0;
@@ -921,7 +929,55 @@ export default {
 .controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+}
+
+/* 控制按钮组 */
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 控制按钮 */
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--text-secondary, #64748b);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.control-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  color: var(--text-primary, #1e293b);
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.control-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-btn.active {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.control-icon {
+  font-size: 18px;
 }
 
 /* 播放按钮 */
@@ -937,6 +993,7 @@ export default {
   cursor: pointer;
   transition: var(--transition-fast);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  margin: 0 12px;
 }
 
 .play-btn:hover {
@@ -1027,17 +1084,56 @@ export default {
   display: none;
 }
 
-/* 动画定义 */
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* 减少动画偏好设置 */
+@media (prefers-reduced-motion) {
+  .record-wrapper {
+    animation: rotate 20s linear infinite;
+  }
 }
 
-/* 移除响应式适配部分，保持固定尺寸 */
-
-@media (prefers-reduced-motion) {
-  .record-wrapper.playing {
-    animation: rotate 20s linear infinite;
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .music-player {
+    right: 16px;
+    bottom: 16px;
+    width: calc(100vw - 32px);
+    max-width: 500px;
+  }
+  
+  .player-main {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .record-container {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .title {
+    font-size: 18px;
+  }
+  
+  .artist {
+    font-size: 14px;
+  }
+  
+  .reason {
+    font-size: 12px;
+  }
+  
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .control-group {
+    justify-content: center;
+  }
+  
+  .volume-controls {
+    justify-content: center;
   }
 }
 </style>

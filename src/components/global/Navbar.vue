@@ -29,7 +29,7 @@
           <span>首页</span>
         </el-menu-item>
         
-        <el-menu-item index="/fatigue-result">
+        <el-menu-item index="/quick-detection">
           <el-icon><TrendCharts /></el-icon>
           <span>快速检测</span>
         </el-menu-item>
