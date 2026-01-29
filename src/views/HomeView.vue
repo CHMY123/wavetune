@@ -284,6 +284,10 @@ export default {
   pointer-events: none;
 }
 
+.theme-dark .home-wave-decoration {
+  background: linear-gradient(180deg, rgba(106, 90, 205, 0.02) 0%, transparent 50%);
+}
+
 .hero-section {
   background: linear-gradient(135deg, var(--wave-purple) 0%, var(--wave-blue) 100%);
   border-radius: 24px;
@@ -1195,6 +1199,90 @@ export default {
         .node-connection {
           width: 40px;
         }
+      }
+    }
+  }
+}
+
+/* 暗模式适配 */
+.theme-dark {
+  /* 联邦学习状态卡片 */
+  .federated-section {
+    .federated-status {
+      .status-info {
+        .status-item {
+          background: rgba(30, 41, 59, 0.8);
+          border: 1px solid rgba(75, 85, 99, 0.3);
+          
+          .status-label {
+            color: var(--text-secondary);
+          }
+        }
+      }
+    }
+    
+    .federated-chart {
+      background: rgba(30, 41, 59, 0.3);
+    }
+  }
+  
+  /* 统计卡片 */
+  .stats-section {
+    .stat-item {
+      background: var(--bg-card);
+      
+      &:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+    }
+  }
+  
+  /* 功能卡片 */
+  .features-section {
+    .feature-card {
+      &:hover {
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+      }
+      
+      :deep(.el-card__body) {
+        background: var(--bg-card);
+      }
+    }
+  }
+  
+  /* 快速操作按钮 */
+  .quick-actions {
+    .action-buttons {
+      .action-btn {
+        &:hover {
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+  }
+  
+  /* 按钮样式 */
+  .secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+  }
+  
+  /* 波形装饰 */
+  .hero-wave-decoration {
+    .wave {
+      background: rgba(255, 255, 255, 0.1);
+      
+      &.wave-2 {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      
+      &.wave-3 {
+        background: rgba(255, 255, 255, 0.04);
       }
     }
   }

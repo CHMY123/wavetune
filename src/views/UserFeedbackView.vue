@@ -392,6 +392,104 @@ onBeforeUnmount(() => {
   --spacing-xl: 32px;
 }
 
+// 暗色模式适配
+.theme-dark {
+  --bg-primary: #1e293b;
+  --bg-secondary: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border-color: #475569;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
+  
+  // 卡片组件暗色模式样式
+  .user-info-card,
+  .feedback-form-card,
+  .history-item {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+    
+    &:hover {
+      border-color: var(--color-primary) !important;
+    }
+  }
+  
+  .history-content {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--color-primary) !important;
+  }
+  
+  .avatar-section {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, var(--bg-secondary) 100%) !important;
+    border-color: var(--border-color) !important;
+  }
+  
+  .info-notice {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-secondary) !important;
+  }
+  
+  // Element Plus 组件暗色模式样式
+  :deep(.el-input__wrapper),
+  :deep(.el-textarea__wrapper) {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    
+    &:hover {
+      border-color: var(--color-primary) !important;
+    }
+    
+    &:focus-within {
+      border-color: var(--color-primary) !important;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+    }
+  }
+  
+  :deep(.el-input__inner),
+  :deep(.el-textarea__inner) {
+    color: var(--text-primary) !important;
+  }
+  
+  :deep(.el-button) {
+    &.el-button--primary {
+      background-color: var(--color-primary) !important;
+      border-color: var(--color-primary) !important;
+      
+      &:hover {
+        background-color: var(--color-primary-dark) !important;
+        border-color: var(--color-primary-dark) !important;
+      }
+    }
+    
+    &.el-button--default {
+      background-color: var(--bg-secondary) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+      
+      &:hover {
+        border-color: var(--color-primary) !important;
+        color: var(--color-primary) !important;
+      }
+    }
+  }
+  
+  :deep(.el-radio__label) {
+    color: var(--text-primary) !important;
+  }
+  
+  :deep(.el-radio__input.is-checked .el-radio__inner) {
+    border-color: var(--color-primary) !important;
+    background-color: var(--color-primary) !important;
+  }
+  
+  :deep(.el-radio__input.is-checked .el-radio__inner::after) {
+    background-color: #fff !important;
+  }
+}
+
 .user-feedback-view {
   position: relative;
   max-width: 1200px;
@@ -401,6 +499,7 @@ onBeforeUnmount(() => {
   overflow: visible;
   box-shadow: var(--shadow-md);
   min-height: calc(100vh - 100px);
+  color: var(--text-primary);
 }
 
 .wave-background {
@@ -465,7 +564,7 @@ onBeforeUnmount(() => {
   z-index: 1;
   padding: var(--spacing-lg);
   border-bottom: 1px solid var(--border-color);
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.8) 100%);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, var(--bg-primary) 100%);
 }
 
 .main-section {
@@ -476,7 +575,7 @@ onBeforeUnmount(() => {
 
 .user-info-card {
   height: fit-content;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
@@ -491,7 +590,7 @@ onBeforeUnmount(() => {
   .avatar-section {
     text-align: center;
     margin-bottom: var(--spacing-lg);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.5) 100%);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, var(--bg-secondary) 100%);
     border-radius: var(--radius-md);
     padding: var(--spacing-md);
     border: 1px solid var(--border-color);
@@ -549,13 +648,13 @@ onBeforeUnmount(() => {
     color: var(--text-secondary);
     text-align: center;
     padding: var(--spacing-sm);
-    background: rgba(248, 250, 252, 0.8);
+    background: var(--bg-secondary);
     border-radius: var(--radius-sm);
   }
 }
 
 .feedback-form-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--bg-primary);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-md);
@@ -652,7 +751,7 @@ onBeforeUnmount(() => {
 
     .history-item {
       padding: var(--spacing-md);
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--bg-primary);
       border-radius: var(--radius-md);
       border: 1px solid var(--border-color);
       margin-bottom: calc(var(--spacing-md) * 1.2);
@@ -665,7 +764,7 @@ onBeforeUnmount(() => {
       
       &:hover {
         transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow-lg);
         border-color: var(--color-primary-light);
       }
 
@@ -707,7 +806,7 @@ onBeforeUnmount(() => {
           color: var(--text-primary);
           line-height: 1.7;
           padding: 12px;
-          background: rgba(248, 250, 252, 0.95);
+          background: var(--bg-secondary);
           border-radius: var(--radius-sm);
           border-left: 3px solid var(--color-primary);
           max-width: 100%;
@@ -742,7 +841,7 @@ onBeforeUnmount(() => {
   padding: calc(var(--spacing-lg) * 1.5);
   border-top: 1px solid var(--border-color);
   text-align: left;
-  background: linear-gradient(180deg, rgba(250,250,250,0.6), transparent);
+  background: linear-gradient(180deg, var(--bg-primary), transparent);
   backdrop-filter: blur(8px);
 
   .feedback-notice {

@@ -64,7 +64,8 @@
       <div class="navbar-user">
         <!-- Theme toggle -->
         <el-button class="theme-toggle" type="text" @click="toggleTheme" title="切换主题">
-          <el-icon><SwitchButton /></el-icon>
+          <el-icon v-if="!isDarkMode"><MoonNight /></el-icon>
+          <el-icon v-else><Sunny /></el-icon>
         </el-button>
         <!-- 核心修改：替换ElAvatar为原生img标签 -->
         <el-dropdown v-if="isAuthenticated" @command="handleUserCommand">
@@ -106,235 +107,181 @@
   </el-header>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { 
   Monitor, House, TrendCharts, Headset, 
-  Connection, User, Setting, SwitchButton 
+  Connection, User, Setting, SwitchButton, MoonNight, Sunny
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { requestMethod } from '@/utils/request'
+import { useTheme } from '@/composables/useTheme'
 
-export default {
-  name: 'Navbar',
-  components: {
-    Monitor,
-    House,
-    TrendCharts,
-    Headset,
-    Connection,
-    User,
-    Setting,
-    SwitchButton
-  },
-  data() {
-    return {
-      activeIndex: '/',
-      isAuthenticated: false,
-      userInfo: {}
-    }
-  },
-  created() {
-    // 在组件创建时根据 localStorage 恢复主题（若在 App 启动前没有恢复）
-    const theme = localStorage.getItem('theme')
-    if (theme === 'dark') document.documentElement.classList.add('theme-dark')
-    else document.documentElement.classList.remove('theme-dark')
-  },
-  mounted() {
-    // 调试日志：组件加载时的初始状态
-    // console.log('🔧 Navbar组件加载 - 初始状态：')
-    // console.log('  - token存在:', !!localStorage.getItem('session_token'))
-    // console.log('  - 本地user数据:', localStorage.getItem('user'))
+const router = useRouter()
+const route = useRoute()
+
+// 使用主题管理
+const { isDarkMode, toggleTheme } = useTheme()
+
+const activeIndex = ref('/')
+const isAuthenticated = ref(false)
+const userInfo = ref({})
+
+const checkAuthStatus = () => {
+  const token = localStorage.getItem('session_token')
+  const userStr = localStorage.getItem('user')
+  
+  isAuthenticated.value = !!token
+  
+  // 未登录 → 清空用户信息
+  if (!isAuthenticated.value || !userStr) {
+    userInfo.value = {}
+    console.log('🔓 用户未登录/无本地缓存，清空用户信息')
+    return
+  }
+
+  try {
+    // 直接解析本地缓存的用户数据
+    userInfo.value = JSON.parse(userStr)
+    // console.log('✅ 从本地缓存加载用户信息:', userInfo.value)
+    // console.log('✅ 头像地址:', userInfo.value.avatar || '无')
+  } catch (e) {
+    console.error('❌ 解析本地用户数据失败:', e)
+    userInfo.value = {}
+  }
+}
+
+const handleStorageEvent = (e) => {
+  if (!e) return
+  if (e.key === 'user' || e.key === 'session_token') {
+    // console.log('🔄 localStorage变化，更新登录状态')
+    checkAuthStatus()
+  }
+}
+
+const handleScroll = () => {
+  const navbar = document.querySelector('.navbar')
+  if (window.scrollY > 50) {
+    navbar.classList.add('navbar-scrolled')
+  } else {
+    navbar.classList.remove('navbar-scrolled')
+  }
+}
+
+const updateActiveIndex = () => {
+  activeIndex.value = route.path
+}
+
+const handleSelect = (key) => {
+  activeIndex.value = key
+  router.push(key)
+}
+
+const handleUserCommand = (command) => {
+  switch (command) {
+    case 'profile':
+      router.push('/user-center')
+      break
+    case 'settings':
+      router.push('/user-center')
+      break
+    case 'logout':
+      handleLogout()
+      break
+  }
+}
+
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '确认退出', {
+      type: 'warning',
+      confirmButtonText: '确认',
+      cancelButtonText: '取消'
+    })
     
-    this.checkAuthStatus()
-    this.updateActiveIndex()
+    const token = localStorage.getItem('session_token')
+    if (token) {
+      // 调用登出API
+      try {
+        await requestMethod.post('/auth/logout', { session_token: token })
+      } catch (err) {
+        console.error('登出接口调用失败:', err)
+      }
+    }
     
-    // 监听全局登录状态变化
-    window.addEventListener('auth-changed', this.checkAuthStatus)
-    // 监听 localStorage 在其它窗口/标签页的变化
-    window.addEventListener('storage', this.handleStorageEvent)
-    // 添加滚动事件监听
-    window.addEventListener('scroll', this.handleScroll)
-    // 初始化滚动状态
-    this.handleScroll()
-  },
-  beforeUnmount() {
-    // 移除事件监听
-    try { window.removeEventListener('auth-changed', this.checkAuthStatus) } catch (e) {}
-    try { window.removeEventListener('scroll', this.handleScroll) } catch (e) {}
-    try { window.removeEventListener('storage', this.handleStorageEvent) } catch (e) {}
-  },
-  watch: {
-    '$route'() {
-      this.updateActiveIndex()
-    }
-  },
-  computed: {
-    avatarSrc() {
-      try {
-        // 1. 未登录/无头像 → 显示默认头像
-        if (!this.isAuthenticated || !this.userInfo || !this.userInfo.avatar || this.userInfo.avatar === '') {
-          // console.log('🔍 头像源：使用默认头像（未登录/无头像数据）')
-          return '/static/avatar/default.png'
-        }
-
-        const rawAvatar = this.userInfo.avatar
-        let finalUrl = rawAvatar
-
-        // ✅ 保留：非S3 URL（本地/普通URL）的防缓存逻辑
-        if (!finalUrl.includes('amz-signature') && !finalUrl.includes('s3.bitiful.net')) {
-          const timestamp = Date.now()
-          finalUrl = finalUrl.includes('?') 
-            ? `${finalUrl}&t=${timestamp}` 
-            : `${finalUrl}?t=${timestamp}`
-        }
-
-        // console.log('🔍 最终头像URL:', finalUrl)
-        return finalUrl
-      } catch (e) {
-        console.error('❌ 生成头像URL失败:', e)
-        return '/static/avatar/default.png'
-      }
-    },
-    logoSrc() {
-      try { return '/static/logo/SCNU.png' } catch (e) { return '/static/logo/SCNU.png' }
-    }
-  },
-  methods: {
-    /**
-     * 检查登录状态（直接使用本地缓存数据）
-     */
-    checkAuthStatus() {
-      const token = localStorage.getItem('session_token')
-      const userStr = localStorage.getItem('user')
-      
-      this.isAuthenticated = !!token
-      
-      // 未登录 → 清空用户信息
-      if (!this.isAuthenticated || !userStr) {
-        this.userInfo = {}
-        console.log('🔓 用户未登录/无本地缓存，清空用户信息')
-        return
-      }
-
-      try {
-        // 直接解析本地缓存的用户数据
-        this.userInfo = JSON.parse(userStr)
-        // console.log('✅ 从本地缓存加载用户信息:', this.userInfo)
-        // console.log('✅ 头像地址:', this.userInfo.avatar || '无')
-      } catch (e) {
-        console.error('❌ 解析本地用户数据失败:', e)
-        this.userInfo = {}
-      }
-    },
-
-    /**
-     * 监听localStorage变化
-     */
-    handleStorageEvent(e) {
-      if (!e) return
-      if (e.key === 'user' || e.key === 'session_token') {
-        // console.log('🔄 localStorage变化，更新登录状态')
-        this.checkAuthStatus()
-      }
-    },
-
-    /**
-     * 处理滚动效果
-     */
-    handleScroll() {
-      const navbar = document.querySelector('.navbar')
-      if (window.scrollY > 50) {
-        navbar.classList.add('navbar-scrolled')
-      } else {
-        navbar.classList.remove('navbar-scrolled')
-      }
-    },
-
-    /**
-     * 更新当前激活的菜单索引
-     */
-    updateActiveIndex() {
-      this.activeIndex = this.$route.path
-    },
-
-    /**
-     * 处理菜单选择
-     */
-    handleSelect(key) {
-      this.activeIndex = key
-      this.$router.push(key)
-    },
-
-    /**
-     * 处理用户下拉菜单命令
-     */
-    handleUserCommand(command) {
-      switch (command) {
-        case 'profile':
-          this.$router.push('/user-center')
-          break
-        case 'settings':
-          this.$router.push('/user-center')
-          break
-        case 'logout':
-          this.handleLogout()
-          break
-      }
-    },
-
-    /**
-     * 切换主题
-     */
-    toggleTheme() {
-      const root = document.documentElement
-      const isDark = root.classList.toggle('theme-dark')
-      try { localStorage.setItem('theme', isDark ? 'dark' : 'light') } catch (e) {}
-      // 触发全局事件方便其他组件响应（可选）
-      try { window.dispatchEvent(new Event('theme-changed')) } catch (e) {}
-    },
-
-    /**
-     * 处理退出登录
-     */
-    async handleLogout() {
-      try {
-        await ElMessageBox.confirm('确定要退出登录吗？', '确认退出', {
-          type: 'warning',
-          confirmButtonText: '确认',
-          cancelButtonText: '取消'
-        })
-        
-        const token = localStorage.getItem('session_token')
-        if (token) {
-          // 调用登出API
-          try {
-            await requestMethod.post('/auth/logout', { session_token: token })
-          } catch (err) {
-            console.error('登出接口调用失败:', err)
-          }
-        }
-        
-        // 清除本地存储
-        localStorage.removeItem('session_token')
-        localStorage.removeItem('user')
-        
-        ElMessage.success('已退出登录')
-        this.isAuthenticated = false
-        this.userInfo = {}
-        
-        // 跳转到登录页
-        this.$router.push('/login')
-      } catch (error) {
-        // Element Plus 会在取消时抛出对象，忽略取消
-        // 其它错误显示通用提示
-        if (error && error !== 'cancel') {
-          console.error('退出登录失败:', error)
-          ElMessage.error('退出登录失败')
-        }
-      }
+    // 清除本地存储
+    localStorage.removeItem('session_token')
+    localStorage.removeItem('user')
+    
+    ElMessage.success('已退出登录')
+    isAuthenticated.value = false
+    userInfo.value = {}
+    
+    // 跳转到登录页
+    router.push('/login')
+  } catch (error) {
+    // Element Plus 会在取消时抛出对象，忽略取消
+    // 其它错误显示通用提示
+    if (error && error !== 'cancel') {
+      console.error('退出登录失败:', error)
+      ElMessage.error('退出登录失败')
     }
   }
 }
+
+const avatarSrc = computed(() => {
+  try {
+    // 1. 未登录/无头像 → 显示默认头像
+    if (!isAuthenticated.value || !userInfo.value || !userInfo.value.avatar || userInfo.value.avatar === '') {
+      // console.log('🔍 头像源：使用默认头像（未登录/无头像数据）')
+      return '/static/avatar/default.png'
+    }
+
+    const rawAvatar = userInfo.value.avatar
+    let finalUrl = rawAvatar
+
+    // ✅ 保留：非S3 URL（本地/普通URL）的防缓存逻辑
+    if (!finalUrl.includes('amz-signature') && !finalUrl.includes('s3.bitiful.net')) {
+      const timestamp = Date.now()
+      finalUrl = finalUrl.includes('?') 
+        ? `${finalUrl}&t=${timestamp}` 
+        : `${finalUrl}?t=${timestamp}`
+    }
+
+    // console.log('🔍 最终头像URL:', finalUrl)
+    return finalUrl
+  } catch (e) {
+    console.error('❌ 生成头像URL失败:', e)
+    return '/static/avatar/default.png'
+  }
+})
+
+onMounted(() => {
+  // 调试日志：组件加载时的初始状态
+  // console.log('🔧 Navbar组件加载 - 初始状态：')
+  // console.log('  - token存在:', !!localStorage.getItem('session_token'))
+  // console.log('  - 本地user数据:', localStorage.getItem('user'))
+  
+  checkAuthStatus()
+  updateActiveIndex()
+  
+  // 监听全局登录状态变化
+  window.addEventListener('auth-changed', checkAuthStatus)
+  // 监听 localStorage 在其它窗口/标签页的变化
+  window.addEventListener('storage', handleStorageEvent)
+  // 添加滚动事件监听
+  window.addEventListener('scroll', handleScroll)
+  // 初始化滚动状态
+  handleScroll()
+})
+
+onBeforeUnmount(() => {
+  // 移除事件监听
+  try { window.removeEventListener('auth-changed', checkAuthStatus) } catch (e) {}
+  try { window.removeEventListener('scroll', handleScroll) } catch (e) {}
+  try { window.removeEventListener('storage', handleStorageEvent) } catch (e) {}
+})
 </script>
 
 <style lang="scss" scoped>
@@ -712,8 +659,19 @@ export default {
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    background: transparent;
-    border: 1px solid transparent;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: var(--bg-active);
+      transform: scale(1.05);
+    }
+    
+    .el-icon {
+      font-size: 18px;
+    }
   }
 }
 
@@ -849,6 +807,104 @@ export default {
     .auth-btn {
       padding: 4px 12px;
       font-size: 12px;
+    }
+  }
+}
+
+/* 暗模式适配 */
+.theme-dark {
+  .navbar {
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid var(--border-color);
+    
+    &.navbar-scrolled {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+  }
+  
+  .navbar-brand {
+    .brand-logo-container {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      
+      &:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+      }
+    }
+  }
+  
+  .navbar-menu {
+    :deep(.el-menu-item) {
+      color: var(--text-primary);
+      
+      &:hover {
+        color: var(--wave-purple);
+      }
+      
+      &.is-active {
+        color: var(--wave-purple);
+      }
+    }
+    
+    :deep(.el-sub-menu) {
+      .el-sub-menu__title {
+        color: var(--text-primary);
+        
+        &:hover {
+          color: var(--wave-purple);
+        }
+      }
+      
+      .el-dropdown-menu {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid var(--border-color);
+        
+        .el-dropdown-menu__item {
+          color: var(--text-primary);
+          
+          &:hover {
+            background: var(--bg-hover);
+            color: var(--wave-purple);
+          }
+          
+          &.is-disabled {
+            color: var(--text-disabled);
+          }
+        }
+      }
+    }
+  }
+  
+  .navbar-user {
+    .user-avatar {
+      background-color: var(--bg-card);
+      
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+    }
+    
+    .register-btn {
+      &:hover {
+        box-shadow: 0 6px 18px rgba(123, 97, 255, 0.3);
+      }
+    }
+    
+    .login-btn {
+      &:hover {
+        box-shadow: 0 6px 18px rgba(123, 97, 255, 0.3);
+      }
+    }
+    
+    .theme-toggle {
+      color: var(--text-primary);
+      background: var(--bg-hover);
+      border: 1px solid var(--border-color);
+      
+      &:hover {
+        background: var(--bg-active);
+      }
     }
   }
 }

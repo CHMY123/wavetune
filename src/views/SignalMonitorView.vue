@@ -616,4 +616,120 @@ export default {
     }
   }
 }
+
+/* 暗模式适配 */
+.theme-dark {
+  .signal-monitor-view {
+    background: var(--bg-page);
+  }
+  
+  .top-section {
+    background: var(--bg-card);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    
+    .header-content {
+      .page-title {
+        :deep(.el-page-header__content) {
+          color: var(--text-primary);
+        }
+      }
+      
+      .status-info {
+        .device-status {
+          color: var(--text-secondary);
+        }
+      }
+    }
+    
+    .monitor-info {
+      color: var(--text-regular);
+    }
+  }
+  
+  .signal-modules {
+    .signal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+      
+      :deep(.el-card__header) {
+        background: rgba(30, 41, 59, 0.8);
+        border-bottom: 1px solid var(--border-color);
+        
+        .card-header {
+          .signal-name {
+            color: var(--text-primary);
+          }
+        }
+      }
+      
+      .signal-data {
+        .data-value {
+          .value-text {
+            color: var(--text-primary);
+          }
+          
+          .value-unit {
+            color: var(--text-secondary);
+          }
+        }
+        
+        .reference-range {
+          color: var(--text-secondary);
+        }
+      }
+      
+      .waveform-container {
+        background: rgba(30, 41, 59, 0.5);
+        
+        .waveform {
+          line {
+            stroke: rgba(255, 255, 255, 0.1);
+          }
+        }
+      }
+    }
+  }
+  
+  .bottom-section {
+    background: var(--bg-card);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    
+    .timeline-section {
+      .timeline-header {
+        .timeline-title {
+          color: var(--text-primary);
+        }
+        
+        .current-time {
+          color: var(--text-regular);
+        }
+      }
+      
+      .timeline {
+        .time-marks {
+          .time-mark {
+            color: var(--text-secondary);
+            
+            &.current {
+              color: var(--el-color-danger);
+            }
+          }
+        }
+        
+        .timeline-progress {
+          background: rgba(255, 255, 255, 0.1);
+          
+          .progress-line {
+            background: var(--el-color-primary);
+          }
+        }
+      }
+    }
+  }
+}
 </style>

@@ -163,6 +163,187 @@ $--dialog-box-shadow: $shadow-dark;
   padding: 2px 12px;
 }
 
+// 全局暗模式样式
+.theme-dark {
+  // 对话框
+  .el-dialog {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+  
+  .el-dialog__header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    
+    .el-dialog__title {
+      color: var(--text-primary) !important;
+    }
+  }
+  
+  .el-dialog__body {
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  .el-dialog__footer {
+    background-color: rgba(30, 41, 59, 0.9) !important;
+    border-top: 1px solid var(--border-color) !important;
+  }
+  
+  // 卡片
+  .el-card {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .el-card__header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  .el-card__body {
+    background: rgba(30, 41, 59, 0.9) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  // 表格
+  .el-table {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid var(--border-color) !important;
+  }
+  
+  .el-table th,
+  .el-table td {
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+  }
+  
+  .el-table th {
+    background: rgba(30, 41, 59, 0.9) !important;
+  }
+  
+  .el-table__row:hover td {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+  }
+  
+  .el-table__row {
+    background: rgba(30, 41, 59, 0.7) !important;
+  }
+  
+  .el-table__row--striped {
+    background: rgba(30, 41, 59, 0.8) !important;
+  }
+  
+  // 输入框
+  .el-input__wrapper {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    
+    &:focus-within {
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+      border-color: var(--el-color-primary) !important;
+    }
+  }
+  
+  .el-textarea__wrapper {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  // 按钮
+  .el-button {
+    &.el-button--default {
+      background: rgba(30, 41, 59, 0.7) !important;
+      border: 1px solid var(--border-color) !important;
+      color: var(--text-primary) !important;
+      
+      &:hover {
+        background: rgba(30, 41, 59, 1) !important;
+      }
+    }
+    
+    &.el-button--primary {
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)) !important;
+      border: none !important;
+      
+      &:hover {
+        background: linear-gradient(135deg, var(--brand-secondary), var(--brand-primary)) !important;
+      }
+    }
+  }
+  
+  // 选择器
+  .el-select__wrapper {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+  }
+  
+  .el-select-dropdown {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid var(--border-color) !important;
+    
+    .el-select-dropdown__item {
+      color: var(--text-primary) !important;
+      
+      &:hover {
+        background: rgba(59, 130, 246, 0.1) !important;
+      }
+      
+      &.selected {
+        background: rgba(59, 130, 246, 0.3) !important;
+      }
+    }
+  }
+  
+  // 单选框
+  .el-radio__label {
+    color: var(--text-primary) !important;
+  }
+  
+  // 评分
+  .el-rate__icon {
+    &.is-active {
+      color: #f59e0b !important;
+    }
+  }
+  
+  // 时间线
+  .el-timeline-item__content {
+    color: var(--text-primary) !important;
+  }
+  
+  // 标签
+  .el-tag {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border: 1px solid rgba(59, 130, 246, 0.3) !important;
+    color: var(--brand-primary) !important;
+  }
+  
+  // 消息提示
+  .el-message-box {
+    background: rgba(30, 41, 59, 0.95) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(12px) !important;
+    
+    .el-message-box__title {
+      color: var(--text-primary) !important;
+    }
+    
+    .el-message-box__content {
+      color: var(--text-secondary) !important;
+    }
+  }
+}
+
+
 
 
 

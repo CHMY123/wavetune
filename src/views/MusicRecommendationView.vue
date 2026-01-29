@@ -685,8 +685,8 @@ export default {
         return
       }
 
-      // 使用playerStore播放音乐
-      this.playerStore.playTrack(track)
+      // 使用playerStore播放音乐，传递当前音乐列表作为playlist
+      this.playerStore.playTrack(track, this.displayedMusicList)
     },
     async addMusic() {
       try {
@@ -1934,6 +1934,401 @@ export default {
   
   .cancel-button, .confirm-button {
     width: 100%;
+  }
+}
+
+/* 暗模式适配 */
+.theme-dark {
+  /* 页面背景 */
+  .music-recommendation-view {
+    background: var(--bg-page);
+  }
+  
+  /* 波形背景装饰 */
+  .wave-bg-container {
+    .wave-bg {
+      opacity: 0.1;
+    }
+    
+    .wave-bg-1 {
+      background: var(--brand-primary);
+    }
+    
+    .wave-bg-2 {
+      background: var(--brand-accent);
+    }
+    
+    .wave-bg-3 {
+      background: var(--brand-secondary);
+    }
+  }
+  
+  /* 顶部推荐说明栏 */
+  .recommendation-header {
+    .header-content {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      
+      .header-text {
+        .main-text {
+          background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+        }
+        
+        .recommendation-basis {
+          color: var(--text-secondary);
+        }
+      }
+      
+      .fatigue-tag {
+        background: rgba(255, 183, 77, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 183, 77, 0.3);
+        color: var(--warning-color);
+      }
+    }
+  }
+  
+  /* 添加音乐按钮 */
+  .add-music-btn {
+    background: rgba(16, 185, 129, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    color: var(--brand-primary) !important;
+    
+    &:hover {
+      background: var(--brand-primary) !important;
+      color: white !important;
+      border-color: var(--brand-primary) !important;
+    }
+  }
+  
+  /* 音乐卡片 */
+  .music-grid {
+    .skeleton-grid {
+      .music-card.skeleton {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(8px);
+        border: 1px solid var(--border-color);
+        
+        .cover-section {
+          .skeleton-cover {
+            background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
+          }
+        }
+        
+        .info-section {
+          .skeleton-line {
+            background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
+          }
+        }
+      }
+    }
+    
+    .music-card {
+      background: rgba(30, 41, 59, 0.9);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      
+      &:hover {
+        background: rgba(30, 41, 59, 1);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+      }
+      
+      .cover-section {
+        .image-error {
+          background: linear-gradient(135deg, #1e293b, #334155);
+          
+          .music-icon {
+            color: var(--text-placeholder);
+          }
+        }
+        
+        .match-badge {
+          background: var(--brand-accent);
+          color: white;
+          box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+        }
+        
+        .play-button {
+          background: rgba(255, 255, 255, 0.9);
+          color: var(--brand-primary);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+          
+          &:hover {
+            background: var(--brand-primary);
+            color: white;
+          }
+        }
+        
+        .delete-music-btn {
+          background: rgba(239, 68, 68, 0.8) !important;
+          color: white !important;
+          border: none !important;
+          
+          &:hover {
+            background: rgba(239, 68, 68, 1) !important;
+          }
+        }
+      }
+      
+      .info-section {
+        .music-title {
+          color: var(--text-primary);
+        }
+        
+        .music-artist {
+          color: var(--text-secondary);
+        }
+        
+        .music-meta {
+          .music-duration {
+            color: var(--text-secondary);
+            background: var(--bg-hover);
+          }
+        }
+        
+        .music-reason {
+          color: var(--text-secondary);
+        }
+      }
+    }
+  }
+  
+  /* 空状态 */
+  .empty-state {
+    .empty-container {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      
+      .empty-icon {
+        color: var(--text-placeholder);
+      }
+      
+      .empty-text {
+        color: var(--text-primary);
+      }
+      
+      .empty-subtext {
+        color: var(--text-secondary);
+      }
+      
+      .primary-button {
+        background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+        
+        &:hover {
+          background: linear-gradient(135deg, var(--brand-secondary), var(--brand-primary));
+        }
+      }
+    }
+  }
+  
+  /* 弹窗样式 */
+  .custom-add-music-dialog {
+    --primary-color: var(--brand-primary);
+    --primary-light: var(--brand-primary-light);
+    --border-color: var(--border-color);
+    --text-primary: var(--text-primary);
+    --text-secondary: var(--text-secondary);
+    --bg-light: var(--bg-hover);
+    
+    .el-dialog {
+      background: rgba(30, 41, 59, 0.95) !important;
+      border: 1px solid var(--border-color) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+      backdrop-filter: blur(12px) !important;
+    }
+    
+    .el-dialog__header {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+      border-bottom: 1px solid var(--border-color) !important;
+      
+      .el-dialog__title {
+        color: var(--text-primary) !important;
+      }
+    }
+    
+    .el-dialog__body {
+      background: rgba(30, 41, 59, 0.9) !important;
+      
+      .form-item {
+        .el-form-item__label {
+          color: var(--text-primary) !important;
+        }
+      }
+      
+      .form-control {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        
+        &:focus {
+          border-color: var(--brand-primary) !important;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+        }
+      }
+      
+      .upload-hint {
+        color: var(--text-secondary) !important;
+      }
+      
+      .form-hint {
+        color: var(--text-secondary) !important;
+      }
+      
+      .file-info {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+      }
+      
+      .audio-upload {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid var(--border-color) !important;
+        
+        .upload-title {
+          color: var(--text-primary) !important;
+          border-bottom: 1px solid var(--border-color) !important;
+        }
+      }
+    }
+    
+    .el-dialog__footer {
+      background-color: rgba(30, 41, 59, 0.9) !important;
+      border-top: 1px solid var(--border-color) !important;
+      
+      .el-button {
+        &.el-button--primary {
+          background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)) !important;
+          border: none !important;
+          
+          &:hover {
+            background: linear-gradient(135deg, var(--brand-secondary), var(--brand-primary)) !important;
+          }
+        }
+        
+        &.el-button--default {
+          background: rgba(30, 41, 59, 0.7) !important;
+          border: 1px solid var(--border-color) !important;
+          color: var(--text-primary) !important;
+          
+          &:hover {
+            background: rgba(30, 41, 59, 1) !important;
+          }
+        }
+      }
+    }
+  }
+  
+  /* 弹窗内容 */
+  .dialog-content {
+    .left-section {
+      .cover-container {
+        .cover-image {
+          border: 6px solid var(--bg-card);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cover-ring {
+          border: 2px dashed var(--border-color);
+        }
+      }
+      
+      .cover-placeholder {
+        background: linear-gradient(135deg, var(--bg-card), var(--bg-hover));
+        border: 6px solid var(--bg-card);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        color: var(--text-secondary);
+        
+        .placeholder-icon {
+          color: var(--text-placeholder);
+        }
+      }
+      
+      .audio-upload {
+        background-color: var(--bg-hover);
+        border: 1px solid var(--border-color);
+        
+        &:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          border-color: var(--brand-primary-light);
+        }
+        
+        .upload-title {
+          color: var(--text-primary);
+          border-bottom: 1px solid var(--border-color);
+        }
+        
+        .file-info {
+          background-color: var(--bg-card);
+          border: 1px solid var(--border-color);
+        }
+      }
+    }
+    
+    .right-section {
+      .form-item {
+        .el-form-item__label {
+          color: var(--text-primary);
+        }
+      }
+      
+      .form-control {
+        border-color: var(--border-color) !important;
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        
+        &:focus {
+          border-color: var(--brand-primary) !important;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+        }
+      }
+      
+      .form-hint {
+        color: var(--text-secondary);
+      }
+    }
+  }
+  
+  /* 按钮样式 */
+  .select-audio-btn {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    
+    &:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--brand-primary);
+    }
+  }
+  
+  .select-cover-btn {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    
+    &:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--brand-primary);
+    }
+  }
+  
+  .cancel-button {
+    background-color: var(--bg-card);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    
+    &:hover {
+      background-color: var(--bg-hover);
+    }
+  }
+  
+  /* 加载更多和懒加载样式 */
+  .all-loaded {
+    color: var(--text-secondary);
   }
 }
 </style>

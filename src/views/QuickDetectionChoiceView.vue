@@ -3,7 +3,7 @@
     <el-card class="choice-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <component :is="Detection" class="header-icon" />
+          <component :is="Aim" class="header-icon" />
           <span>快速检测</span>
         </div>
       </template>
@@ -24,7 +24,7 @@
               class="choice-button primary-button"
             >
               <div class="button-icon-container">
-                <el-icon class="icon"><Experiment /></el-icon>
+                <el-icon class="icon"><Histogram /></el-icon>
               </div>
               <div class="button-content">
                 <div class="button-title">2-Back 疲劳诱发实验</div>
@@ -60,18 +60,18 @@
 
 <script>
 import { 
-  Experiment, 
   DataAnalysis, 
-  Detection, 
+  Aim, 
+  Histogram, 
   ArrowRight 
 } from '@element-plus/icons-vue'
 
 export default {
   name: 'QuickDetectionChoiceView',
   components: {
-    Experiment,
     DataAnalysis,
-    Detection,
+    Aim,
+    Histogram,
     ArrowRight
   },
   methods: {
@@ -412,5 +412,66 @@ export default {
   .button-subtitle {
     font-size: 12px;
   }
+}
+
+/* 暗模式适配 */
+.theme-dark .quick-detection-choice {
+  background-color: var(--bg-page);
+  background-image: none;
+}
+
+.theme-dark .choice-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.theme-dark .choice-card:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .card-header {
+  background-color: var(--bg-hover);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.theme-dark .header-icon {
+  color: var(--brand-primary);
+}
+
+.theme-dark .main-title {
+  color: var(--text-primary);
+}
+
+.theme-dark .description {
+  color: var(--text-secondary);
+}
+
+.theme-dark .choice-button:hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .primary-button {
+  background: linear-gradient(135deg, #409eff, #66b1ff);
+}
+
+.theme-dark .primary-button:hover {
+  background: linear-gradient(135deg, #3a8ee6, #53a8ff);
+}
+
+.theme-dark .success-button {
+  background: linear-gradient(135deg, #67c23a, #85ce61);
+}
+
+.theme-dark .success-button:hover {
+  background: linear-gradient(135deg, #5cb85c, #71d571);
+}
+
+.theme-dark .button-icon-container {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.theme-dark .choice-button:hover .button-icon-container {
+  background-color: rgba(255, 255, 255, 0.25);
 }
 </style>

@@ -8,6 +8,7 @@ import router from './router'
 import axios from 'axios'
 import { setupErrorHandler } from './utils/errorHandler.js'
 import './assets/styles/_variables.scss'
+import './assets/styles/_design_tokens.scss'
 
 // 设置错误处理
 setupErrorHandler()

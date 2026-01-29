@@ -63,8 +63,8 @@ export default {
 
 <style lang="scss" scoped>
 .footer {
-  background: #2c3e50;
-  color: #ecf0f1;
+  background: var(--bg-card);
+  color: var(--text-primary);
   padding: 0;
   margin-top: auto; 
   width: 100%; 
@@ -73,6 +73,7 @@ export default {
   box-sizing: border-box;
   position: relative; // 确保层级，防止被遮挡
   min-height: 200px; // 确保有足够的高度显示内容
+  border-top: 1px solid var(--border-color);
 }
 
 .footer-content {
@@ -98,25 +99,26 @@ export default {
     
     .footer-icon {
       font-size: 24px;
-      color: var(--el-color-primary);
+      color: var(--brand-primary);
     }
     
     .footer-title {
       font-size: 20px;
       font-weight: bold;
+      color: var(--text-primary);
     }
   }
   
   .footer-desc {
     font-size: 14px;
     line-height: 1.6;
-    color: #bdc3c7;
+    color: var(--text-secondary);
     margin-bottom: 12px;
   }
   
   .footer-tech {
     font-size: 12px;
-    color: #95a5a6;
+    color: var(--text-placeholder);
     margin: 0;
   }
 }
@@ -132,7 +134,7 @@ export default {
     font-size: 16px;
     font-weight: bold;
     margin-bottom: 16px;
-    color: #ecf0f1;
+    color: var(--text-primary);
   }
   
   .link-list {
@@ -144,13 +146,13 @@ export default {
       margin-bottom: 8px;
       
       a {
-        color: #bdc3c7;
+        color: var(--text-secondary);
         text-decoration: none;
         font-size: 14px;
         transition: color 0.3s ease;
         
         &:hover {
-          color: var(--el-color-primary);
+          color: var(--brand-primary);
         }
       }
     }
@@ -158,7 +160,7 @@ export default {
 }
 
 .footer-bottom {
-  border-top: 1px solid #34495e;
+  border-top: 1px solid var(--border-color);
   padding: 20px 24px; // 移除未定义变量，避免padding失效
   text-align: center;
   box-sizing: border-box;
@@ -171,13 +173,13 @@ export default {
   p {
     margin: 4px 0;
     font-size: 14px;
-    color: #95a5a6;
+    color: var(--text-placeholder);
     word-wrap: break-word; // 防止文字换行溢出
   }
   
   .footer-privacy {
     font-size: 12px;
-    color: #7f8c8d;
+    color: var(--text-placeholder);
   }
 }
 

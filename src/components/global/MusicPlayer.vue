@@ -173,9 +173,13 @@ import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { VideoPlay, VideoPause, Close, ArrowLeft, ArrowRight, Refresh, RefreshLeft, Rank } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { usePlayerStore } from '../../stores/playerStore'
+import { useTheme } from '@/composables/useTheme'
 
 // 使用 Pinia store
 const playerStore = usePlayerStore()
+
+// 使用主题管理
+const { isDarkMode } = useTheme()
 
 // 音频元素引用
 const audioEl = ref(null)
@@ -201,11 +205,6 @@ const isMuted = computed({
 const repeatMode = computed(() => playerStore.repeatMode)
 const hasNextTrack = computed(() => playerStore.hasNextTrack)
 const hasPrevTrack = computed(() => playerStore.hasPrevTrack)
-
-// 检测系统暗色模式
-const isDarkMode = computed(() => {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-})
 
 // 获取主题色
 const getAccentColor = computed(() => {

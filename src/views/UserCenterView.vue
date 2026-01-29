@@ -1396,4 +1396,210 @@ export default {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* 暗模式适配 */
+.theme-dark {
+  .user-center {
+    background-color: var(--bg-page);
+  }
+  
+  .wave-background {
+    .wave {
+      opacity: 0.05;
+    }
+  }
+  
+  .user-center-container {
+    .user-info-card,
+    .preferences-card,
+    .sessions-card,
+    .password-card,
+    .feedback-card {
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      
+      &:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      }
+      
+      :deep(.el-card__header) {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%);
+        border-bottom: 1px solid var(--border-color);
+        
+        .card-header {
+          h2 {
+            color: var(--text-primary);
+          }
+        }
+      }
+    }
+    
+    .user-info-card {
+      .user-info-content {
+        .avatar-section {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.5) 100%);
+          border: 1px solid var(--border-color);
+        }
+        
+        .user-form {
+          .el-form-item {
+            :deep(.el-form-item__label) {
+              color: var(--text-primary);
+            }
+            
+            :deep(.el-input__wrapper) {
+              background: rgba(30, 41, 59, 0.7);
+              border: 1px solid var(--border-color);
+              
+              &:focus-within {
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+                border-color: var(--el-color-primary);
+              }
+            }
+            
+            :deep(.el-input.is-disabled .el-input__wrapper) {
+              background-color: rgba(30, 41, 59, 0.5);
+            }
+          }
+        }
+      }
+    }
+    
+    .preferences-card {
+      .preferences-form {
+        .el-form-item {
+          :deep(.el-form-item__label) {
+            color: var(--text-primary);
+          }
+          
+          :deep(.el-select__wrapper) {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-color);
+            
+            &:focus-within {
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+              border-color: var(--el-color-primary);
+            }
+          }
+          
+          :deep(.el-switch) {
+            --el-switch-on-color: var(--el-color-primary);
+          }
+        }
+      }
+    }
+    
+    .password-card {
+      .password-form {
+        .el-form-item {
+          :deep(.el-form-item__label) {
+            color: var(--text-primary);
+          }
+          
+          :deep(.el-input__wrapper) {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid var(--border-color);
+            
+            &:focus-within {
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+              border-color: var(--el-color-primary);
+            }
+          }
+        }
+      }
+    }
+    
+    .sessions-card {
+      :deep(.el-table) {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid var(--border-color) !important;
+        
+        th,
+        td {
+          color: var(--text-primary) !important;
+          border-bottom: 1px solid var(--border-color) !important;
+        }
+        
+        th {
+          background: rgba(30, 41, 59, 0.9) !important;
+        }
+        
+        .el-table__row:hover td {
+          background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .el-table__row {
+          background: rgba(30, 41, 59, 0.7) !important;
+        }
+        
+        .el-table__row--striped {
+          background: rgba(30, 41, 59, 0.8) !important;
+        }
+      }
+    }
+    
+    .feedback-card {
+      .feedback-form-container {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+        border: 1px solid var(--border-color) !important;
+      }
+      
+      .feedback-form {
+        .el-form-item {
+          :deep(.el-form-item__label) {
+            color: var(--text-primary) !important;
+          }
+          
+          :deep(.el-input__wrapper) {
+            background: rgba(30, 41, 59, 0.7) !important;
+            border: 1px solid var(--border-color) !important;
+            
+            &:focus-within {
+              box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+              border-color: var(--el-color-primary) !important;
+            }
+          }
+        }
+      }
+      
+      :deep(.el-table) {
+        background: rgba(30, 41, 59, 0.7) !important;
+        border: 1px solid var(--border-color) !important;
+        
+        th,
+        td {
+          color: var(--text-primary) !important;
+          border-bottom: 1px solid var(--border-color) !important;
+        }
+        
+        th {
+          background: rgba(30, 41, 59, 0.9) !important;
+        }
+        
+        .el-table__row:hover td {
+          background-color: rgba(59, 130, 246, 0.1) !important;
+        }
+        
+        .el-table__row {
+          background: rgba(30, 41, 59, 0.7) !important;
+        }
+        
+        .el-table__row--striped {
+          background: rgba(30, 41, 59, 0.8) !important;
+        }
+      }
+      
+      .feedback-content {
+        color: var(--text-primary) !important;
+      }
+    }
+  }
+  
+  :deep(.el-button) {
+    &:hover {
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+  }
+}
 </style>

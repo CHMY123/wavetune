@@ -385,4 +385,32 @@ export default {
     color: var(--dark-text-primary);
   }
 }
+
+/* 手动主题切换支持 */
+.theme-dark .modern-card {
+  background-color: var(--dark-background-color-light);
+  
+  :deep(.el-card__header),
+  :deep(.el-card__body) {
+    background-color: transparent;
+  }
+  
+  &.gradient-border {
+    background-image: linear-gradient(var(--dark-background-color-light), var(--dark-background-color-light)),
+                     linear-gradient(90deg, var(--wave-blue), var(--wave-purple), var(--wave-pink));
+  }
+  
+  &.wave-card {
+    background-color: var(--dark-background-color-light);
+    
+    &::before {
+      background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.03) 0%, transparent 20%),
+                        radial-gradient(circle at 80% 70%, rgba(106, 90, 205, 0.03) 0%, transparent 30%);
+    }
+  }
+}
+
+.theme-dark .card-title {
+  color: var(--dark-text-primary);
+}
 </style>

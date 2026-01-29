@@ -25,7 +25,7 @@ export const usePlayerStore = defineStore('player', {
 
   actions: {
     // 播放指定曲目
-    playTrack(track) {
+    playTrack(track, playlist = []) {
       if (!track) return
       
       this.currentTrack = track
@@ -33,6 +33,16 @@ export const usePlayerStore = defineStore('player', {
       this.duration = 0
       this.isPlaying = true
       this.showPlayer = true
+      
+      // 如果提供了播放列表，更新playlist和currentIndex
+      if (playlist && playlist.length > 0) {
+        this.playlist = playlist
+        this.currentIndex = playlist.findIndex(item => item.id === track.id)
+        // 如果在列表中找不到当前曲目，设置为0
+        if (this.currentIndex === -1) {
+          this.currentIndex = 0
+        }
+      }
     },
 
     // 关闭播放器
@@ -79,7 +89,8 @@ export const usePlayerStore = defineStore('player', {
       
       this.currentIndex++
       const nextTrack = this.playlist[this.currentIndex]
-      this.playTrack(nextTrack)
+      // 传递当前playlist，确保导航状态保持一致
+      this.playTrack(nextTrack, this.playlist)
       return nextTrack
     },
 
@@ -89,7 +100,8 @@ export const usePlayerStore = defineStore('player', {
       
       this.currentIndex--
       const prevTrack = this.playlist[this.currentIndex]
-      this.playTrack(prevTrack)
+      // 传递当前playlist，确保导航状态保持一致
+      this.playTrack(prevTrack, this.playlist)
       return prevTrack
     }
   }

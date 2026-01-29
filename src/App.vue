@@ -11,17 +11,19 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { onMounted } from 'vue'
 import Navbar from './components/global/Navbar.vue'
 import Footer from './components/global/Footer.vue'
+import { useTheme } from './composables/useTheme'
 
-export default {
-  name: 'App',
-  components: {
-    Navbar,
-    Footer
-  }
-}
+// 使用主题管理
+const { initTheme } = useTheme()
+
+onMounted(() => {
+  // 初始化主题
+  initTheme()
+})
 </script>
 
 <style lang="scss">
@@ -31,7 +33,7 @@ export default {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-page);
   width: 100%;
   margin: 0;
   padding: 0;
