@@ -8,6 +8,8 @@
       </main>
     </div>
     <Footer />
+    <!-- 全局播放器 -->
+    <MusicPlayer />
   </div>
 </template>
 
@@ -15,6 +17,7 @@
 import { onMounted } from 'vue'
 import Navbar from './components/global/Navbar.vue'
 import Footer from './components/global/Footer.vue'
+import MusicPlayer from './components/global/MusicPlayer.vue'
 import { useTheme } from './composables/useTheme'
 
 // 使用主题管理

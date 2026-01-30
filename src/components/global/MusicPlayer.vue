@@ -47,23 +47,17 @@
         
         <!-- 进度条区域 -->
         <div class="progress-container">
-          <div class="progress-bar-wrapper">
+          <div class="progress-bar-wrapper" ref="progressBarWrapper" @click="handleProgressClick">
             <div 
               class="progress-indicator" 
               :style="{ width: `${(duration > 0 ? (currentTime / duration) * 100 : 0)}%` }"
             ></div>
-            <input 
-              ref="progressSlider"
-              type="range" 
-              min="0" 
-              :max="duration || 100" 
-              step="0.1" 
-              :value="currentTime"
-              @input="handleProgressInput"
-              @change="handleProgressChange"
-              class="progress-slider"
-              aria-label="播放进度"
-            />
+            <div 
+              class="progress-handle" 
+              :style="{ left: `${(duration > 0 ? (currentTime / duration) * 100 : 0)}%` }"
+              @mousedown="startDragging"
+              @touchstart="startDragging"
+            ></div>
           </div>
           <div class="time-display">
             <span class="current-time">{{ formatTime(currentTime) }}</span>
@@ -183,8 +177,8 @@ const { isDarkMode } = useTheme()
 
 // 音频元素引用
 const audioEl = ref(null)
-const progressSlider = ref(null)
-const isSeeking = ref(false)
+const progressBarWrapper = ref(null)
+const isDragging = ref(false)
 const isClosing = ref(false)
 const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
 const isManualPause = ref(false)
@@ -332,7 +326,7 @@ const toggleRepeatMode = () => {
 // 处理意外暂停
 const handleUnexpectedPause = () => {
   // 如果不是手动暂停、不是正在关闭、不是正在拖动进度条，且应该处于播放状态
-  if (!isManualPause.value && !isClosing.value && !isSeeking.value && isPlaying.value) {
+  if (!isManualPause.value && !isClosing.value && !isDragging.value && isPlaying.value) {
     console.debug('[MusicPlayer] 检测到意外暂停，尝试恢复播放')
     // 延迟恢复，避免浏览器策略拦截
     setTimeout(() => {
@@ -345,7 +339,7 @@ const handleUnexpectedPause = () => {
 
 // 时间更新处理
 const onTimeUpdate = () => {
-  if (!audioEl.value || isSeeking.value) return
+  if (!audioEl.value || isDragging.value) return
   playerStore.setCurrentTime(audioEl.value.currentTime)
 }
 
@@ -405,36 +399,155 @@ const handleAudioError = (e) => {
   ElMessage.error(errorMessage)
 }
 
-// 进度条输入处理
-const handleProgressInput = (event) => {
-  if (!audioEl.value) return
+// 进度条拖动逻辑
+const startDragging = (event) => {
+  event.preventDefault()
+  event.stopPropagation()
   
-  const newTime = parseFloat(event.target.value)
-  isSeeking.value = true
-  playerStore.setCurrentTime(newTime)
-  console.debug('[MusicPlayer] handleProgressInput newTime=', newTime, 'isSeeking=', isSeeking.value)
+  isDragging.value = true
+  
+  // 添加鼠标和触摸事件监听器
+  document.addEventListener('mousemove', handleDragging)
+  document.addEventListener('mouseup', stopDragging)
+  document.addEventListener('touchmove', handleDragging, { passive: false })
+  document.addEventListener('touchend', stopDragging)
+  
+  console.debug('[MusicPlayer] started dragging')
 }
 
-const handleProgressChange = async (event) => {
-  if (!audioEl.value) return
+const handleDragging = (event) => {
+  if (!isDragging.value || !progressBarWrapper.value || !audioEl.value) return
   
-  const newTime = parseFloat(event.target.value)
+  event.preventDefault()
+  
+  const wrapperRect = progressBarWrapper.value.getBoundingClientRect()
+  let clientX
+  
+  // 处理鼠标和触摸事件
+  if (event.type === 'mousemove') {
+    clientX = event.clientX
+  } else if (event.type === 'touchmove') {
+    clientX = event.touches[0].clientX
+  }
+  
+  // 计算拖动位置占进度条的百分比
+  let percentage = (clientX - wrapperRect.left) / wrapperRect.width
+  percentage = Math.max(0, Math.min(1, percentage))
+  
+  // 计算对应的时间
+  const newTime = percentage * duration.value
+  playerStore.setCurrentTime(newTime)
+  
+  console.debug('[MusicPlayer] dragging to:', newTime, 'seconds,', (percentage * 100).toFixed(1), '%')
+}
+
+const stopDragging = async () => {
+  if (!isDragging.value || !audioEl.value) return
+  
+  // 移除事件监听器
+  document.removeEventListener('mousemove', handleDragging)
+  document.removeEventListener('mouseup', stopDragging)
+  document.removeEventListener('touchmove', handleDragging)
+  document.removeEventListener('touchend', stopDragging)
+  
+  isDragging.value = false
+  
+  // 应用最终的播放位置
+  const newTime = playerStore.currentTime
   const validTime = Math.max(0, Math.min(newTime, duration.value))
-  playerStore.setCurrentTime(validTime)
-  console.debug('[MusicPlayer] handleProgressChange -> applying time=', validTime)
+  
   try {
+    // 暂停当前播放，以便更准确地设置时间
+    if (isPlaying.value) {
+      audioEl.value.pause()
+    }
+    
+    // 设置音频时间
     audioEl.value.currentTime = validTime
+    
+    // 等待音频时间设置完成
+    await new Promise(resolve => {
+      const onSeeked = () => {
+        audioEl.value.removeEventListener('seeked', onSeeked)
+        resolve()
+      }
+      audioEl.value.addEventListener('seeked', onSeeked)
+      // 超时处理，防止事件不触发
+      setTimeout(resolve, 1000)
+    })
+    
+    console.debug('[MusicPlayer] seeked to new time:', validTime)
   } catch (e) {
     console.warn('设置音频时间时发生警告:', e)
   }
   
-  await nextTick()
-  isSeeking.value = false
-  
+  // 恢复播放
   if (isPlaying.value) {
     try {
       await audioEl.value.play()
-      console.debug('[MusicPlayer] resumed play after change')
+      console.debug('[MusicPlayer] resumed play after dragging')
+    } catch (e) {
+      console.error('恢复播放失败:', e)
+      playerStore.setIsPlaying(false)
+    }
+  }
+}
+
+const handleProgressClick = (event) => {
+  if (!progressBarWrapper.value || !audioEl.value || isDragging.value) return
+  
+  const wrapperRect = progressBarWrapper.value.getBoundingClientRect()
+  const clientX = event.clientX
+  
+  // 计算点击位置占进度条的百分比
+  let percentage = (clientX - wrapperRect.left) / wrapperRect.width
+  percentage = Math.max(0, Math.min(1, percentage))
+  
+  // 计算对应的时间
+  const newTime = percentage * duration.value
+  playerStore.setCurrentTime(newTime)
+  
+  // 应用播放位置
+  applyProgressChange(newTime)
+  
+  console.debug('[MusicPlayer] clicked at:', newTime, 'seconds,', (percentage * 100).toFixed(1), '%')
+}
+
+const applyProgressChange = async (newTime) => {
+  if (!audioEl.value) return
+  
+  const validTime = Math.max(0, Math.min(newTime, duration.value))
+  
+  try {
+    // 暂停当前播放，以便更准确地设置时间
+    if (isPlaying.value) {
+      audioEl.value.pause()
+    }
+    
+    // 设置音频时间
+    audioEl.value.currentTime = validTime
+    
+    // 等待音频时间设置完成
+    await new Promise(resolve => {
+      const onSeeked = () => {
+        audioEl.value.removeEventListener('seeked', onSeeked)
+        resolve()
+      }
+      audioEl.value.addEventListener('seeked', onSeeked)
+      // 超时处理，防止事件不触发
+      setTimeout(resolve, 1000)
+    })
+    
+    console.debug('[MusicPlayer] applied progress change to:', validTime)
+  } catch (e) {
+    console.warn('设置音频时间时发生警告:', e)
+  }
+  
+  // 恢复播放
+  if (isPlaying.value) {
+    try {
+      await audioEl.value.play()
+      console.debug('[MusicPlayer] resumed play after progress change')
     } catch (e) {
       console.error('恢复播放失败:', e)
       playerStore.setIsPlaying(false)
@@ -890,18 +1003,14 @@ onBeforeUnmount(() => {
   transition: width 0.1s linear;
 }
 
-.progress-slider {
-  width: 100%;
-  height: 100%;
-  opacity: 0;
+.progress-bar-wrapper {
   cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
 }
 
-.progress-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
+.progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 16px;
   height: 16px;
   border-radius: 50%;
@@ -909,11 +1018,17 @@ onBeforeUnmount(() => {
   cursor: pointer;
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
   transition: var(--transition-fast);
+  z-index: 10;
 }
 
-.progress-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+.progress-handle:hover {
+  transform: translate(-50%, -50%) scale(1.2);
   box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.3);
+}
+
+.progress-handle.dragging {
+  transform: translate(-50%, -50%) scale(1.3);
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.4);
 }
 
 .time-display {

@@ -149,9 +149,6 @@
       </el-button>
     </div>
   </div>
-  
-  <!-- 音乐播放器组件 -->
-  <MusicPlayer />
 
   <!-- 添加音乐弹窗 -->
   <el-dialog 
@@ -323,7 +320,6 @@
 
 <script>
 import { Headset, VideoPlay, Upload, Loading, Picture, Check, Microphone, UploadFilled } from '@element-plus/icons-vue'
-import MusicPlayer from '@/components/global/MusicPlayer.vue'
 import { requestMethod } from '@/utils/request'
 import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
@@ -340,7 +336,6 @@ export default {
     Loading,
     Picture,
     Check,
-    MusicPlayer,
     ElDialog,
     ElButton,
     ElSelect,

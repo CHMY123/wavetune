@@ -6,7 +6,7 @@ export const usePlayerStore = defineStore('player', {
     isPlaying: false,
     duration: 0,
     currentTime: 0,
-    volume: 0.7,
+    volume: 0.15,
     isMuted: false,
     repeatMode: 'list',
     playlist: [],

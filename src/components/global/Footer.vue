@@ -63,8 +63,8 @@ export default {
 
 <style lang="scss" scoped>
 .footer {
-  background: var(--bg-card);
-  color: var(--text-primary);
+  background: #1e293b;
+  color: #f8fafc;
   padding: 0;
   margin-top: auto; 
   width: 100%; 
@@ -73,7 +73,7 @@ export default {
   box-sizing: border-box;
   position: relative; // 确保层级，防止被遮挡
   min-height: 200px; // 确保有足够的高度显示内容
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #475569;
 }
 
 .footer-content {
@@ -99,26 +99,26 @@ export default {
     
     .footer-icon {
       font-size: 24px;
-      color: var(--brand-primary);
+      color: #3b82f6;
     }
     
     .footer-title {
       font-size: 20px;
       font-weight: bold;
-      color: var(--text-primary);
+      color: #f8fafc;
     }
   }
   
   .footer-desc {
     font-size: 14px;
     line-height: 1.6;
-    color: var(--text-secondary);
+    color: #cbd5e1;
     margin-bottom: 12px;
   }
   
   .footer-tech {
     font-size: 12px;
-    color: var(--text-placeholder);
+    color: #94a3b8;
     margin: 0;
   }
 }
@@ -134,7 +134,7 @@ export default {
     font-size: 16px;
     font-weight: bold;
     margin-bottom: 16px;
-    color: var(--text-primary);
+    color: #f8fafc;
   }
   
   .link-list {
@@ -146,13 +146,13 @@ export default {
       margin-bottom: 8px;
       
       a {
-        color: var(--text-secondary);
+        color: #cbd5e1;
         text-decoration: none;
         font-size: 14px;
         transition: color 0.3s ease;
         
         &:hover {
-          color: var(--brand-primary);
+          color: #3b82f6;
         }
       }
     }
@@ -160,10 +160,11 @@ export default {
 }
 
 .footer-bottom {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #475569;
   padding: 20px 24px; // 移除未定义变量，避免padding失效
   text-align: center;
   box-sizing: border-box;
+  background-color: #1e293b;
 }
 
 .footer-copyright {
@@ -173,13 +174,13 @@ export default {
   p {
     margin: 4px 0;
     font-size: 14px;
-    color: var(--text-placeholder);
+    color: #94a3b8;
     word-wrap: break-word; // 防止文字换行溢出
   }
   
   .footer-privacy {
     font-size: 12px;
-    color: var(--text-placeholder);
+    color: #94a3b8;
   }
 }
 
