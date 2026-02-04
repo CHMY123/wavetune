@@ -115,10 +115,10 @@ def require_auth(user: User = Depends(get_current_user)) -> User:
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
     """要求管理员权限（依赖注入）"""
-    # 这里可以根据实际需求实现管理员权限检查
-    # 目前简化处理
     if not user.is_active:
         raise HTTPException(status_code=403, detail="权限不足")
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="权限不足，需要管理员权限")
     return user
 
 

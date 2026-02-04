@@ -79,6 +79,79 @@ const routes = [
     path: '/about',
     name: 'about',
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
+  },
+  // 管理员界面路由
+  {
+    path: '/admin',
+    component: () => import(/* webpackChunkName: "admin" */ '../views/admin/AdminLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        redirect: '/admin/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'admin-dashboard',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/DashboardView.vue')
+      },
+      {
+        path: 'music',
+        name: 'admin-music',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/MusicManagementView.vue')
+      },
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/UserManagementView.vue')
+      },
+      {
+        path: 'feedback',
+        name: 'admin-feedback',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/FeedbackManagementView.vue')
+      },
+      {
+        path: 'config',
+        name: 'admin-config',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/SystemConfigView.vue')
+      }
+    ]
+  },
+  // 数据分析面板路由
+  {
+    path: '/analytics',
+    redirect: '/analytics/dashboard',
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics/dashboard',
+    name: 'analytics-dashboard',
+    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/AnalyticsDashboardView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics/users',
+    name: 'analytics-users',
+    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/UserAnalyticsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics/music',
+    name: 'analytics-music',
+    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/MusicAnalyticsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics/fatigue',
+    name: 'analytics-fatigue',
+    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/FatigueAnalyticsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/analytics/system',
+    name: 'analytics-system',
+    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/SystemAnalyticsView.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -102,6 +175,20 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresGuest && isAuthenticated) {
     next('/')
     return
+  }
+  
+  // 管理员权限检查
+  if (to.path.startsWith('/admin/') || to.path.startsWith('/analytics/')) {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.role !== 'admin') {
+        next('/user-center')
+        return
+      }
+    } catch (error) {
+      next('/user-center')
+      return
+    }
   }
   
   next()

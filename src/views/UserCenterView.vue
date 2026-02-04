@@ -17,6 +17,9 @@
               <el-button type="primary" @click="editMode = !editMode">
                 {{ editMode ? '取消编辑' : '编辑资料' }}
               </el-button>
+              <el-button v-if="userInfo.role === 'admin'" type="success" @click="navigateToAdmin">
+                管理员界面
+              </el-button>
               <el-button type="danger" plain @click="handleDeleteAccount">
                 删除账户
               </el-button>
@@ -481,6 +484,14 @@ export default {
               auto_play: data.preferences.auto_play === 'true'
             })
           }
+          
+          // 更新本地存储中的用户信息，确保包含role字段
+          try {
+            const localUser = JSON.parse(localStorage.getItem('user') || '{}')
+            localStorage.setItem('user', JSON.stringify({...localUser, ...data}))
+          } catch (e) {
+            console.error('更新本地存储失败:', e)
+          }
         }
       } catch (error) {
         console.error('获取用户信息失败:', error)
@@ -734,6 +745,11 @@ export default {
       }
     }
     
+    // 导航到管理员界面
+    const navigateToAdmin = () => {
+      router.push('/admin')
+    }
+    
     // 头像加载错误处理
     const handleAvatarError = (e) => {
       // 替换为默认头像
@@ -961,6 +977,7 @@ export default {
       handleRevokeSession,
       handleLogoutAll,
       handleDeleteAccount,
+      navigateToAdmin,
       handleAvatarError,
       beforeAvatarUpload,
       uploadAvatar,

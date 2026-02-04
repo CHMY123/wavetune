@@ -33,6 +33,8 @@ feedback_router = APIRouter()
 music_router = APIRouter()
 scene_router = APIRouter()
 detection_router = APIRouter()
+admin_router = APIRouter()
+analytics_router = APIRouter()
 
 # 2. 逐个导入路由模块，提取内部的 router 实例（避免一个模块失败影响全部）
 try:
@@ -77,6 +79,18 @@ try:
     detection_router = detection.router if hasattr(detection, 'router') else APIRouter()
 except ImportError as e:
     logging.warning(f"⚠️  detection 路由模块导入失败：{e}，请确保 routers/detection.py 存在并正确")
+
+try:
+    from routers import admin
+    admin_router = admin.router if hasattr(admin, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  admin 路由模块导入失败：{e}，请确保 routers/admin.py 存在并正确")
+
+try:
+    from routers import analytics
+    analytics_router = analytics.router if hasattr(analytics, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  analytics 路由模块导入失败：{e}，请确保 routers/analytics.py 存在并正确")
 
 # 导入数据库配置（如果缺少，临时注释避免报错）
 try:
@@ -133,7 +147,7 @@ app = FastAPI(
 # ========== 配置CORS跨域 ==========
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://wavetune-6xb1.onrender.com", "http://localhost:8080"],
+    allow_origins=["https://wavetune-6xb1.onrender.com", "http://localhost:8080", "http://localhost:8081"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -147,6 +161,8 @@ app.include_router(feedback_router, prefix="/api/feedback", tags=["用户反馈"
 app.include_router(music_router, prefix="/api/music", tags=["音乐推荐"])
 app.include_router(scene_router, prefix="/api/scene", tags=["场景配置"])
 app.include_router(detection_router, prefix="/api/detection", tags=["快速检测"])
+app.include_router(admin_router, prefix="/api", tags=["CMS管理"])
+app.include_router(analytics_router, prefix="/api", tags=["数据分析"])
 
 # ========== 全局异常处理器 ==========
 @app.exception_handler(HTTPException)
@@ -241,11 +257,10 @@ app.mount(
 
 # ========== 启动服务 ==========
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=port,
+        port=8002,
         reload=False,
         log_level="info"
     )

@@ -25,6 +25,7 @@ class User(Base):
     intervention_count = Column(Integer, default=0, comment="干预次数")
     last_login_time = Column(DateTime, comment="最后登录时间")
     is_active = Column(Boolean, default=True, comment="是否激活")
+    role = Column(String(20), default="user", comment="用户角色")
     create_time = Column(DateTime, default=func.now(), comment="注册时间")
     update_time = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
     
@@ -51,6 +52,7 @@ class User(Base):
             "intervention_count": self.intervention_count,
             "last_login_time": self.last_login_time.isoformat() if self.last_login_time else None,
             "is_active": self.is_active,
+            "role": self.role,
             "create_time": self.create_time.isoformat() if self.create_time else None,
             "update_time": self.update_time.isoformat() if self.update_time else None
         }
