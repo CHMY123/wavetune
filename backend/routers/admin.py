@@ -53,8 +53,9 @@ async def create_music(
             cover=music_data.cover,
             audio_url=music_data.audio_url,
             music_type=music_data.music_type,
-            mood=music_data.mood,
-            description=music_data.description
+            fatigue_level=music_data.fatigue_level,
+            match_rate=music_data.match_rate,
+            reason=music_data.reason
         )
         
         db.add(music)
@@ -81,7 +82,6 @@ async def get_music_list(
     page_size: int = 10,
     search: Optional[str] = None,
     music_type: Optional[str] = None,
-    mood: Optional[str] = None,
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
@@ -105,8 +105,6 @@ async def get_music_list(
         # 筛选
         if music_type:
             query = query.filter(Music.music_type == music_type)
-        if mood:
-            query = query.filter(Music.mood == mood)
         
         # 分页
         total = query.count()
@@ -130,6 +128,7 @@ async def get_music_list(
         }
         
     except Exception as e:
+        print(f"获取音乐列表错误: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取音乐列表失败: {str(e)}")
 
 

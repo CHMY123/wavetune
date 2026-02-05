@@ -19,8 +19,8 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <el-tag class="fatigue-tag" :type="fatigueTagType" size="large">{{ currentFatigueLevel }} 疲劳专属</el-tag>
-          <!-- 顶部添加音乐按钮 - 单独强化样式 -->
-          <el-button 
+          <!-- 顶部添加音乐按钮 - 已移至管理员界面 -->
+          <!-- <el-button 
             type="primary" 
             plain 
             size="small" 
@@ -28,7 +28,7 @@
             class="add-music-btn"
           >
             <el-icon><Upload /></el-icon>添加音乐
-          </el-button>
+          </el-button> -->
         </div>
       </div>
     </div>
@@ -91,12 +91,13 @@
               <button class="play-button" type="button" @click.stop="playTrack(music)" :aria-label="'播放 ' + (music.title || '歌曲')">
                 <VideoPlay class="play-svg-icon" />
               </button>
-              <el-button 
+              <!-- 删除按钮 - 已移至管理员界面 -->
+              <!-- <el-button 
                 class="delete-music-btn" 
                 type="danger" size="small" 
                 @click.stop="deleteMusic(music.id)">
                 删除
-              </el-button>
+              </el-button> -->
             </div>
             
             <!-- 信息区域 -->
@@ -150,8 +151,8 @@
     </div>
   </div>
 
-  <!-- 添加音乐弹窗 -->
-  <el-dialog 
+  <!-- 添加音乐弹窗 - 已移至管理员界面 -->
+  <!-- <el-dialog 
     title="添加音乐" 
     v-model="showAddDialog" 
     width="600px" 
@@ -315,7 +316,7 @@
         </el-button>
       </div>
     </template>
-  </el-dialog>
+  </el-dialog> -->
 </template>
 
 <script>
@@ -362,29 +363,29 @@ export default {
           return u?.preferences?.auto_play === 'true'
         }catch(e){return false}
       })(),
-  // 添加音乐弹窗相关
-      showAddDialog: false,
-      newMusic: {
-        title: '',
-        artist: '',
-        duration: '',
-        cover: '',
-        reason: '',
-        music_type: 'natural',
-        fatigue_level: 'medium',
-        match_rate: 50,
-        audio_url: ''
-      },
+  // 添加音乐弹窗相关 - 已移至管理员界面
+      // showAddDialog: false,
+      // newMusic: {
+      //   title: '',
+      //   artist: '',
+      //   duration: '',
+      //   cover: '',
+      //   reason: '',
+      //   music_type: 'natural',
+      //   fatigue_level: 'medium',
+      //   match_rate: 50,
+      //   audio_url: ''
+      // },
       // upload state
-      selectedFile: null,
-      selectedFileName: '',
-      uploading: false,
-      uploadProgress: 0,
+      // selectedFile: null,
+      // selectedFileName: '',
+      // uploading: false,
+      // uploadProgress: 0,
       // cover upload state
-      selectedCoverFile: null,
-      selectedCoverFileName: '',
-      uploadingCover: false,
-      coverUploadProgress: 0
+      // selectedCoverFile: null,
+      // selectedCoverFileName: '',
+      // uploadingCover: false,
+      // coverUploadProgress: 0
     }
   },
   computed: {
@@ -498,22 +499,22 @@ export default {
         console.warn('卡片观察器初始化失败:', error)
       }
     },
-    openAddDialog() {
-      // 打开添加弹窗前，将默认 fatigue_level 设为当前页面的固定等级（映射到后端期望的值）
-      const mapToBackend = (lvl) => {
-        if (!lvl) return 'medium'
-        const l = String(lvl).trim().toLowerCase()
-        if (l === 'high') return 'heavy'
-        if (l === 'low') return 'light'
-        if (l === 'heavy' || l === 'light' || l === 'medium') return l
-        if (l === 'high' || l === 'low') return l === 'high' ? 'heavy' : 'light'
-        return 'medium'
-      }
-      try {
-        this.newMusic.fatigue_level = mapToBackend(this.currentFatigueLevel)
-      } catch (e) {}
-      this.showAddDialog = true;
-    },
+    // openAddDialog() {
+    //   // 打开添加弹窗前，将默认 fatigue_level 设为当前页面的固定等级（映射到后端期望的值）
+    //   const mapToBackend = (lvl) => {
+    //     if (!lvl) return 'medium'
+    //     const l = String(lvl).trim().toLowerCase()
+    //     if (l === 'high') return 'heavy'
+    //     if (l === 'low') return 'light'
+    //     if (l === 'heavy' || l === 'light' || l === 'medium') return l
+    //     if (l === 'high' || l === 'low') return l === 'high' ? 'heavy' : 'light'
+    //     return 'medium'
+    //   }
+    //   try {
+    //     this.newMusic.fatigue_level = mapToBackend(this.currentFatigueLevel)
+    //   } catch (e) {}
+    //   this.showAddDialog = true;
+    // },
     // 处理图片加载错误
     handleImageError(event, music) {
       // 如果图片加载失败，使用默认占位图
@@ -683,169 +684,169 @@ export default {
       // 使用playerStore播放音乐，传递当前音乐列表作为playlist
       this.playerStore.playTrack(track, this.displayedMusicList)
     },
-    async addMusic() {
-      try {
-        // 验证必填字段
-        if (!this.newMusic.title) {
-          ElMessage.warning('请填写音乐标题')
-          return
-        }
-        // 把前端字段 audio_url 映射为后端期望的 src
-        const payload = { ...this.newMusic }
-        if (payload.audio_url) {
-          payload.src = payload.audio_url
-          delete payload.audio_url
-        }
-        const res = await requestMethod.post('/music', payload)
-        
-        if (res && res.code === 200) {
-          ElMessage.success('添加成功')
-          this.showAddDialog = false
-          // 重置表单，疲劳等级默认回到当前页面固定等级（映射为后端值）
-          const mapToBackend = (lvl) => {
-            if (!lvl) return 'medium'
-            const l = String(lvl).trim().toLowerCase()
-            if (l === 'high') return 'heavy'
-            if (l === 'low') return 'light'
-            if (['heavy','light','medium'].includes(l)) return l
-            return 'medium'
-          }
-          this.newMusic = {
-            title: '', 
-            artist: '', 
-            duration: '', 
-            cover: '', 
-            reason: '', 
-            music_type: 'natural', 
-            fatigue_level: mapToBackend(this.currentFatigueLevel), 
-            match_rate: 50, 
-            audio_url: ''
-          }
-          await this.loadMusic()  // 刷新列表
-        } else {
-          ElMessage.error(res?.msg || '添加失败')
-        }
-      } catch (e) {
-        console.error('添加音乐失败', e)
-        ElMessage.error('添加音乐失败，请检查网络或参数')
-      }
-    },
-    onFileChange(e) {
-      const file = e.target.files && e.target.files[0]
-      if (!file) return
-      this.selectedFile = file
-      this.selectedFileName = file.name
-      // 从文件名自动填充标题（用户可后续编辑）
-      const name = file.name.replace(/\.[^/.]+$/, "")
-      this.newMusic.title = name.replace(/[_-]+/g, ' ')
-      // 计算时长前清空现有值
-      this.newMusic.duration = ''
-      // 尝试本地读取时长
-      this.computeDurationFromFile(file).then(d => {
-        if (d) this.newMusic.duration = d
-      }).catch(() => {})
-    },
-    computeDurationFromFile(file) {
-      return new Promise((resolve) => {
-        try {
-          const url = URL.createObjectURL(file)
-          const audio = new Audio()
-          audio.src = url
-          audio.addEventListener('loadedmetadata', () => {
-            const sec = Math.floor(audio.duration || 0)
-            URL.revokeObjectURL(url)
-            const mm = String(Math.floor(sec / 60)).padStart(2, '0')
-            const ss = String(sec % 60).padStart(2, '0')
-            resolve(`${mm}:${ss}`)
-          })
-          audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null) })
-        } catch (e) { resolve(null) }
-      })
-    },
-    async uploadFile() {
-      if (!this.selectedFile) { ElMessage.warning('请先选择文件'); return }
-      try {
-        this.uploading = true
-        this.uploadProgress = 0
-        const form = new FormData()
-        form.append('file', this.selectedFile)
-        // 使用底层axios实例获取上传进度
-        const res = await request.post('/music/upload', form, {
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            }
-          },
-          timeout: 30 * 1000 // 30秒超时
-        })
-        if (res && res.code === 200 && res.data && res.data.src) {
-          // 后端返回src和可能的元数据（标题、艺术家、时长、封面）
-          const d = res.data
-          this.newMusic.audio_url = d.src
-          this.newMusic.src = d.src
-          if (d.title) this.newMusic.title = d.title
-          if (d.artist) this.newMusic.artist = d.artist
-          if (d.duration) this.newMusic.duration = d.duration
-          if (d.cover) this.newMusic.cover = d.cover
-          ElMessage.success('上传成功，已填充音频信息')
-        } else {
-          ElMessage.error(res?.msg || '上传失败')
-        }
-      } catch (e) {
-        console.error('上传失败', e)
-        ElMessage.error('上传失败')
-      } finally {
-        this.uploading = false
-        // 清除文件输入值以允许重新上传相同文件
-        try { this.$refs.fileInput.value = null } catch (e) {}
-        this.uploadProgress = 0
-      }
-    },
-    onCoverChange(e) {
-      const file = e.target.files && e.target.files[0]
-      if (!file) return
-      this.selectedCoverFile = file
-      this.selectedCoverFileName = file.name
-    },
-    async uploadCover() {
-      if (!this.selectedCoverFile) { ElMessage.warning('请先选择封面文件'); return }
-      try {
-        this.uploadingCover = true
-        this.coverUploadProgress = 0
-        const form = new FormData()
-        form.append('file', this.selectedCoverFile)
-        const res = await request.post('/music/upload_cover', form, {
-          onUploadProgress: (ev) => {
-            if (ev.total) this.coverUploadProgress = Math.round((ev.loaded * 100) / ev.total)
-          }
-        })
-        if (res && res.code === 200 && res.data && res.data.cover) {
-          this.newMusic.cover = res.data.cover
-          ElMessage.success('封面上传成功')
-        } else {
-          ElMessage.error(res?.msg || '封面上传失败')
-        }
-      } catch (e) {
-        console.error('封面上传失败', e)
-        ElMessage.error('上传封面失败')
-      } finally {
-        this.uploadingCover = false
-        try { this.$refs.coverInput.value = null } catch (e) {}
-        this.coverUploadProgress = 0
-      }
-    },
-    async deleteMusic(musicId) {
-      try {
-        await requestMethod.delete(`/music/${musicId}`, { delete_files: true })
-        ElMessage.success('删除成功')
-        this.musicList = this.musicList.filter(m => m.id !== musicId)
-        // 更新显示的音乐列表
-        this.updateDisplayedMusicList()
-      } catch (e) {
-        console.error('删除音乐失败', e)
-        ElMessage.error('删除失败，请稍后重试')
-      }
-    }
+    // async addMusic() {
+    //   try {
+    //     // 验证必填字段
+    //     if (!this.newMusic.title) {
+    //       ElMessage.warning('请填写音乐标题')
+    //       return
+    //     }
+    //     // 把前端字段 audio_url 映射为后端期望的 src
+    //     const payload = { ...this.newMusic }
+    //     if (payload.audio_url) {
+    //       payload.src = payload.audio_url
+    //       delete payload.audio_url
+    //     }
+    //     const res = await requestMethod.post('/music', payload)
+    //     
+    //     if (res && res.code === 200) {
+    //       ElMessage.success('添加成功')
+    //       this.showAddDialog = false
+    //       // 重置表单，疲劳等级默认回到当前页面固定等级（映射为后端值）
+    //       const mapToBackend = (lvl) => {
+    //         if (!lvl) return 'medium'
+    //         const l = String(lvl).trim().toLowerCase()
+    //         if (l === 'high') return 'heavy'
+    //         if (l === 'low') return 'light'
+    //         if (['heavy','light','medium'].includes(l)) return l
+    //         return 'medium'
+    //       }
+    //       this.newMusic = {
+    //         title: '', 
+    //         artist: '', 
+    //         duration: '', 
+    //         cover: '', 
+    //         reason: '', 
+    //         music_type: 'natural', 
+    //         fatigue_level: mapToBackend(this.currentFatigueLevel), 
+    //         match_rate: 50, 
+    //         audio_url: ''
+    //       }
+    //       await this.loadMusic()  // 刷新列表
+    //     } else {
+    //       ElMessage.error(res?.msg || '添加失败')
+    //     }
+    //   } catch (e) {
+    //     console.error('添加音乐失败', e)
+    //     ElMessage.error('添加音乐失败，请检查网络或参数')
+    //   }
+    // },
+    // onFileChange(e) {
+    //   const file = e.target.files && e.target.files[0]
+    //   if (!file) return
+    //   this.selectedFile = file
+    //   this.selectedFileName = file.name
+    //   // 从文件名自动填充标题（用户可后续编辑）
+    //   const name = file.name.replace(/\.[^/.]+$/, "")
+    //   this.newMusic.title = name.replace(/[_-]+/g, ' ')
+    //   // 计算时长前清空现有值
+    //   this.newMusic.duration = ''
+    //   // 尝试本地读取时长
+    //   this.computeDurationFromFile(file).then(d => {
+    //     if (d) this.newMusic.duration = d
+    //   }).catch(() => {})
+    // },
+    // computeDurationFromFile(file) {
+    //   return new Promise((resolve) => {
+    //     try {
+    //       const url = URL.createObjectURL(file)
+    //       const audio = new Audio()
+    //       audio.src = url
+    //       audio.addEventListener('loadedmetadata', () => {
+    //         const sec = Math.floor(audio.duration || 0)
+    //         URL.revokeObjectURL(url)
+    //         const mm = String(Math.floor(sec / 60)).padStart(2, '0')
+    //         const ss = String(sec % 60).padStart(2, '0')
+    //         resolve(`${mm}:${ss}`)
+    //       })
+    //       audio.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(null) })
+    //     } catch (e) { resolve(null) }
+    //   })
+    // },
+    // async uploadFile() {
+    //   if (!this.selectedFile) { ElMessage.warning('请先选择文件'); return }
+    //   try {
+    //     this.uploading = true
+    //     this.uploadProgress = 0
+    //     const form = new FormData()
+    //     form.append('file', this.selectedFile)
+    //     // 使用底层axios实例获取上传进度
+    //     const res = await request.post('/music/upload', form, {
+    //       onUploadProgress: (progressEvent) => {
+    //         if (progressEvent.total) {
+    //           this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+    //         }
+    //       },
+    //       timeout: 30 * 1000 // 30秒超时
+    //     })
+    //     if (res && res.code === 200 && res.data && res.data.src) {
+    //       // 后端返回src和可能的元数据（标题、艺术家、时长、封面）
+    //       const d = res.data
+    //       this.newMusic.audio_url = d.src
+    //       this.newMusic.src = d.src
+    //       if (d.title) this.newMusic.title = d.title
+    //       if (d.artist) this.newMusic.artist = d.artist
+    //       if (d.duration) this.newMusic.duration = d.duration
+    //       if (d.cover) this.newMusic.cover = d.cover
+    //       ElMessage.success('上传成功，已填充音频信息')
+    //     } else {
+    //       ElMessage.error(res?.msg || '上传失败')
+    //     }
+    //   } catch (e) {
+    //     console.error('上传失败', e)
+    //     ElMessage.error('上传失败')
+    //   } finally {
+    //     this.uploading = false
+    //     // 清除文件输入值以允许重新上传相同文件
+    //     try { this.$refs.fileInput.value = null } catch (e) {}
+    //     this.uploadProgress = 0
+    //   }
+    // },
+    // onCoverChange(e) {
+    //   const file = e.target.files && e.target.files[0]
+    //   if (!file) return
+    //   this.selectedCoverFile = file
+    //   this.selectedCoverFileName = file.name
+    // },
+    // async uploadCover() {
+    //   if (!this.selectedCoverFile) { ElMessage.warning('请先选择封面文件'); return }
+    //   try {
+    //     this.uploadingCover = true
+    //     this.coverUploadProgress = 0
+    //     const form = new FormData()
+    //     form.append('file', this.selectedCoverFile)
+    //     const res = await request.post('/music/upload_cover', form, {
+    //       onUploadProgress: (ev) => {
+    //         if (ev.total) this.coverUploadProgress = Math.round((ev.loaded * 100) / ev.total)
+    //       }
+    //     })
+    //     if (res && res.code === 200 && res.data && res.data.cover) {
+    //       this.newMusic.cover = res.data.cover
+    //       ElMessage.success('封面上传成功')
+    //     } else {
+    //       ElMessage.error(res?.msg || '封面上传失败')
+    //     }
+    //   } catch (e) {
+    //     console.error('封面上传失败', e)
+    //     ElMessage.error('上传封面失败')
+    //   } finally {
+    //     this.uploadingCover = false
+    //     try { this.$refs.coverInput.value = null } catch (e) {}
+    //     this.coverUploadProgress = 0
+    //   }
+    // },
+    // async deleteMusic(musicId) {
+    //   try {
+    //     await requestMethod.delete(`/music/${musicId}`, { delete_files: true })
+    //     ElMessage.success('删除成功')
+    //     this.musicList = this.musicList.filter(m => m.id !== musicId)
+    //     // 更新显示的音乐列表
+    //     this.updateDisplayedMusicList()
+    //   } catch (e) {
+    //     console.error('删除音乐失败', e)
+    //     ElMessage.error('删除失败，请稍后重试')
+    //   }
+    // }
   },
   mounted() {
     // 初始化playerStore

@@ -13,24 +13,26 @@ class MusicCreate(BaseModel):
     """创建音乐"""
     title: str = Field(..., description="音乐标题")
     artist: str = Field(..., description="艺术家")
-    duration: int = Field(..., description="时长（秒）")
+    duration: str = Field(..., description="时长（格式：MM:SS）")
     cover: Optional[str] = Field(None, description="封面路径")
     audio_url: str = Field(..., description="音频文件路径")
     music_type: str = Field(..., description="音乐类型")
-    mood: str = Field(..., description="音乐情绪")
-    description: Optional[str] = Field(None, description="音乐描述")
+    fatigue_level: str = Field(..., description="适用疲劳程度")
+    match_rate: int = Field(..., description="匹配率")
+    reason: Optional[str] = Field(None, description="推荐理由")
 
 
 class MusicUpdate(BaseModel):
     """更新音乐"""
     title: Optional[str] = Field(None, description="音乐标题")
     artist: Optional[str] = Field(None, description="艺术家")
-    duration: Optional[int] = Field(None, description="时长（秒）")
+    duration: Optional[str] = Field(None, description="时长（格式：MM:SS）")
     cover: Optional[str] = Field(None, description="封面路径")
     audio_url: Optional[str] = Field(None, description="音频文件路径")
     music_type: Optional[str] = Field(None, description="音乐类型")
-    mood: Optional[str] = Field(None, description="音乐情绪")
-    description: Optional[str] = Field(None, description="音乐描述")
+    fatigue_level: Optional[str] = Field(None, description="适用疲劳程度")
+    match_rate: Optional[int] = Field(None, description="匹配率")
+    reason: Optional[str] = Field(None, description="推荐理由")
 
 
 class MusicResponse(BaseModel):

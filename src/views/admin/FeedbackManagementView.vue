@@ -59,10 +59,10 @@
           </div>
         </template>
       </el-table-column>
-      <el-table-column prop="type" label="类型" width="120">
+      <el-table-column prop="feedback_type" label="类型" width="180">
         <template #default="scope">
-          <el-tag :type="getTypeTagType(scope.row.type)">
-            {{ getTypeLabel(scope.row.type) }}
+          <el-tag :type="getTypeTagType(scope.row.feedback_type)">
+            {{ getTypeLabel(scope.row.feedback_type) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -93,7 +93,7 @@
           {{ formatDate(scope.row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150">
+      <el-table-column label="操作" width="200">
         <template #default="scope">
           <el-button type="primary" size="small" @click="handleReplyFeedback(scope.row)" style="margin-right: 8px;">
             回复
@@ -250,7 +250,7 @@ const handleReplyFeedback = (feedback) => {
   feedbackForm.value = {
     id: feedback.id,
     username: feedback.username || '',
-    type: feedback.type || '',
+    type: feedback.feedback_type || feedback.type || '',
     content: feedback.content || '',
     status: feedback.status || 'pending',
     reply: feedback.reply || ''
@@ -296,6 +296,12 @@ const handleMarkProcessed = async (feedbackId) => {
 // 获取类型标签类型
 const getTypeTagType = (type) => {
   switch (type) {
+    case 'accuracy':
+      return 'warning';
+    case 'music':
+      return 'primary';
+    case 'function':
+      return 'info';
     case 'suggestion':
       return 'primary';
     case 'bug':
@@ -310,6 +316,12 @@ const getTypeTagType = (type) => {
 // 获取类型标签文本
 const getTypeLabel = (type) => {
   switch (type) {
+    case 'accuracy':
+      return '脑疲劳检测准确性';
+    case 'music':
+      return '轻音乐推荐效果';
+    case 'function':
+      return '系统功能建议';
     case 'suggestion':
       return '功能建议';
     case 'bug':
