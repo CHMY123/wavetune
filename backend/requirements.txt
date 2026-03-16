@@ -45,3 +45,6 @@ boto3==1.42.9
 
 # 音频处理
 mutagen==1.47.0
+
+# AI API
+openai==1.35.10

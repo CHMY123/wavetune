@@ -35,6 +35,7 @@ scene_router = APIRouter()
 detection_router = APIRouter()
 admin_router = APIRouter()
 analytics_router = APIRouter()
+ai_router = APIRouter()
 
 # 2. 逐个导入路由模块，提取内部的 router 实例（避免一个模块失败影响全部）
 try:
@@ -91,6 +92,12 @@ try:
     analytics_router = analytics.router if hasattr(analytics, 'router') else APIRouter()
 except ImportError as e:
     logging.warning(f"⚠️  analytics 路由模块导入失败：{e}，请确保 routers/analytics.py 存在并正确")
+
+try:
+    from routers import ai
+    ai_router = ai.router if hasattr(ai, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  ai 路由模块导入失败：{e}，请确保 routers/ai.py 存在并正确")
 
 # 导入数据库配置（如果缺少，临时注释避免报错）
 try:
@@ -163,6 +170,7 @@ app.include_router(scene_router, prefix="/api/scene", tags=["场景配置"])
 app.include_router(detection_router, prefix="/api/detection", tags=["快速检测"])
 app.include_router(admin_router, prefix="/api", tags=["CMS管理"])
 app.include_router(analytics_router, prefix="/api", tags=["数据分析"])
+app.include_router(ai_router, tags=["AI助手"])
 
 # ========== 全局异常处理器 ==========
 @app.exception_handler(HTTPException)

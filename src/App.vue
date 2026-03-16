@@ -10,18 +10,24 @@
     <Footer />
     <!-- 全局播放器 -->
     <MusicPlayer />
+    <!-- AI助手侧边栏 -->
+    <AIAssistantSidebar v-model:isOpen="isAISidebarOpen" />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import Navbar from './components/global/Navbar.vue'
 import Footer from './components/global/Footer.vue'
 import MusicPlayer from './components/global/MusicPlayer.vue'
+import AIAssistantSidebar from './components/global/AIAssistantSidebar.vue'
 import { useTheme } from './composables/useTheme'
 
 // 使用主题管理
 const { initTheme } = useTheme()
+
+// AI侧边栏状态
+const isAISidebarOpen = ref(false)
 
 onMounted(() => {
   // 初始化主题

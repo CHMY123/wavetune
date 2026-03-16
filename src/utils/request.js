@@ -61,50 +61,57 @@ request.interceptors.request.use(
 // 3. 响应拦截器：统一处理响应、错误码
 request.interceptors.response.use(
   (response) => {
-    const res = response.data  // 后端返回的JSON数据
+    const res = response.data;
 
-    // 3.1 处理成功响应（根据后端约定的code判断）
-    if (res.code === 200) {
-      return res  // 直接返回数据，组件中可直接使用res.data
+    // ==============================================
+    // 兼容两种格式：
+    // 1. 标准格式：{ code:200, data, msg }
+    // 2. AI直出格式：{ response, recommended_music }
+    // ==============================================
+
+    // 如果是标准格式，正常校验
+    if (res.code !== undefined) {
+      if (res.code === 200) {
+        return res;
+      }
+      ElMessage.error(res.msg || '操作失败');
+      return Promise.reject(new Error(res.msg || 'Error'));
     }
 
-    // 3.2 处理业务错误（后端返回非200状态码）
-    ElMessage.error(res.msg || '操作失败')
-    return Promise.reject(new Error(res.msg || 'Error'))
+    // 如果没有code字段 → 判定为AI直出接口，直接放行
+    // 不做校验，不报错，保持健壮性
+    return res;
   },
   (error) => {
-    // 4. 处理HTTP错误（如401、500等）
-    const status = error.response?.status
+    const status = error.response?.status;
 
     switch (status) {
       case 401:
-        Cookies.remove('session_token')
+        Cookies.remove('session_token');
         ElMessageBox.alert('登录状态已失效，请重新登录', '提示', {
-            confirmButtonText: '确定',
-            // 改为async回调，动态导入router
-            callback: async () => {
-            // 动态导入路由模块，打破循环依赖
-            const { default: router } = await import('@/router')
-            router.push('/login')  // 动态获取router后再使用
-            }
-        })
-        break
+          confirmButtonText: '确定',
+          callback: async () => {
+            const { default: router } = await import('@/router');
+            router.push('/login');
+          }
+        });
+        break;
       case 403:
-        ElMessage.error('没有权限执行此操作')
-        break
+        ElMessage.error('没有权限执行此操作');
+        break;
       case 404:
-        ElMessage.error('请求的接口不存在')
-        break
+        ElMessage.error('请求的接口不存在');
+        break;
       case 500:
-        ElMessage.error('服务器内部错误，请稍后重试')
-        break
+        ElMessage.error('服务器内部错误，请稍后重试');
+        break;
       default:
-        ElMessage.error(`请求失败（${status || '未知错误'}）`)
+        ElMessage.error(`请求失败（${status || '未知错误'}）`);
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
 // 4. 封装常用请求方法（可选，简化组件调用）
 export const requestMethod = {

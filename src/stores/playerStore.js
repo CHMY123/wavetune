@@ -44,6 +44,34 @@ export const usePlayerStore = defineStore('player', {
         }
       }
     },
+    
+    // 播放AI推荐的音乐
+    playMusic(musicName) {
+      if (!musicName) return
+      
+      // 从音乐名称中提取标题和艺术家
+      let title = musicName
+      let artist = '未知艺术家'
+      
+      // 尝试从文件名中提取艺术家和标题
+      const match = musicName.match(/(.+?) - (.+)\.mp3/)
+      if (match) {
+        artist = match[1]
+        title = match[2]
+      }
+      
+      // 创建一个临时的track对象
+      const track = {
+        id: Date.now(),
+        title: title,
+        artist: artist,
+        src: `/static/music/${encodeURIComponent(musicName)}`,
+        cover: '/static/music_cover/placeholder.png',
+        reason: 'AI推荐'
+      }
+      
+      this.playTrack(track)
+    },
 
     // 关闭播放器
     closePlayer() {
