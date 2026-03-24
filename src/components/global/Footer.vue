@@ -203,25 +203,60 @@ export default {
 }
 
 @media (max-width: 480px) {
+  .footer {
+    min-height: 180px;
+  }
+  
+  .footer-content {
+    padding: 20px 12px 12px;
+    gap: 20px;
+  }
+  
   .footer-info {
     .footer-brand {
       .footer-title {
-        font-size: 18px;
+        font-size: 16px;
       }
     }
     
     .footer-desc {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5; // 优化行高，避免文字重叠
+    }
+    
+    .footer-tech {
+      font-size: 11px;
     }
   }
   
   .link-group {
     .link-title {
-      font-size: 15px;
+      font-size: 14px;
+      margin-bottom: 12px;
     }
-    .link-list li a {
-      font-size: 13px;
+    
+    .link-list {
+      li {
+        margin-bottom: 6px;
+        
+        a {
+          font-size: 12px;
+        }
+      }
+    }
+  }
+  
+  .footer-bottom {
+    padding: 12px 12px;
+  }
+  
+  .footer-copyright {
+    p {
+      font-size: 12px;
+    }
+    
+    .footer-privacy {
+      font-size: 10px;
     }
   }
 }

@@ -159,12 +159,6 @@
               </div>
               <div v-if="uploadingCover" class="progress-container">
                 <el-progress :percentage="coverUploadProgress" stroke-width="2" class="progress-bar"></el-progress>
-                <span class="progress-text" v-if="coverUploadProgress < 100">
-                  {{ coverUploadProgress }}%
-                </span>
-                <span class="progress-text" v-else>
-                  上传完成
-                </span>
               </div>
             </div>
           </div>
@@ -201,12 +195,6 @@
               </div>
               <div v-if="uploading" class="progress-container">
                 <el-progress :percentage="uploadProgress" stroke-width="2" class="progress-bar"></el-progress>
-                <span class="progress-text" v-if="uploadProgress < 100">
-                  {{ uploadProgress }}%
-                </span>
-                <span class="progress-text" v-else>
-                  上传完成
-                </span>
               </div>
               <div v-if="musicForm.audio_url" class="audio-info">
                 <el-icon><Check /></el-icon>
@@ -592,7 +580,7 @@ const uploadFile = async () => {
     const form = new FormData();
     form.append('file', selectedFile.value);
     // 使用底层axios实例获取上传进度
-    const res = await requestMethod.postForm('/music/upload', form, {
+    const res = await requestMethod.postForm('/music/upload', form, {}, {
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && progressEvent.loaded) {
           // 1. 计算进度并限制最大值为 100
@@ -650,7 +638,7 @@ const uploadCover = async () => {
     coverUploadProgress.value = 0;
     const form = new FormData();
     form.append('file', selectedCoverFile.value);
-    const res = await requestMethod.postForm('/music/upload_cover', form, {
+    const res = await requestMethod.postForm('/music/upload_cover', form, {}, {
       onUploadProgress: (ev) => {
         if (ev.total && ev.loaded) {
           // 1. 计算进度并限制最大值为 100

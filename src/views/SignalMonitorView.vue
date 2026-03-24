@@ -14,58 +14,27 @@
       </p>
     </div>
 
-    <!-- 中部主体区：信号监测模块 -->
+    <!-- 中部主体区：数据可视化图表模块 -->
     <div class="signal-modules">
       <el-row :gutter="16">
-        <el-col 
-          v-for="signal in signalModules" 
-          :key="signal.type"
-          :xs="24" 
-          :sm="24" 
-          :md="12" 
-          :lg="12" 
-          :xl="12"
-        >
-          <el-card class="signal-card" :class="signal.status">
+        <el-col :xs="24" :md="12">
+          <el-card class="signal-card">
             <template #header>
               <div class="card-header">
-                <span class="signal-name">{{ signal.name }}</span>
-                <el-badge 
-                  :type="signal.status === 'normal' ? 'success' : 'danger'" 
-                  :value="signal.status === 'normal' ? '正常' : '异常'"
-                />
+                <span class="signal-name">EEG 脑电信号</span>
               </div>
             </template>
-            
-            <!-- 核心数值与状态 -->
-            <div class="signal-data">
-              <div class="data-value">
-                <span class="value-text">{{ signal.value }}</span>
-                <span class="value-unit">{{ signal.unit }}</span>
+            <div ref="eegChart" class="chart"></div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :md="12">
+          <el-card class="signal-card">
+            <template #header>
+              <div class="card-header">
+                <span class="signal-name">fNIRS 近红外信号</span>
               </div>
-              <div class="reference-range">
-                {{ signal.range }}
-              </div>
-            </div>
-            
-            <!-- 简化波形图 -->
-            <div class="waveform-container">
-              <svg class="waveform" :viewBox="`0 0 400 120`">
-                <!-- 参考线 -->
-                <line x1="0" y1="30" x2="400" y2="30" stroke="#ddd" stroke-dasharray="2,2" />
-                <line x1="0" y1="60" x2="400" y2="60" stroke="#ddd" stroke-dasharray="2,2" />
-                <line x1="0" y1="90" x2="400" y2="90" stroke="#ddd" stroke-dasharray="2,2" />
-                
-                <!-- 波形路径 -->
-                <path 
-                  :d="signal.waveform" 
-                  :stroke="signal.color" 
-                  stroke-width="2" 
-                  fill="none"
-                  class="waveform-path"
-                />
-              </svg>
-            </div>
+            </template>
+            <div ref="fnirsChart" class="chart"></div>
           </el-card>
         </el-col>
       </el-row>
@@ -134,17 +103,40 @@
           上传检测
         </el-button>
 
-        <div class="detection-result" v-if="detectionResult" style="margin-left:12px; display:flex; align-items:center; gap:8px">
+        <div class="detection-result" v-if="detectionResult" style="margin-left:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap">
           <el-tag :type="detectionResult.type || 'warning'">检测：{{ detectionResult.label_name }}</el-tag>
-          <span class="prob">概率: {{ detectionResult.probabilities.map(p => p.toFixed(3)).join(' / ') }}</span>
+          
+          <!-- 概率分布显示 -->
+          <div class="probability-distribution" style="margin-top:8px; width:100%;">
+            <h4 style="margin:0 0 8px 0;">概率分布：</h4>
+            <div v-for="(prob, label) in detectionResult.probabilities" :key="label" style="margin-bottom:4px; display:flex; align-items:center;">
+              <span style="width:100px; font-size:14px;">{{ label }}:</span>
+              <div style="flex:1; height:12px; background-color:#f0f0f0; border-radius:6px; overflow:hidden; margin:0 8px;">
+                <div 
+                  :style="{
+                    width: `${prob}%`, 
+                    height: '100%', 
+                    backgroundColor: getProbabilityColor(label),
+                    transition: 'width 0.3s ease'
+                  }"
+                ></div>
+              </div>
+              <span style="width:60px; text-align:right; font-size:14px;">{{ prob.toFixed(2) }}%</span>
+            </div>
+          </div>
 
           <!-- 当检测为中/高疲劳时，显示查看推荐的按钮（占位行为，可跳转或展开推荐面板） -->
           <el-button
-            v-if="detectionResult.label_name === 'Medium' || detectionResult.label_name === 'High'"
+            v-if="detectionResult.label === '中度疲劳' || detectionResult.label === '重度疲劳'"
             type="primary"
             size="small"
             @click="showRecommendations"
-          >查看推荐音乐</el-button>
+          >
+            推荐音乐
+          </el-button>
+
+          <!-- 当检测为静息态或正常时，显示鼓励提示 -->
+          <el-tag v-if="detectionResult.label === '静息态' || detectionResult.label === '正常'" type="success">状态良好，继续保持！</el-tag>
         </div>
       </div>
     </div>
@@ -155,6 +147,7 @@
 import { VideoPause, Download } from '@element-plus/icons-vue'
 import { requestMethod } from '@/utils/request'
 import { ElMessage } from 'element-plus'
+import * as echarts from 'echarts'
 
 export default {
   name: 'SignalMonitorView',
@@ -210,14 +203,29 @@ export default {
       selectedFileName: '',
       selectedFile: null,
       detecting: false,
-      detectionResult: null,
-      timeMarks: ['00:00', '00:01', '00:02', '00:03', '00:04', '00:05']
+      detectionResult: localStorage.getItem('detectionResult') ? JSON.parse(localStorage.getItem('detectionResult')) : null,
+      timeMarks: ['00:00', '00:01', '00:02', '00:03', '00:04', '00:05'],
+      // 数据可视化相关状态
+      csvData: localStorage.getItem('chartData') ? JSON.parse(localStorage.getItem('chartData')) : null,
+      eegChart: null,
+      fnirsChart: null
     }
   },
   created() {
     // 日志：组件创建完成，初始化信号监测数据
     console.log('%c [SignalMonitorView] 组件创建完成', 'color: #1890ff; font-weight: bold;')
     console.log('%c [SignalMonitorView] 初始化信号监测模块数据：', 'color: #722ed1;', this.signalModules)
+    
+    // 从localStorage中读取图表数据
+    if (localStorage.getItem('chartData')) {
+      this.csvData = JSON.parse(localStorage.getItem('chartData'))
+      console.log('%c [SignalMonitorView] 从localStorage读取图表数据：', 'color: #1890ff;', this.csvData)
+      
+      // 延迟初始化图表，确保DOM已经更新
+      setTimeout(() => {
+        this.initCharts()
+      }, 100)
+    }
   },
   methods: {
       chooseFile() {
@@ -256,6 +264,9 @@ export default {
           return
         }
 
+        // 先解析CSV文件数据用于可视化
+        await this.parseCsvFile()
+
         // 构建FormData
         const form = new FormData()
         form.append('file', this.selectedFile)
@@ -273,7 +284,7 @@ export default {
                 this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               }
             },
-            timeout: 30000 // 关键：延长超时时间，解决10秒超时问题
+            timeout: 120000 // 关键：延长超时时间，解决60秒超时问题
           });
           console.log('%c [SignalMonitorView] 上传检测请求响应成功：', 'color: #52c41a;', res)
           
@@ -281,13 +292,16 @@ export default {
           const payload = res.data || {}
           this.detectionResult = {
             label: payload.label,
-            label_name: payload.label_name || payload.labelName || 'Unknown',
-            probabilities: payload.probabilities || payload.probs || [],
-            type: (payload.label_name === 'High' ? 'danger' : (payload.label_name === 'Medium' ? 'warning' : 'success'))
+            label_name: payload.label || 'Unknown',
+            probabilities: payload.probabilities || payload.probs || {},
+            type: (payload.label === '重度疲劳' ? 'danger' : (payload.label === '中度疲劳' || payload.label === '轻度疲劳' ? 'warning' : 'success'))
           }
           
+          // 存储到localStorage
+          localStorage.setItem('detectionResult', JSON.stringify(this.detectionResult))
+          
           // 日志：记录检测结果
-          console.log('%c [SignalMonitorView] 脑疲劳检测结果解析完成：', 'color: #722ed1;', this.detectionResult)
+          console.log('%c [SignalMonitorView] 脑疲劳检测结果解析完成并存储：', 'color: #722ed1;', this.detectionResult)
           ElMessage.success(`检测完成：${this.detectionResult.label_name}`)
         } catch (err) {
           // 日志：记录上传检测异常
@@ -298,6 +312,388 @@ export default {
           this.detecting = false
           console.log('%c [SignalMonitorView] 上传检测流程结束，重置detecting状态', 'color: #fa8c16;')
         }
+      },
+      async parseCsvFile() {
+        if (!this.selectedFile) return
+        
+        try {
+          console.log('%c [SignalMonitorView] 开始解析CSV文件数据', 'color: #1890ff;')
+          console.log('%c [SignalMonitorView] 文件信息：', 'color: #1890ff;', {
+            name: this.selectedFile.name,
+            size: this.selectedFile.size,
+            type: this.selectedFile.type
+          })
+          
+          // 构建FormData
+          const form = new FormData()
+          form.append('file', this.selectedFile)
+          
+          // 发送请求到后端，获取处理后的数据
+          console.log('%c [SignalMonitorView] 发送请求到后端处理CSV文件', 'color: #1890ff;')
+          const res = await requestMethod.postForm('/detection/process_csv', form, {
+            timeout: 300000 // 延长超时时间，处理大型文件
+          })
+          
+          console.log('%c [SignalMonitorView] 后端处理CSV文件响应成功：', 'color: #52c41a;', res)
+          
+          // 提取数据
+          let extractedData = {
+            eeg: [],
+            fnirs_raw: [],
+            hbo: [],
+            hbr: [],
+            marker: [],
+            label: [],
+            shape: [0, 0]
+          }
+          
+          // 检查响应数据
+          if (res && res.eeg) {
+            // 直接使用响应数据
+            extractedData = res
+          } else if (res && res.data) {
+            // 使用响应中的data字段
+            extractedData = res.data
+          }
+          
+          console.log('%c [SignalMonitorView] 提取的数据：', 'color: #1890ff;', extractedData)
+          
+          // 赋值给csvData
+          this.csvData = extractedData
+          
+          // 存储图表数据到localStorage（只存储前500个点，避免超出存储限制）
+          try {
+            const chartData = {
+              eeg: extractedData.eeg ? extractedData.eeg.map(channel => channel.slice(0, 500)) : [],
+              fnirs_raw: extractedData.fnirs_raw ? extractedData.fnirs_raw.map(channel => channel.slice(0, 500)) : [],
+              shape: extractedData.shape || [0, 0]
+            }
+            localStorage.setItem('chartData', JSON.stringify(chartData))
+            console.log('%c [SignalMonitorView] 图表数据存储完成：', 'color: #52c41a;', chartData)
+          } catch (err) {
+            console.error('%c [SignalMonitorView] 存储图表数据失败：', 'color: #f5222d;', err)
+          }
+          
+          console.log('%c [SignalMonitorView] CSV数据赋值完成：', 'color: #52c41a;', this.csvData)
+          
+          // 延迟初始化图表，确保DOM已经更新
+          setTimeout(() => {
+            console.log('%c [SignalMonitorView] 延迟初始化图表', 'color: #1890ff;')
+            this.initCharts()
+          }, 100)
+        } catch (err) {
+          console.error('%c [SignalMonitorView] 解析CSV文件失败：', 'color: #f5222d;', err)
+          ElMessage.error('解析CSV文件失败')
+        }
+      },
+      transpose(matrix) {
+        // 转置二维数组
+        if (!matrix || matrix.length === 0 || !matrix[0]) {
+          console.error('%c [SignalMonitorView] 转置失败：输入矩阵为空或格式错误', 'color: #f5222d;')
+          return { shape: [0, 0] }
+        }
+        
+        const rows = matrix.length
+        const cols = matrix[0].length
+        const result = new Array(cols)
+        
+        for (let i = 0; i < cols; i++) {
+          result[i] = new Array(rows)
+          for (let j = 0; j < rows; j++) {
+            result[i][j] = matrix[j][i]
+          }
+        }
+        
+        // 添加shape属性，模拟numpy数组
+        result.shape = [cols, rows]
+        return result
+      },
+      extractData(rawData) {
+        // 检查数据是否有效
+        if (!rawData || rawData.length === 0) {
+          console.error('%c [SignalMonitorView] 提取数据失败：输入数据为空或格式错误', 'color: #f5222d;')
+          return {
+            eeg: [],
+            fnirs_raw: [],
+            hbo: [],
+            hbr: [],
+            marker: [],
+            label: [],
+            shape: [0, 0]
+          }
+        }
+        
+        // 提取EEG数据（1-32通道）
+        const eegData = rawData.slice ? rawData.slice(1, 33) : []
+        
+        // 提取fNIRS原始数据（33-56通道）
+        const fnirsRaw = rawData.slice ? rawData.slice(33, 57) : []
+        
+        // 提取标记数据（第57列）
+        const markerData = rawData[56] || []
+        
+        // 提取标签数据（最后一列）
+        const labelData = rawData.length > 0 ? rawData[rawData.length - 1] : []
+        
+        // 这里简化处理，实际项目中可以调用后端API获取处理后的数据
+        // 或者在前端实现类似processing_fNIRS_new.py的功能
+        
+        return {
+          eeg: eegData,
+          fnirs_raw: fnirsRaw,
+          hbo: [], // 简化处理，实际项目中需要计算
+          hbr: [], // 简化处理，实际项目中需要计算
+          marker: markerData,
+          label: labelData,
+          shape: rawData.shape || [0, 0]
+        }
+      },
+      initCharts() {
+        console.log('%c [SignalMonitorView] 开始初始化图表', 'color: #1890ff;')
+        console.log('%c [SignalMonitorView] EEG图表容器：', 'color: #1890ff;', this.$refs.eegChart)
+        console.log('%c [SignalMonitorView] fNIRS图表容器：', 'color: #1890ff;', this.$refs.fnirsChart)
+        console.log('%c [SignalMonitorView] CSV数据：', 'color: #1890ff;', this.csvData)
+        
+        // 初始化EEG图表
+        if (this.$refs.eegChart) {
+          // 先销毁旧图表，避免内存泄漏
+          if (this.eegChart) {
+            this.eegChart.dispose()
+          }
+          this.eegChart = echarts.init(this.$refs.eegChart)
+          console.log('%c [SignalMonitorView] EEG图表初始化成功', 'color: #52c41a;')
+          this.updateEegChart()
+        }
+        
+        // 初始化fNIRS图表
+        if (this.$refs.fnirsChart) {
+          // 先销毁旧图表，避免内存泄漏
+          if (this.fnirsChart) {
+            this.fnirsChart.dispose()
+          }
+          this.fnirsChart = echarts.init(this.$refs.fnirsChart)
+          console.log('%c [SignalMonitorView] fNIRS图表初始化成功', 'color: #52c41a;')
+          this.updateFnirsChart()
+        }
+      },
+      updateEegChart() {
+        console.log('%c [SignalMonitorView] 开始更新EEG图表', 'color: #1890ff;')
+        if (!this.eegChart || !this.csvData) {
+          console.log('%c [SignalMonitorView] EEG图表或CSV数据不存在', 'color: #f5222d;')
+          return
+        }
+        
+        const eegData = this.csvData.eeg
+        if (!eegData || eegData.length === 0) {
+          console.log('%c [SignalMonitorView] EEG数据不存在或为空', 'color: #f5222d;')
+          return
+        }
+        
+        console.log('%c [SignalMonitorView] EEG数据形状：', 'color: #1890ff;', {
+          channels: eegData.length,
+          points: eegData[0] ? eegData[0].length : 0
+        })
+        
+        // 选择前4个EEG通道进行显示
+        const channels = [0, 1, 2, 3]
+        const sampleRate = 1000
+        const maxPoints = 500 // 最多显示500个点
+        const endSample = Math.min(eegData[0].length, maxPoints)
+        
+        console.log('%c [SignalMonitorView] 显示点数：', 'color: #1890ff;', endSample)
+        
+        // 生成时间轴数据
+        const timeData = []
+        for (let i = 0; i < endSample; i++) {
+          timeData.push((i / sampleRate).toFixed(2))
+        }
+        
+        // 准备系列数据
+        const series = channels.map((ch, index) => {
+          const color = this.getColor(index)
+          const channelData = eegData[ch].slice(0, endSample)
+          console.log('%c [SignalMonitorView] EEG通道' + (ch + 1) + '数据长度：', 'color: #1890ff;', channelData.length)
+          
+          return {
+            name: `Channel ${ch + 1}`,
+            type: 'line',
+            data: channelData,
+            smooth: true,
+            lineStyle: {
+              width: 2,
+              color
+            },
+            showSymbol: false
+          }
+        })
+        
+        const option = {
+          title: {
+            text: `EEG 信号波形（前${endSample}个点）`,
+            left: 'center'
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'cross'
+            }
+          },
+          legend: {
+            data: channels.map(ch => `Channel ${ch + 1}`),
+            orient: 'vertical',
+            right: 10,
+            top: 'center'
+          },
+          grid: {
+            left: '3%',
+            right: '15%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: timeData,
+            axisLabel: {
+              formatter: '{value}s'
+            }
+          },
+          yAxis: {
+            type: 'value',
+            axisLabel: {
+              formatter: '{value}'
+            }
+          },
+          series
+        }
+        
+        console.log('%c [SignalMonitorView] EEG图表选项：', 'color: #1890ff;', option)
+        this.eegChart.setOption(option)
+        console.log('%c [SignalMonitorView] EEG图表更新完成', 'color: #52c41a;')
+      },
+      updateFnirsChart() {
+        console.log('%c [SignalMonitorView] 开始更新fNIRS图表', 'color: #1890ff;')
+        if (!this.fnirsChart || !this.csvData) {
+          console.log('%c [SignalMonitorView] fNIRS图表或CSV数据不存在', 'color: #f5222d;')
+          return
+        }
+        
+        const fnirsRaw = this.csvData.fnirs_raw
+        if (!fnirsRaw || fnirsRaw.length === 0) {
+          console.log('%c [SignalMonitorView] fNIRS数据不存在或为空', 'color: #f5222d;')
+          return
+        }
+        
+        console.log('%c [SignalMonitorView] fNIRS数据形状：', 'color: #1890ff;', {
+          channels: fnirsRaw.length,
+          points: fnirsRaw[0] ? fnirsRaw[0].length : 0
+        })
+        
+        // 选择前4个fNIRS通道进行显示
+        const channels = [0, 1, 2, 3]
+        const sampleRate = 5 // fNIRS采样率
+        const maxPoints = 500 // 最多显示500个点
+        const endSample = Math.min(fnirsRaw[0].length, maxPoints)
+        
+        console.log('%c [SignalMonitorView] 显示点数：', 'color: #1890ff;', endSample)
+        
+        // 生成时间轴数据
+        const timeData = []
+        for (let i = 0; i < endSample; i++) {
+          timeData.push((i / sampleRate).toFixed(2))
+        }
+        
+        // 准备系列数据
+        const series = channels.map((ch, index) => {
+          const color = this.getColor(index + 10) // 使用不同的颜色
+          const channelData = fnirsRaw[ch].slice(0, endSample)
+          console.log('%c [SignalMonitorView] fNIRS通道' + (ch + 1) + '数据长度：', 'color: #1890ff;', channelData.length)
+          
+          return {
+            name: `Channel ${ch + 1}`,
+            type: 'line',
+            data: channelData,
+            smooth: true,
+            lineStyle: {
+              width: 2,
+              color
+            },
+            showSymbol: false
+          }
+        })
+        
+        const option = {
+          title: {
+            text: `fNIRS 信号波形（前${endSample}个点）`,
+            left: 'center'
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'cross'
+            }
+          },
+          legend: {
+            data: channels.map(ch => `Channel ${ch + 1}`),
+            orient: 'vertical',
+            right: 10,
+            top: 'center'
+          },
+          grid: {
+            left: '3%',
+            right: '15%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: timeData,
+            axisLabel: {
+              formatter: '{value}s'
+            }
+          },
+          yAxis: {
+            type: 'value',
+            axisLabel: {
+              formatter: '{value}'
+            }
+          },
+          series
+        }
+        
+        console.log('%c [SignalMonitorView] fNIRS图表选项：', 'color: #1890ff;', option)
+        this.fnirsChart.setOption(option)
+        console.log('%c [SignalMonitorView] fNIRS图表更新完成', 'color: #52c41a;')
+      },
+      updateSignalModules() {
+        if (!this.csvData) return
+        
+        // 计算EEG数据的平均值
+        const eegColumns = this.csvData.headers.filter(header => 
+          header.toLowerCase().includes('eeg') || header.toLowerCase().includes('脑电')
+        )
+        
+        if (eegColumns.length > 0) {
+          const eegData = this.csvData.data.map(row => {
+            return eegColumns.reduce((sum, column) => sum + row[column], 0) / eegColumns.length
+          })
+          const eegAvg = eegData.reduce((sum, val) => sum + val, 0) / eegData.length
+          
+          // 更新EEG模块数据
+          this.signalModules[0].value = eegAvg.toFixed(1)
+          this.signalModules[0].status = eegAvg >= 5 && eegAvg <= 8 ? 'normal' : 'warning'
+        }
+        
+        // 这里可以根据CSV数据更新其他模块的数据
+        // 例如EOG、HRV、呼吸频率等
+      },
+      getColor(index) {
+        const colors = [
+          '#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1',
+          '#13c2c2', '#fa8c16', '#eb2f96', '#a0d911', '#2f54eb'
+        ]
+        return colors[index % colors.length]
       },
       showRecommendations() {
         console.log('%c [SignalMonitorView] 触发查看推荐音乐操作，当前疲劳等级：', 'color: #722ed1;', this.detectionResult.label_name)
@@ -319,6 +715,20 @@ export default {
           console.error('%c [SignalMonitorView] 跳转音乐推荐页面失败：', 'color: #f5222d;', e)
           ElMessage.info('请在推荐页面查看推荐列表')
         }
+      },
+
+      // 根据标签获取概率条颜色
+      getProbabilityColor(label) {
+        const colorMap = {
+          '静息态': '#409EFF',  // 蓝色
+          '正常': '#67C23A',     // 绿色
+          '轻度疲劳': '#E6A23C', // 黄色
+          '中度疲劳': '#F56C6C',  // 橙色
+          '重度疲劳': '#F56C6C',  // 红色
+          '疲劳恢复期': '#909399', // 灰色
+          '其他': '#909399'       // 灰色
+        };
+        return colorMap[label] || '#909399';
       }
     }
   }
@@ -378,95 +788,48 @@ export default {
   margin-bottom: 20px;
   
   .signal-card {
-    height: 240px;
-    margin-bottom: 20px;
-    border-left: 4px solid;
-    transition: box-shadow 0.3s ease;
-    
-    &:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    }
-    
-    &.normal {
-      border-left-color: var(--el-color-success);
-    }
-    
-    &.warning {
-      border-left-color: var(--el-color-warning);
-    }
-    
-    &.danger {
-      border-left-color: var(--el-color-danger);
-    }
-    
-    :deep(.el-card__header) {
-      padding: 16px 20px;
-      background: #fafafa;
-      border-bottom: 1px solid #f0f0f0;
-      
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        
-        .signal-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-primary);
+          height: 300px;
+          margin-bottom: 20px;
+          border-left: 4px solid var(--el-color-primary);
+          transition: box-shadow 0.3s ease;
+          
+          &:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+          }
+          
+          :deep(.el-card__header) {
+            padding: 16px 20px;
+            background: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
+            
+            .card-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              
+              .signal-name {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--text-primary);
+              }
+            }
+          }
+          
+          :deep(.el-card__body) {
+            padding: 0;
+            height: calc(100% - 57px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          
+          .chart {
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            min-height: 200px;
+          }
         }
-      }
-    }
-    
-    :deep(.el-card__body) {
-      padding: 16px 20px;
-      height: calc(100% - 57px);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    
-    .signal-data {
-      .data-value {
-        display: flex;
-        align-items: baseline;
-        gap: 4px;
-        margin-bottom: 8px;
-        
-        .value-text {
-          font-size: 24px;
-          font-weight: bold;
-          color: var(--text-primary);
-          font-family: 'SF Mono', Monaco, monospace;
-        }
-        
-        .value-unit {
-          font-size: 14px;
-          color: var(--text-secondary);
-        }
-      }
-      
-      .reference-range {
-        font-size: 12px;
-        color: var(--text-secondary);
-      }
-    }
-    
-    .waveform-container {
-      height: 120px;
-      background: #fafafa;
-      border-radius: 4px;
-      padding: 8px;
-      
-      .waveform {
-        width: 100%;
-        height: 100%;
-        
-        .waveform-path {
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-        }
-      }
-    }
-  }
 }
 
 .bottom-section {
@@ -550,6 +913,38 @@ export default {
   }
 }
 
+/* 数据可视化区域样式 */
+.data-visualization {
+  margin-bottom: 20px;
+  
+  .visualization-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    
+    :deep(.el-card__body) {
+      padding: 20px;
+    }
+    
+    .chart-container {
+      margin-bottom: 20px;
+      
+      h3 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      
+      .chart {
+        width: 100%;
+        height: 400px;
+        border-radius: 4px;
+        min-height: 400px;
+      }
+    }
+  }
+}
+
 // 响应式适配
 @media (max-width: 768px) {
   .signal-monitor-view {
@@ -568,18 +963,21 @@ export default {
   
   .signal-modules {
     .signal-card {
-      height: 200px;
-      
-      .signal-data {
-        .data-value {
-          .value-text {
-            font-size: 20px;
-          }
-        }
+      height: 250px;
+    }
+  }
+  
+  .data-visualization {
+    .visualization-card {
+      :deep(.el-card__body) {
+        padding: 16px;
       }
       
-      .waveform-container {
-        height: 100px;
+      .chart-container {
+        .chart {
+          height: 300px;
+          min-height: 300px;
+        }
       }
     }
   }
@@ -600,19 +998,7 @@ export default {
 @media (max-width: 480px) {
   .signal-modules {
     .signal-card {
-      height: 180px;
-      
-      .signal-data {
-        .data-value {
-          .value-text {
-            font-size: 18px;
-          }
-        }
-      }
-      
-      .waveform-container {
-        height: 80px;
-      }
+      height: 200px;
     }
   }
 }
@@ -663,32 +1049,6 @@ export default {
         .card-header {
           .signal-name {
             color: var(--text-primary);
-          }
-        }
-      }
-      
-      .signal-data {
-        .data-value {
-          .value-text {
-            color: var(--text-primary);
-          }
-          
-          .value-unit {
-            color: var(--text-secondary);
-          }
-        }
-        
-        .reference-range {
-          color: var(--text-secondary);
-        }
-      }
-      
-      .waveform-container {
-        background: rgba(30, 41, 59, 0.5);
-        
-        .waveform {
-          line {
-            stroke: rgba(255, 255, 255, 0.1);
           }
         }
       }

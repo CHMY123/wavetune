@@ -19,6 +19,11 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <el-tag class="fatigue-tag" :type="fatigueTagType" size="large">{{ currentFatigueLevel }} 疲劳专属</el-tag>
+          <el-select v-model="currentFatigueLevel" size="large" @change="onFatigueLevelChange" class="fatigue-select">
+            <el-option label="轻度 (Light)" value="Light"></el-option>
+            <el-option label="中度 (Medium)" value="Medium"></el-option>
+            <el-option label="重度 (Heavy)" value="Heavy"></el-option>
+          </el-select>
           <!-- 顶部添加音乐按钮 - 已移至管理员界面 -->
           <!-- <el-button 
             type="primary" 
@@ -526,6 +531,17 @@ export default {
         music.cover = resolveMedia('/static/music_cover/placeholder.png')
       }
     },
+    // 处理疲劳等级变化
+    onFatigueLevelChange() {
+      // 保存选择的疲劳等级到localStorage
+      try {
+        localStorage.setItem('current_fatigue_level', this.currentFatigueLevel)
+      } catch (e) {
+        console.warn('无法保存疲劳等级到localStorage:', e)
+      }
+      // 重新加载对应疲劳等级的音乐
+      this.loadMusic()
+    },
     // 优化的滚动检测逻辑 - 使用 Intersection Observer API
     handleScroll() {
       // 兼容处理：优先使用 Intersection Observer，降级到传统方式
@@ -997,67 +1013,115 @@ export default {
   margin-bottom: 32px;
   position: relative;
   z-index: 1;
+}
+
+/* 疲劳等级选择器样式 */
+.fatigue-select {
+  min-width: 160px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
   
-  .header-content {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: var(--shadow-sm);
+  &:hover {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+  
+  .el-select__wrapper {
+    border-radius: 8px;
+  }
+  
+  .el-select__placeholder {
+    color: var(--text-secondary);
+  }
+  
+  .el-select__value-text {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  
+  .el-select__caret {
+    color: var(--text-secondary);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .fatigue-select {
+    min-width: 140px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fatigue-select {
+    min-width: 120px;
+    font-size: 12px;
+  }
+}
+
+/* 头部内容布局 */
+.header-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+  
+  .header-text {
+    flex: 1;
+    min-width: 300px;
     
-    .header-text {
-      flex: 1;
-      min-width: 300px;
+    .main-text {
+      margin: 0 0 12px 0;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       
-      .main-text {
-        margin: 0 0 12px 0;
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--text-primary);
-        background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        
-        .recommendation-basis {
-          font-size: 16px;
-          font-weight: 400;
-          color: var(--text-regular);
-          background: none;
-          -webkit-background-clip: none;
-          background-clip: none;
-          -webkit-text-fill-color: var(--text-regular);
-        }
-      }
-      
-      .sub-text {
-        margin: 0;
+      .recommendation-basis {
         font-size: 16px;
-        color: var(--text-secondary);
+        font-weight: 400;
+        color: var(--text-regular);
+        background: none;
+        -webkit-background-clip: none;
+        background-clip: none;
+        -webkit-text-fill-color: var(--text-regular);
       }
     }
     
-    .fatigue-tag {
-      border-radius: 24px;
-      padding: 10px 20px;
+    .sub-text {
+      margin: 0;
       font-size: 16px;
-      font-weight: 600;
-      background: rgba(255, 183, 77, 0.25);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 183, 77, 0.35);
-      color: var(--warning-color);
-      transition: all 0.3s ease;
-      
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-      }
+      color: var(--text-secondary);
+    }
+  }
+  
+  .fatigue-tag {
+    border-radius: 24px;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    background: rgba(255, 183, 77, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 183, 77, 0.35);
+    color: var(--warning-color);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
   }
 }
@@ -1847,11 +1911,97 @@ export default {
   .main-text {
     font-size: 24px !important;
   }
+}
+
+@media (max-width: 992px) {
+  .music-recommendation-view {
+    padding: 18px;
+  }
   
-  /* 优化大屏幕上的懒加载性能 */
-  .music-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .music-recommendation-view {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  
+  .recommendation-header {
+    margin-bottom: 24px;
+  }
+  
+  .header-content {
+    padding: 16px;
+  }
+  
+  .main-text {
+    font-size: 20px !important;
+  }
+  
+  .main-text .recommendation-basis {
+    font-size: 14px !important;
+  }
+  
+  .music-card {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .music-recommendation-view {
+    padding: 12px;
+    border-radius: 8px;
+    min-height: calc(100vh - 120px);
+  }
+  
+  .recommendation-header {
+    margin-bottom: 16px;
+  }
+  
+  .header-content {
+    padding: 12px;
+  }
+  
+  .main-text {
+    font-size: 18px !important;
+  }
+  
+  .sub-text {
+    font-size: 12px !important;
+  }
+  
+  .fatigue-tag {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
+  
+  .music-card {
+    margin-bottom: 12px;
+  }
+  
+  .music-card .info-section {
+    padding: 12px;
+  }
+  
+  .music-card .music-title {
+    font-size: 16px;
+  }
+  
+  .music-card .music-artist {
+    font-size: 13px;
+  }
+  
+  .music-card .music-duration {
+    font-size: 11px;
+  }
+  
+  .music-card .music-reason {
+    font-size: 11px;
   }
 }
 

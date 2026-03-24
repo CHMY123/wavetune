@@ -154,13 +154,14 @@ export const requestMethod = {
   },
 
   // 表单提交（如文件上传）
-  postForm: (url, data = {}, params = {}) => {
+  postForm: (url, data = {}, params = {}, config = {}) => {
     return request({
       url,
       method: 'post',
       data,
       params,
       // 不手动设置 Content-Type，让浏览器/axios 为 FormData 自动添加 boundary
+      ...config
     })
   }
 }

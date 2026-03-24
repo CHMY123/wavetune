@@ -772,7 +772,17 @@ onBeforeUnmount(() => {
     line-height: 56px;
   }
   
+  .navbar-content {
+    padding: 0 8px;
+  }
+  
   .navbar-brand {
+    gap: 6px;
+    
+    .brand-logo-container {
+      width: 36px;
+      height: 36px;
+    }
     
     .brand-text {
       font-size: 16px;
@@ -780,20 +790,24 @@ onBeforeUnmount(() => {
   }
   
   .navbar-menu {
+    margin: 0 4px;
+    
     :deep(.el-menu-item) {
-      padding: 0 8px;
+      padding: 0 6px;
       height: 56px;
       line-height: 56px;
+      font-size: 12px;
     }
     
     :deep(.el-sub-menu .el-sub-menu__title) {
       height: 56px;
       line-height: 56px;
+      font-size: 12px;
     }
   }
   
   .navbar-user {
-    gap: 8px;
+    gap: 6px;
     
     .user-avatar {
       width: 32px !important;
@@ -801,12 +815,18 @@ onBeforeUnmount(() => {
     }
     
     .auth-buttons {
-      gap: 8px;
+      gap: 6px;
     }
     
     .auth-btn {
-      padding: 4px 12px;
+      padding: 4px 10px;
       font-size: 12px;
+    }
+    
+    .theme-toggle {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
     }
   }
 }

@@ -47,6 +47,14 @@ onMounted(() => {
   margin: 0;
   padding: 0;
   position: relative;
+  box-sizing: border-box;
+}
+
+/* 确保在移动设备上内容不会被底部栏遮挡 */
+@media (max-width: 480px) {
+  .app-main {
+    padding-bottom: 20px;
+  }
 }
 
 // 关键：使用简单的 div 容器替代 el-container
