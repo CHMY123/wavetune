@@ -1,9 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Body
 import pandas as pd
 import io
+import os
 from typing import Tuple, Dict, Any
 
-from utils.quick_detect import detect_from_array
+from utils.quick_detect import detect_from_csv
 from services.two_back_service import two_back_service
 from services.data_storage import data_storage_service
 
@@ -12,34 +13,36 @@ router = APIRouter()
 
 @router.post('/upload')
 async def upload_and_detect(file: UploadFile = File(...)):
-    """接收 CSV 文件，解析为 20x20 数组并运行检测，返回疲劳等级与概率。"""
+    """接收 CSV 文件，解析为多模态数据并运行检测，返回疲劳等级与概率。"""
     try:
-        if not file.filename.lower().endswith('.csv'):
-            raise HTTPException(status_code=400, detail='只接受 CSV 文件')
 
-        content = await file.read()
-        # 使用 pandas 读取，无 header
-        df = pd.read_csv(io.BytesIO(content), header=None)
-        if df.shape != (20, 20):
-            raise HTTPException(status_code=400, detail='CSV 必须是 20x20 的数值表格')
-        arr = df.values.astype(float)
-        label, prob = detect_from_array(arr)
-
-        # 返回更友好的标签名（前端显示使用首字母大写）
-        label_map = {0: 'Low', 1: 'Medium', 2: 'High'}
+        # 保存临时文件
+        temp_file_path = f"temp_{file.filename}"
+        with open(temp_file_path, 'wb') as f:
+            content = await file.read()
+            f.write(content)
+        
+        # 使用新的检测逻辑
+        result = detect_from_csv(temp_file_path)
+        
+        # 清理临时文件
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        
+        if result is None:
+            raise HTTPException(status_code=400, detail='无法解析 CSV 文件或未找到有效的数据')
 
         return {
             'code': 200,
             'msg': '检测完成',
-            'data': {
-                'label': int(label),
-                'label_name': label_map.get(label, 'unknown'),
-                'probabilities': prob.tolist()
-            }
+            'data': result
         }
     except HTTPException:
         raise
     except Exception as e:
+        # 清理临时文件
+        if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
         raise HTTPException(status_code=500, detail=f'检测失败: {str(e)}')
 
 
@@ -194,3 +197,71 @@ async def send_two_back_trigger(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'触发信号发送失败: {str(e)}')
+
+@router.post('/process_csv')
+async def process_csv(file: UploadFile = File(...)):
+    """处理CSV文件并返回提取的数据"""
+    try:
+        import tempfile
+        import numpy as np
+        from utils.processing_fNIRS_new import get_processing_from_origin_data_48_ch, process_origin_to_fNIRS
+        
+        # 保存上传的文件到临时目录
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        # 加载并处理数据
+        print(f"📁 处理文件: {temp_file_path}")
+        try:
+            raw_data = np.loadtxt(temp_file_path, delimiter=',').T
+        except ValueError:
+            raw_data = np.loadtxt(temp_file_path).T
+        print(f"   原始数据形状: {raw_data.shape}")
+        
+        # 提取数据，只取前500个点
+        max_points = 500
+        eeg_data = raw_data[1:33, :max_points].tolist()
+        fnirs_raw = raw_data[33:57, :max_points].tolist()
+        marker_data = raw_data[56, :max_points].tolist()
+        label_data = raw_data[-1, :max_points].tolist()
+        
+        marker_col_index = 56
+        fNIRS_channels, data_780, data_850, _ = get_processing_from_origin_data_48_ch(raw_data, marker_col_index)
+        
+        hbo, hbr = [], []
+        if len(data_780) > 0 and len(data_780[0]) > 0:
+            hbo, hbr = process_origin_to_fNIRS(
+                np.array(data_850).T, 
+                np.array(data_780).T, 
+                [850, 780]
+            )
+            # 只取前500个点
+            hbo = hbo.T[:, :max_points].tolist()
+            hbr = hbr.T[:, :max_points].tolist()
+        
+        extracted_data = {
+            'eeg': eeg_data,
+            'fnirs_raw': fnirs_raw,
+            'hbo': hbo,
+            'hbr': hbr,
+            'marker': marker_data,
+            'label': label_data,
+            'shape': list(raw_data.shape)
+        }
+        
+        # 清理临时文件
+        import os
+        os.unlink(temp_file_path)
+        
+        return extracted_data
+    except Exception as e:
+        # 确保临时文件被清理
+        if 'temp_file_path' in locals():
+            try:
+                import os
+                os.unlink(temp_file_path)
+            except:
+                pass
+        raise HTTPException(status_code=500, detail=str(e))

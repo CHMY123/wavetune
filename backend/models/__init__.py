@@ -12,6 +12,7 @@ from .user_session import UserSession
 from .user_preference import UserPreference
 from .operation_log import OperationLog
 from .system_config import SystemConfig
+from .models import MultimodalFatigueModel
 
 __all__ = [
     "User",
@@ -22,7 +23,8 @@ __all__ = [
     "UserSession",
     "UserPreference",
     "OperationLog",
-    "SystemConfig"
+    "SystemConfig",
+    "MultimodalFatigueModel"
 ]
 
 

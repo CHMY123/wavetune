@@ -16,7 +16,7 @@ try {
   }
   // 本地开发环境兜底（避免未配置时请求404）
   else if (env.NODE_ENV === 'development' && baseURL === '/api') {
-    baseURL = 'http://127.0.0.1:8000/api';
+    baseURL = 'http://127.0.0.1:8002/api';
     console.warn('[request] 本地开发模式，默认API地址：', baseURL);
   }
 } catch (e) {
@@ -27,7 +27,7 @@ try {
 
 const request = axios.create({
   baseURL, // 从环境变量/兜底获取基础URL
-  timeout: 30000,
+  timeout: 150000,
   headers: {
     'Content-Type': 'application/json;charset=utf-8'
   }
