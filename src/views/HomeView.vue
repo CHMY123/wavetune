@@ -29,7 +29,7 @@
         </div>
         <div class="hero-image">
           <div class="system-icon">
-            <img src="/static/logo/SCNU.png" class="hero-main-icon" alt="WaveTune" 
+            <img src="/static/logo/logo.png" class="hero-main-icon" alt="WaveTune" 
             style="width: 140px; height: 140px; object-fit: contain; 
             object-position: 90% 5px" />
           </div>
