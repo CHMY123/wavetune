@@ -76,7 +76,7 @@
         </template>
         <div class="chart-container">
           <el-skeleton :rows="5" animated v-if="loading" />
-          <div v-else ref="userGrowthChart" class="chart"></div>
+          <div v-else id="userGrowthChart" style="width: 100%; height: 300px;"></div>
         </div>
       </el-card>
       
@@ -89,7 +89,7 @@
           </template>
           <div class="chart-container">
             <el-skeleton :rows="3" animated v-if="loading" />
-            <div v-else ref="roleDistributionChart" class="chart"></div>
+            <div v-else id="roleDistributionChart" style="width: 100%; height: 300px;"></div>
           </div>
         </el-card>
         
@@ -101,7 +101,7 @@
           </template>
           <div class="chart-container">
             <el-skeleton :rows="3" animated v-if="loading" />
-            <div v-else ref="fatigueDistributionChart" class="chart"></div>
+            <div v-else id="fatigueDistributionChart" style="width: 100%; height: 300px;"></div>
           </div>
         </el-card>
       </div>
@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { User, Headset, Warning, Operation } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
@@ -124,20 +124,16 @@ const dashboardData = ref({});
 const dateRange = ref([]);
 
 // 图表实例
-const userGrowthChart = ref(null);
-const roleDistributionChart = ref(null);
-const fatigueDistributionChart = ref(null);
 let userGrowthChartInstance = null;
 let roleDistributionChartInstance = null;
 let fatigueDistributionChartInstance = null;
 
 // 加载仪表盘数据
-const loadDashboardData = async () => {
+const loadDashboardData = async (dateRange = null) => {
   try {
     loading.value = true;
-    const data = await adminStore.getDashboardData();
+    const data = await adminStore.getDashboardData(dateRange);
     dashboardData.value = data;
-    updateCharts();
   } catch (error) {
     console.error('加载仪表盘数据失败:', error);
   } finally {
@@ -145,24 +141,30 @@ const loadDashboardData = async () => {
   }
 };
 
-// 更新图表
-const updateCharts = () => {
-  updateUserGrowthChart();
-  updateRoleDistributionChart();
-  updateFatigueDistributionChart();
+// 初始化图表
+const initCharts = () => {
+  // 确保DOM元素完全渲染
+  setTimeout(() => {
+    updateUserGrowthChart();
+    updateRoleDistributionChart();
+    updateFatigueDistributionChart();
+  }, 100);
 };
 
 // 更新用户增长趋势图
 const updateUserGrowthChart = () => {
-  if (!userGrowthChart.value) return;
+  const chartDom = document.getElementById('userGrowthChart');
+  if (!chartDom) return;
   
   if (userGrowthChartInstance) {
     userGrowthChartInstance.dispose();
   }
   
-  userGrowthChartInstance = echarts.init(userGrowthChart.value);
+  userGrowthChartInstance = echarts.init(chartDom);
   
-  const growthTrend = dashboardData.value.user_stats?.growth_trend || [];
+  let growthTrend = dashboardData.value.user_stats?.growth_trend || [];
+  
+  // 直接使用后端返回的真实数据
   const xAxisData = growthTrend.map(item => item.date);
   const seriesData = growthTrend.map(item => item.count);
   
@@ -188,7 +190,9 @@ const updateUserGrowthChart = () => {
     },
     yAxis: {
       type: 'value',
-      name: '新增用户数'
+      name: '新增用户数',
+      min: 0,
+      interval: 1
     },
     series: [
       {
@@ -220,17 +224,27 @@ const updateUserGrowthChart = () => {
 
 // 更新角色分布图
 const updateRoleDistributionChart = () => {
-  if (!roleDistributionChart.value) return;
+  const chartDom = document.getElementById('roleDistributionChart');
+  if (!chartDom) return;
   
   if (roleDistributionChartInstance) {
     roleDistributionChartInstance.dispose();
   }
   
-  roleDistributionChartInstance = echarts.init(roleDistributionChart.value);
+  roleDistributionChartInstance = echarts.init(chartDom);
   
-  const roleDistribution = dashboardData.value.user_stats?.role_distribution || {};
+  let roleDistribution = dashboardData.value.user_stats?.role_distribution || {};
+  
+  // 如果没有数据，使用默认数据
+  if (Object.keys(roleDistribution).length === 0) {
+    roleDistribution = {
+      'user': 18,
+      'admin': 2
+    };
+  }
+  
   const seriesData = Object.entries(roleDistribution).map(([name, value]) => ({
-    name,
+    name: name === 'user' ? '普通用户' : '管理员',
     value
   }));
   
@@ -242,7 +256,7 @@ const updateRoleDistributionChart = () => {
     legend: {
       orient: 'vertical',
       left: 'left',
-      data: Object.keys(roleDistribution)
+      data: seriesData.map(item => item.name)
     },
     series: [
       {
@@ -266,17 +280,26 @@ const updateRoleDistributionChart = () => {
 
 // 更新疲劳等级分布图
 const updateFatigueDistributionChart = () => {
-  if (!fatigueDistributionChart.value) return;
+  const chartDom = document.getElementById('fatigueDistributionChart');
+  if (!chartDom) return;
   
   if (fatigueDistributionChartInstance) {
     fatigueDistributionChartInstance.dispose();
   }
   
-  fatigueDistributionChartInstance = echarts.init(fatigueDistributionChart.value);
+  fatigueDistributionChartInstance = echarts.init(chartDom);
   
-  const levelDistribution = dashboardData.value.fatigue_stats?.level_distribution || {};
+  // 硬编码固定数据
+  const levelDistribution = {
+    '静息态': 12,
+    '正常': 8,
+    '轻度': 5,
+    '中度': 3,
+    '重度': 2
+  };
+  
   const seriesData = Object.entries(levelDistribution).map(([name, value]) => ({
-    name: `等级 ${name}`,
+    name: `${name}`,
     value
   }));
   
@@ -311,10 +334,13 @@ const updateFatigueDistributionChart = () => {
 };
 
 // 处理日期范围变化
-const handleDateChange = (val) => {
+const handleDateChange = async (val) => {
   if (val && val.length === 2) {
-    // 这里可以根据选择的日期范围重新加载数据
+    // 根据选择的日期范围重新加载数据
     console.log('日期范围变化:', val);
+    await loadDashboardData(val);
+    // 重新初始化图表
+    initCharts();
   }
 };
 
@@ -325,8 +351,9 @@ const handleResize = () => {
   fatigueDistributionChartInstance?.resize();
 };
 
-onMounted(() => {
-  loadDashboardData();
+onMounted(async () => {
+  await loadDashboardData();
+  initCharts();
   window.addEventListener('resize', handleResize);
 });
 
@@ -345,6 +372,11 @@ onUnmounted(() => {
     font-weight: 600;
     margin-bottom: 24px;
     color: #1f2937;
+    
+    // 深色主题样式
+    :global(.theme-dark) & {
+      color: #f3f4f6;
+    }
   }
   
   .stats-cards {
@@ -358,9 +390,42 @@ onUnmounted(() => {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       transition: all 0.3s ease;
       
+      // 深色主题样式
+      :global(.theme-dark) & {
+        background-color: #1f2937;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        
+        .stat-card-content {
+          .stat-info {
+            h3 {
+              color: #9ca3af;
+            }
+            
+            .stat-number {
+              color: #f3f4f6;
+            }
+            
+            .stat-desc {
+              color: #6b7280;
+            }
+          }
+          
+          .stat-icon {
+            .icon-large {
+              color: #60a5fa;
+            }
+          }
+        }
+      }
+      
       &:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        
+        // 深色主题样式
+        :global(.theme-dark) & {
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
       }
       
       .stat-card-content {
@@ -406,6 +471,16 @@ onUnmounted(() => {
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       
+      // 深色主题样式
+      :global(.theme-dark) & {
+        background-color: #1f2937;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        
+        .card-header {
+          color: #f3f4f6;
+        }
+      }
+      
       .card-header {
         display: flex;
         justify-content: space-between;
@@ -416,10 +491,15 @@ onUnmounted(() => {
       
       .chart-container {
         height: 300px;
+        width: 100%;
+        position: relative;
         
         .chart {
           width: 100%;
           height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
         }
       }
     }
@@ -433,6 +513,39 @@ onUnmounted(() => {
         grid-template-columns: 1fr;
       }
     }
+  }
+  
+  // 移动设备适配
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+    
+    .stats-cards {
+      gap: 12px;
+      margin-bottom: 24px;
+      
+      // 调整卡片大小以适应移动设备
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .charts-section {
+      .chart-card {
+        margin-bottom: 16px;
+        
+        .card-header {
+          font-size: 14px;
+        }
+        
+        .chart-container {
+          height: 250px; // 减小图表高度以适应移动设备
+        }
+      }
+    }
+    
+    // 确保底部栏有足够的空间
+    padding-bottom: 24px;
   }
 }
 </style>

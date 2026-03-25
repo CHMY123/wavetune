@@ -101,9 +101,9 @@
           {{ scope.row.last_login_time ? formatDate(scope.row.last_login_time) : '从未登录' }}
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="注册时间" width="180">
+      <el-table-column prop="create_time" label="注册时间" width="180">
         <template #default="scope">
-          {{ formatDate(scope.row.created_at) }}
+          {{ formatDate(scope.row.create_time) }}
         </template>
       </el-table-column>
       <el-table-column label="操作" width="150">
@@ -418,6 +418,11 @@ onMounted(() => {
       font-weight: 600;
       margin: 0;
       color: #1f2937;
+      
+      // 深色主题样式
+      :global(.theme-dark) & {
+        color: #f3f4f6;
+      }
     }
   }
   
@@ -436,6 +441,15 @@ onMounted(() => {
     padding: 12px;
     background-color: #f3f4f6;
     border-radius: 6px;
+    
+    // 深色主题样式
+    :global(.theme-dark) & {
+      background-color: #374151;
+      
+      span {
+        color: #d1d5db;
+      }
+    }
     
     span {
       margin-right: 16px;
@@ -471,6 +485,12 @@ onMounted(() => {
       font-size: 24px;
       color: #999;
       background-color: #f0f0f0;
+      
+      // 深色主题样式
+      :global(.theme-dark) & {
+        color: #6b7280;
+        background-color: #374151;
+      }
     }
   }
 }

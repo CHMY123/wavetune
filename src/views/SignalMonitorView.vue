@@ -125,26 +125,38 @@
             </div>
           </div>
 
-          <!-- 当检测为中/高疲劳时，显示查看推荐的按钮（占位行为，可跳转或展开推荐面板） -->
-          <el-button
-            v-if="detectionResult.label === '中度疲劳' || detectionResult.label === '重度疲劳'"
-            type="primary"
-            size="small"
-            @click="showRecommendations"
-          >
-            推荐音乐
-          </el-button>
-
-          <!-- 当检测为静息态或正常时，显示鼓励提示 -->
-          <el-tag v-if="detectionResult.label === '静息态' || detectionResult.label === '正常'" type="success">状态良好，继续保持！</el-tag>
+          <!-- 跳转按钮：根据检测结果跳转到对应疲劳等级的音乐推荐 -->
+          <div class="recommendation-section" style="margin-top:12px; width:100%; display:flex; align-items:center; gap:12px;">
+            <el-button
+              v-if="detectionResult.label !== '其他'"
+              type="primary"
+              size="small"
+              @click="navigateToRecommendation"
+            >
+              {{ getRecommendationButtonText() }}
+            </el-button>
+            <el-tag v-if="detectionResult.label === '其他'" type="info">建议再试一次</el-tag>
+          </div>
         </div>
+        
+        <!-- 清空按钮：用于清空暂存在页面的数据可视化 -->
+        <el-button
+          v-if="csvData"
+          type="danger"
+          size="large"
+          @click="clearData"
+          style="margin-left:12px"
+        >
+          <el-icon><Delete /></el-icon>
+          清空数据
+        </el-button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { VideoPause, Download } from '@element-plus/icons-vue'
+import { VideoPause, Download, Delete } from '@element-plus/icons-vue'
 import { requestMethod } from '@/utils/request'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
@@ -153,7 +165,8 @@ export default {
   name: 'SignalMonitorView',
   components: {
     VideoPause,
-    Download
+    Download,
+    Delete
   },
   data() {
     return {
@@ -729,6 +742,92 @@ export default {
           '其他': '#909399'       // 灰色
         };
         return colorMap[label] || '#909399';
+      },
+      
+      // 获取推荐按钮文本
+      getRecommendationButtonText() {
+        const label = this.detectionResult?.label;
+        if (!label) return '推荐音乐';
+        
+        // 依据结果跳转到对应疲劳等级的音乐推荐
+        if (label === '静息态' || label === '正常' || label === '疲劳恢复期' || label === '轻度疲劳') {
+          return '跳转至轻度疲劳推荐音乐';
+        } else if (label === '中度疲劳') {
+          return '跳转至中度疲劳推荐音乐';
+        } else if (label === '重度疲劳') {
+          return '跳转至重度疲劳推荐音乐';
+        }
+        return '推荐音乐';
+      },
+      
+      // 跳转到对应疲劳等级的音乐推荐
+      navigateToRecommendation() {
+        const label = this.detectionResult?.label;
+        if (!label) return;
+        
+        // 依据结果跳转到对应疲劳等级的音乐推荐
+        let fatigueLevel = label;
+        if (label === '静息态' || label === '正常' || label === '疲劳恢复期') {
+          fatigueLevel = '轻度疲劳';
+        }
+        
+        // 将中文疲劳等级转换为英文对应值，以便后端API使用
+        const fatigueLevelMap = {
+          '轻度疲劳': 'Light',
+          '中度疲劳': 'Medium',
+          '重度疲劳': 'Heavy'
+        };
+        
+        const englishFatigueLevel = fatigueLevelMap[fatigueLevel] || 'light';
+        
+        console.log('%c [SignalMonitorView] 跳转到音乐推荐，疲劳等级：', 'color: #722ed1;', fatigueLevel);
+        console.log('%c [SignalMonitorView] 转换为英文疲劳等级：', 'color: #1890ff;', englishFatigueLevel);
+        
+        // 在跳转前将当前检测等级写入 localStorage，供推荐页固定使用
+        localStorage.setItem('current_fatigue_level', englishFatigueLevel);
+        console.log('%c [SignalMonitorView] 已将当前疲劳等级写入localStorage：', 'color: #1890ff;', englishFatigueLevel);
+        
+        try {
+          if (this.$router) {
+            this.$router.push({ path: '/music-recommendation' });
+            console.log('%c [SignalMonitorView] 成功跳转至音乐推荐页面', 'color: #52c41a;');
+          } else {
+            console.warn('%c [SignalMonitorView] 未找到$router实例，无法跳转', 'color: #faad14;');
+          }
+        } catch (e) {
+          // 如果路由不存在则提示
+          console.error('%c [SignalMonitorView] 跳转音乐推荐页面失败：', 'color: #f5222d;', e);
+          ElMessage.info('请在推荐页面查看推荐列表');
+        }
+      },
+      
+      // 清空暂存在页面的数据可视化
+      clearData() {
+        console.log('%c [SignalMonitorView] 开始清空数据', 'color: #f5222d;');
+        
+        // 清空本地存储的数据
+        localStorage.removeItem('chartData');
+        localStorage.removeItem('detectionResult');
+        localStorage.removeItem('current_fatigue_level');
+        
+        // 清空组件状态
+        this.csvData = null;
+        this.detectionResult = null;
+        this.selectedFile = null;
+        this.selectedFileName = '';
+        
+        // 销毁图表实例
+        if (this.eegChart) {
+          this.eegChart.dispose();
+          this.eegChart = null;
+        }
+        if (this.fnirsChart) {
+          this.fnirsChart.dispose();
+          this.fnirsChart = null;
+        }
+        
+        console.log('%c [SignalMonitorView] 数据清空完成', 'color: #52c41a;');
+        ElMessage.success('数据已清空');
       }
     }
   }

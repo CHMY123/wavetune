@@ -63,7 +63,9 @@
             <div class="feature-actions">
               <el-button class="feature-btn" size="small">
                 {{ feature.buttonText }}
-                <el-icon :component="ArrowRight" class="btn-icon" />
+                <el-icon class="btn-icon">
+                  <ArrowRight />
+                </el-icon>
               </el-button>
             </div>
           </CardContainer>
@@ -113,7 +115,9 @@
           <div class="status-actions">
             <el-button class="primary-btn" @click="$router.push('/federated/status')">
               查看详情
-              <el-icon :component="ArrowRight" class="btn-icon" />
+              <el-icon class="btn-icon">
+                <ArrowRight />
+              </el-icon>
             </el-button>
           </div>
         </div>

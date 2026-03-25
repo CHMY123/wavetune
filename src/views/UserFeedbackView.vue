@@ -120,7 +120,7 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px;">
                       <el-rate :model-value="item.score" :max="5" disabled />
-                      <el-button type="danger" size="mini" @click="deleteFeedback(item.id)">删除</el-button>
+                      <el-button type="danger" size="small" @click="deleteFeedback(item.id)">删除</el-button>
                     </div>
                   </div>
                   <!-- 反馈内容：单独区块，与操作栏分隔 -->
@@ -370,6 +370,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
+// 引入样式变量
+@use '@/assets/styles/breakpoints.scss' as bp;
+
 // 设计令牌
 :root {
   --bg-primary: #ffffff;
@@ -885,11 +888,10 @@ onBeforeUnmount(() => {
   }
 }
 
-// 应用响应式工具
-@import '@/assets/styles/breakpoints.scss';
+
 
 // 响应式适配 - 使用断点混入
-@include mobile-layout {
+@include bp.mobile-layout {
   :root {
     --spacing-page: 16px;
     --spacing-lg: 16px;
@@ -908,7 +910,7 @@ onBeforeUnmount(() => {
   }
   
   .user-info-card {
-    @include card(16px, 12px);
+    @include bp.card(16px, 12px);
     margin-bottom: var(--spacing-md);
     
     .avatar-section {
@@ -927,11 +929,11 @@ onBeforeUnmount(() => {
     
     .user-details {
       .user-name {
-        @include responsive-font(18px, null, 16px);
+        @include bp.responsive-font(18px, null, 16px);
       }
       
       .user-status {
-        @include responsive-font(13px, null, 12px);
+        @include bp.responsive-font(13px, null, 12px);
       }
     }
     
@@ -943,7 +945,7 @@ onBeforeUnmount(() => {
   }
   
   .feedback-form-card {
-    @include card(16px, 12px);
+    @include bp.card(16px, 12px);
     margin-top: 0;
     
     .card-title {
@@ -979,7 +981,7 @@ onBeforeUnmount(() => {
   }
   
   .history-card {
-    @include card(16px, 12px);
+    @include bp.card(16px, 12px);
     
     .card-title {
       font-size: 18px;
@@ -1028,7 +1030,7 @@ onBeforeUnmount(() => {
 }
 
 // 平板设备适配
-@include respond-to(sm) {
+@include bp.respond-to(sm) {
   .content-wrapper {
     display: grid;
     grid-template-columns: 1fr;
@@ -1038,7 +1040,7 @@ onBeforeUnmount(() => {
   .user-info-card,
   .feedback-form-card,
   .history-card {
-    @include card(18px);
+    @include bp.card(18px);
   }
   
   .user-info-card {
@@ -1054,13 +1056,13 @@ onBeforeUnmount(() => {
 }
 
 // 大屏设备优化
-@include large-desktop-layout {
+@include bp.large-desktop-layout {
   .user-feedback-view {
     min-height: 100vh;
   }
   
   .main-section {
-    @include container(false);
+    @include bp.container(false);
     max-width: 1400px;
     display: grid;
     grid-template-columns: 300px 1fr;
@@ -1068,7 +1070,7 @@ onBeforeUnmount(() => {
   }
   
   .user-info-card {
-    @include card(24px);
+    @include bp.card(24px);
     position: sticky;
     top: 100px;
   }
@@ -1081,12 +1083,12 @@ onBeforeUnmount(() => {
   
   .feedback-form-card,
   .history-card {
-    @include card(24px);
+    @include bp.card(24px);
   }
 }
 
 // 超大屏设备优化
-@include extra-large-desktop-layout {
+@include bp.extra-large-desktop-layout {
   .main-section {
     max-width: 1600px;
     grid-template-columns: 350px 1fr;
@@ -1095,7 +1097,7 @@ onBeforeUnmount(() => {
 }
 
 // 高对比度模式支持
-@include high-contrast {
+@include bp.high-contrast {
   .user-info-card,
   .feedback-form-card,
   .history-card {

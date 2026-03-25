@@ -239,17 +239,6 @@ const play = async () => {
     playerStore.setIsPlaying(false)
     isManualPause.value = false
     
-    // 确保音频已加载
-    if (audioEl.value.readyState < 2) {
-      try {
-        await audioEl.value.load()
-      } catch (loadError) {
-        console.error('音频加载失败:', loadError)
-        ElMessage.error('音频加载失败')
-        return
-      }
-    }
-    
     // 尝试播放
     const playPromise = audioEl.value.play()
     
@@ -269,6 +258,9 @@ const play = async () => {
     // 检测是否是用户交互问题导致的播放错误
     if (e.name === 'NotAllowedError' || e.message && e.message.includes('user gesture')) {
       ElMessage.warning('请点击播放按钮以开始播放音频')
+    } else if (e.name === 'AbortError' && e.message && e.message.includes('interrupted by a new load request')) {
+      // 忽略由新的load请求中断的播放错误，因为这是正常的切换歌曲行为
+      console.debug('播放被新的load请求中断，这是正常的切换歌曲行为')
     } else {
       ElMessage.error('播放失败，请重试')
     }
@@ -296,12 +288,8 @@ const togglePlay = () => {
 const playNext = () => {
   const nextTrack = playerStore.playNext()
   if (nextTrack) {
-    // 延迟加载新歌曲
-    setTimeout(() => {
-      play().catch(err => {
-        console.warn('播放下一首失败:', err)
-      })
-    }, 100)
+    // 不需要手动调用play()，因为onLoaded会处理播放
+    console.debug('播放下一首:', nextTrack.title)
   }
 }
 
@@ -309,12 +297,8 @@ const playNext = () => {
 const playPrevious = () => {
   const prevTrack = playerStore.playPrevious()
   if (prevTrack) {
-    // 延迟加载新歌曲
-    setTimeout(() => {
-      play().catch(err => {
-        console.warn('播放上一首失败:', err)
-      })
-    }, 100)
+    // 不需要手动调用play()，因为onLoaded会处理播放
+    console.debug('播放上一首:', prevTrack.title)
   }
 }
 
@@ -357,9 +341,12 @@ const onLoaded = () => {
     audioEl.value.volume = volume.value
     audioEl.value.muted = isMuted.value
     
-    // 自动播放
+    // 自动播放 - 只在isPlaying为true时执行
     if (isPlaying.value) {
-      setTimeout(() => play(), 300)
+      // 直接调用play()，不需要延迟，因为音频已经加载完成
+      play().catch(err => {
+        console.warn('自动播放失败:', err)
+      })
     }
   } catch (e) {
     console.warn('音频加载完成处理时发生警告:', e)

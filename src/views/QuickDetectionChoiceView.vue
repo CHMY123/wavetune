@@ -3,7 +3,7 @@
     <el-card class="choice-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <component :is="Aim" class="header-icon" />
+          <el-icon class="header-icon"><Aim /></el-icon>
           <span>快速检测</span>
         </div>
       </template>

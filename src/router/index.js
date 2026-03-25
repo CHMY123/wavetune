@@ -116,42 +116,6 @@ const routes = [
         component: () => import(/* webpackChunkName: "admin" */ '../views/admin/SystemConfigView.vue')
       }
     ]
-  },
-  // 数据分析面板路由
-  {
-    path: '/analytics',
-    redirect: '/analytics/dashboard',
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/analytics/dashboard',
-    name: 'analytics-dashboard',
-    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/AnalyticsDashboardView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/analytics/users',
-    name: 'analytics-users',
-    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/UserAnalyticsView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/analytics/music',
-    name: 'analytics-music',
-    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/MusicAnalyticsView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/analytics/fatigue',
-    name: 'analytics-fatigue',
-    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/FatigueAnalyticsView.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/analytics/system',
-    name: 'analytics-system',
-    component: () => import(/* webpackChunkName: "analytics" */ '../views/analytics/SystemAnalyticsView.vue'),
-    meta: { requiresAuth: true }
   }
 ]
 

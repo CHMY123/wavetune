@@ -266,6 +266,14 @@ onMounted(() => {
   checkAuthStatus()
   updateActiveIndex()
   
+  // 监听路由变化，更新活跃菜单项
+  const routeChange = () => {
+    updateActiveIndex()
+  }
+  
+  // 保存监听器的移除函数
+  window.removeRouteListener = router.afterEach(routeChange)
+  
   // 监听全局登录状态变化
   window.addEventListener('auth-changed', checkAuthStatus)
   // 监听 localStorage 在其它窗口/标签页的变化
@@ -281,6 +289,11 @@ onBeforeUnmount(() => {
   try { window.removeEventListener('auth-changed', checkAuthStatus) } catch (e) {}
   try { window.removeEventListener('scroll', handleScroll) } catch (e) {}
   try { window.removeEventListener('storage', handleStorageEvent) } catch (e) {}
+  // 移除路由变化监听器
+  if (window.removeRouteListener) {
+    try { window.removeRouteListener() } catch (e) {}
+    delete window.removeRouteListener
+  }
 })
 </script>
 

@@ -112,7 +112,7 @@
               <div class="music-meta">
                 <span class="music-duration">{{ music.duration }}</span>
               </div>
-              <p class="music-reason">{{ music.reason }}</p>
+              <p class="music-reason" @click="showMusicDetails(music)">{{ music.reason }}</p>
             </div>
           </div>
         </el-col>
@@ -322,6 +322,59 @@
       </div>
     </template>
   </el-dialog> -->
+  
+  <!-- 音乐详情对话框 -->
+  <el-dialog 
+    :title="currentMusicDetails?.title || '音乐详情'" 
+    v-model="showDetailsDialog" 
+    width="500px" 
+    append-to-body
+    class="music-details-dialog"
+    style="z-index: 10000"
+  >
+    <div class="details-content">
+      <div class="details-cover">
+        <el-image
+          :src="getCoverUrl(currentMusicDetails)"
+          :alt="`${currentMusicDetails?.title || '未知歌曲'} - ${currentMusicDetails?.artist || '未知艺术家'}`"
+          fit="cover"
+          class="details-cover-image"
+        >
+          <template #error>
+            <div class="image-error">
+              <Headset class="music-icon" />
+            </div>
+          </template>
+        </el-image>
+        <div class="details-match-badge">
+          {{ currentMusicDetails?.match_rate }}% 匹配
+        </div>
+      </div>
+      <div class="details-info">
+        <h3 class="details-title">{{ currentMusicDetails?.title || '未知歌曲' }}</h3>
+        <p class="details-artist">{{ currentMusicDetails?.artist || '未知艺术家' }}</p>
+        <div class="details-meta">
+          <span class="details-duration">{{ currentMusicDetails?.duration || '00:00' }}</span>
+        </div>
+        <div class="details-reason">
+          <h4 class="reason-title">推荐理由</h4>
+          <p class="reason-content">{{ currentMusicDetails?.reason || '暂无推荐理由' }}</p>
+        </div>
+      </div>
+    </div>
+    <template #footer>
+      <div class="dialog-footer" style="display: flex; justify-content: flex-end; gap: 12px;">
+        <el-button class="cancel-button" @click="showDetailsDialog = false">关闭</el-button>
+        <el-button
+          type="primary"
+          @click="playTrack(currentMusicDetails)"
+          :disabled="!currentMusicDetails"
+        >
+          <el-icon><VideoPlay /></el-icon>播放音乐
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script>
@@ -390,7 +443,10 @@ export default {
       // selectedCoverFile: null,
       // selectedCoverFileName: '',
       // uploadingCover: false,
-      // coverUploadProgress: 0
+      // coverUploadProgress: 0,
+      // 音乐详情对话框
+      showDetailsDialog: false,
+      currentMusicDetails: null
     }
   },
   computed: {
@@ -862,7 +918,13 @@ export default {
     //     console.error('删除音乐失败', e)
     //     ElMessage.error('删除失败，请稍后重试')
     //   }
-    // }
+    // },
+    // 显示音乐详情
+    showMusicDetails(music) {
+      if (!music) return
+      this.currentMusicDetails = music
+      this.showDetailsDialog = true
+    }
   },
   mounted() {
     // 初始化playerStore
@@ -1445,10 +1507,105 @@ export default {
         color: var(--text-secondary);
         line-height: 1.4;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        cursor: pointer;
+        transition: color 0.3s ease;
+        
+        &:hover {
+          color: var(--brand-primary);
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+}
+
+/* 音乐详情对话框 */
+.music-details-dialog {
+  .details-content {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0;
+    
+    .details-cover {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+      
+      .details-cover-image {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+      }
+      
+      .details-match-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--brand-accent);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 2;
+        box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+      }
+    }
+    
+    .details-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      
+      .details-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+      
+      .details-artist {
+        margin: 0;
+        font-size: 16px;
+        color: var(--text-regular);
+      }
+      
+      .details-meta {
+        display: flex;
+        gap: 12px;
+        
+        .details-duration {
+          font-size: 14px;
+          color: var(--text-secondary);
+          font-family: 'SF Mono', Monaco, monospace;
+          background: var(--bg-light);
+          padding: 2px 8px;
+          border-radius: 12px;
+        }
+      }
+      
+      .details-reason {
+        margin-top: 8px;
+        
+        .reason-title {
+          margin: 0 0 8px 0;
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        
+        .reason-content {
+          margin: 0;
+          font-size: 14px;
+          color: var(--text-regular);
+          line-height: 1.5;
+        }
       }
     }
   }
