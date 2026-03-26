@@ -10,7 +10,7 @@
         </div>
       </div>
       <p class="monitor-info">
-        当前监测信号：EEG、EOG、HRV、呼吸频率
+        当前监测信号：EEG、fNIRS
       </p>
     </div>
 

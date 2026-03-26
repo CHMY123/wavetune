@@ -82,7 +82,7 @@ export default {
     
     // 跳转到直接检测页面
     goToDirectDetection() {
-      this.$router.push('/quick-detection/direct')
+      this.$router.push('/signal-monitor')
     }
   }
 }

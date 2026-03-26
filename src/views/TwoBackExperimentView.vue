@@ -15,11 +15,6 @@
         </div>
       </template>
       
-      <!-- 加载状态 -->
-      <div v-if="isLoading" class="loading-container">
-        <el-loading class="loading" type="spinner" text="加载中..." />
-      </div>
-      
       <!-- 错误提示 -->
       <el-alert 
         v-if="errorMessage" 
@@ -312,45 +307,6 @@
           <el-table-column prop="value" label="值" />
         </el-table>
         
-        <el-divider content-position="left">正确率分析</el-divider>
-        
-        <div class="chart-container">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="chart-header">
-                <span>正确率趋势</span>
-              </div>
-            </template>
-            <div ref="accuracyChart" class="chart"></div>
-          </el-card>
-        </div>
-        
-        <el-divider content-position="left">反应时分析</el-divider>
-        
-        <div class="chart-container">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="chart-header">
-                <span>反应时趋势</span>
-              </div>
-            </template>
-            <div ref="responseTimeChart" class="chart"></div>
-          </el-card>
-        </div>
-        
-        <el-divider content-position="left">KSS 评分分析</el-divider>
-        
-        <div class="chart-container">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="chart-header">
-                <span>KSS 评分趋势</span>
-              </div>
-            </template>
-            <div ref="kssChart" class="chart"></div>
-          </el-card>
-        </div>
-        
         <div class="result-buttons">
           <el-button 
             type="primary" 
@@ -370,8 +326,6 @@
 </template>
 
 <script>
-import * as echarts from 'echarts'
-
 export default {
   name: 'TwoBackExperimentView',
   data() {
@@ -442,7 +396,7 @@ export default {
   },
   mounted() {
     // 绑定键盘事件
-    window.addEventListener('keydown', this.handleKeydown)
+    window.addEventListener('keydown', this.handleKeydown, { passive: false })
   },
   beforeUnmount() {
     // 解绑键盘事件
@@ -454,7 +408,7 @@ export default {
     // 处理键盘事件
     handleKeydown(event) {
       if (this.experimentState === 'running' && !this.showFeedback) {
-        if (event.code === 'Space') {
+        if (event.code === 'Space' || event.key === ' ') {
           event.preventDefault()
           this.respond(true)
         }
@@ -465,19 +419,23 @@ export default {
     async startExperiment() {
       this.isStarting = true
       try {
-        // 初始化实验会话
-        const initResponse = await this.$axios.post('/api/detection/two-back/init', this.experimentSettings)
+        // 初始化实验会话 - 增加超时时间到30秒
+        const initResponse = await this.$axios.post('/api/detection/two-back/init', this.experimentSettings, {
+          timeout: 30000
+        })
         console.log('初始化实验 - 响应:', initResponse.data)
         if (initResponse.data.code === 200) {
           this.sessionId = initResponse.data.data.session_id
           this.participantId = initResponse.data.data.participant_id
           console.log('初始化实验 - 会话 ID:', this.sessionId)
           
-          // 生成刺激序列
+          // 生成刺激序列 - 增加超时时间到30秒
           const sequenceResponse = await this.$axios.post('/api/detection/two-back/generate-sequence', {
             trials: this.experimentSettings.trialsPerBlock * this.experimentSettings.blockCount,
             match_rate: 0.28,
             letters: this.experimentSettings.letters
+          }, {
+            timeout: 30000
           })
           
           if (sequenceResponse.data.code === 200) {
@@ -495,7 +453,15 @@ export default {
         }
       } catch (error) {
         console.error('开始实验失败:', error)
-        this.errorMessage = '开始实验失败，请稍后重试'
+        if (error.code === 'ECONNABORTED') {
+          this.errorMessage = '连接服务器超时，请检查后端服务是否正常运行'
+        } else if (error.response) {
+          this.errorMessage = `服务器错误: ${error.response.status} - ${error.response.data?.message || '未知错误'}`
+        } else if (error.request) {
+          this.errorMessage = '无法连接到服务器，请检查网络连接'
+        } else {
+          this.errorMessage = '开始实验失败，请稍后重试'
+        }
       } finally {
         this.isStarting = false
       }
@@ -724,142 +690,6 @@ export default {
     // 查看详细结果
     viewDetailedResults() {
       this.experimentState = 'result'
-      // 延迟初始化图表，确保 DOM 已更新
-      setTimeout(() => {
-        this.initCharts()
-      }, 100)
-    },
-    
-    // 初始化图表
-    initCharts() {
-      this.initAccuracyChart()
-      this.initResponseTimeChart()
-      this.initKssChart()
-    },
-    
-    // 初始化正确率图表
-    initAccuracyChart() {
-      const chart = echarts.init(this.$refs.accuracyChart)
-      const option = {
-        title: {
-          text: '正确率趋势',
-          left: 'center'
-        },
-        tooltip: {
-          trigger: 'axis'
-        },
-        xAxis: {
-          type: 'category',
-          data: Array.from({ length: this.experimentSettings.blockCount }, (_, i) => `轮次 ${i + 1}`)
-        },
-        yAxis: {
-          type: 'value',
-          min: 0,
-          max: 100,
-          axisLabel: {
-            formatter: '{value}%'
-          }
-        },
-        series: [{
-          data: Array.from({ length: this.experimentSettings.blockCount }, () => this.accuracyRate),
-          type: 'line',
-          smooth: true,
-          lineStyle: {
-            color: '#409EFF'
-          },
-          itemStyle: {
-            color: '#409EFF'
-          }
-        }]
-      }
-      chart.setOption(option)
-      
-      // 响应式调整
-      window.addEventListener('resize', () => {
-        chart.resize()
-      })
-    },
-    
-    // 初始化反应时图表
-    initResponseTimeChart() {
-      const chart = echarts.init(this.$refs.responseTimeChart)
-      const option = {
-        title: {
-          text: '反应时趋势',
-          left: 'center'
-        },
-        tooltip: {
-          trigger: 'axis'
-        },
-        xAxis: {
-          type: 'category',
-          data: Array.from({ length: this.experimentSettings.blockCount }, (_, i) => `轮次 ${i + 1}`)
-        },
-        yAxis: {
-          type: 'value',
-          axisLabel: {
-            formatter: '{value}ms'
-          }
-        },
-        series: [{
-          data: Array.from({ length: this.experimentSettings.blockCount }, () => this.averageResponseTime),
-          type: 'line',
-          smooth: true,
-          lineStyle: {
-            color: '#67C23A'
-          },
-          itemStyle: {
-            color: '#67C23A'
-          }
-        }]
-      }
-      chart.setOption(option)
-      
-      // 响应式调整
-      window.addEventListener('resize', () => {
-        chart.resize()
-      })
-    },
-    
-    // 初始化 KSS 评分图表
-    initKssChart() {
-      const chart = echarts.init(this.$refs.kssChart)
-      const option = {
-        title: {
-          text: 'KSS 评分趋势',
-          left: 'center'
-        },
-        tooltip: {
-          trigger: 'axis'
-        },
-        xAxis: {
-          type: 'category',
-          data: Array.from({ length: this.kssScores.length }, (_, i) => `轮次 ${i + 1}`)
-        },
-        yAxis: {
-          type: 'value',
-          min: 1,
-          max: 9,
-          interval: 1
-        },
-        series: [{
-          data: this.kssScores,
-          type: 'line',
-          smooth: true,
-          lineStyle: {
-            color: '#E6A23C'
-          },
-          itemStyle: {
-            color: '#E6A23C'
-          }
-        }]
-      }
-      chart.setOption(option)
-      
-      // 响应式调整
-      window.addEventListener('resize', () => {
-        chart.resize()
-      })
     },
     
     // 导出结果
@@ -957,22 +787,6 @@ export default {
 
 .card-header .el-button:hover {
   transform: scale(1.05);
-}
-
-/* 加载状态 */
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 400px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  margin: 20px;
-}
-
-.loading {
-  width: 100px;
-  height: 100px;
 }
 
 /* 错误提示 */
@@ -1561,9 +1375,542 @@ export default {
   font-weight: bold;
   text-align: center;
   position: relative;
-  display: inline-block;
-  left: 50%;
-  transform: translateX(-50%);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .two-back-experiment {
+    padding: 16px;
+  }
+  
+  .experiment-card {
+    max-width: 100%;
+  }
+  
+  .card-header {
+    font-size: 18px;
+    padding: 16px 20px;
+  }
+  
+  .experiment-prepare,
+  .experiment-running,
+  .kss-container,
+  .rest-container,
+  .experiment-completed,
+  .experiment-result {
+    padding: 20px;
+  }
+  
+  .experiment-prepare h2,
+  .kss-container h2,
+  .rest-container h2,
+  .experiment-completed h2 {
+    font-size: 24px;
+  }
+  
+  .experiment-result h2 {
+    font-size: 28px;
+  }
+  
+  .experiment-prepare .description,
+  .kss-container .description,
+  .rest-container .description,
+  .experiment-completed .description {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .settings-form {
+    padding: 20px;
+    margin-bottom: 36px;
+  }
+  
+  .settings-form .el-form-item {
+    margin-bottom: 20px;
+  }
+  
+  .start-button-container,
+  .kss-button-container {
+    margin-top: 36px;
+  }
+  
+  .start-button-container .el-button,
+  .kss-button-container .el-button {
+    padding: 14px 40px;
+    font-size: 16px;
+  }
+  
+  .experiment-header {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding: 16px 20px;
+  }
+  
+  .experiment-info span {
+    margin-right: 16px;
+    font-size: 14px;
+  }
+  
+  .stimulus-container {
+    height: 250px;
+    margin: 32px 0;
+  }
+  
+  .stimulus {
+    font-size: 100px;
+  }
+  
+  .feedback {
+    font-size: 36px;
+    padding: 16px 32px;
+  }
+  
+  .response-buttons {
+    gap: 20px;
+    margin: 32px 0;
+  }
+  
+  .response-buttons .el-button {
+    padding: 14px 32px;
+    font-size: 16px;
+  }
+  
+  .response-hint {
+    font-size: 14px;
+    padding: 12px;
+  }
+  
+  .kss-scale {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin: 36px 0;
+  }
+  
+  .kss-item {
+    padding: 20px;
+  }
+  
+  .rest-timer {
+    max-width: 300px;
+    margin: 36px auto;
+  }
+  
+  .timer-circle {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 24px;
+  }
+  
+  .timer-number {
+    font-size: 48px;
+  }
+  
+  .timer-unit {
+    font-size: 18px;
+  }
+  
+  .results-container {
+    padding: 20px;
+    margin: 24px 0;
+  }
+  
+  .result-item {
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  
+  .result-item span:first-child {
+    font-size: 14px;
+  }
+  
+  .result-item span:last-child {
+    font-size: 16px;
+    padding: 4px 12px;
+  }
+  
+  .kss-results {
+    margin: 24px 0;
+  }
+  
+  .kss-result-item {
+    padding: 12px 16px;
+    margin-bottom: 12px;
+  }
+  
+  .kss-score-value {
+    margin: 0 16px;
+    font-size: 16px;
+    padding: 4px 12px;
+    min-width: 50px;
+  }
+  
+  .completed-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 36px;
+  }
+  
+  .completed-buttons .el-button {
+    padding: 12px 28px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .chart-container {
+    margin: 24px 0;
+  }
+  
+  .chart {
+    height: 250px;
+  }
+  
+  .result-buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-top: 36px;
+  }
+  
+  .result-buttons .el-button {
+    padding: 12px 28px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .two-back-experiment {
+    padding: 12px;
+  }
+  
+  .experiment-prepare,
+  .experiment-running,
+  .kss-container,
+  .rest-container,
+  .experiment-completed,
+  .experiment-result {
+    padding: 16px;
+  }
+  
+  .experiment-prepare h2,
+  .kss-container h2,
+  .rest-container h2,
+  .experiment-completed h2 {
+    font-size: 20px;
+  }
+  
+  .experiment-result h2 {
+    font-size: 24px;
+  }
+  
+  .experiment-prepare .description,
+  .kss-container .description,
+  .rest-container .description,
+  .experiment-completed .description {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .settings-form {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .settings-form .el-form-item {
+    margin-bottom: 16px;
+  }
+  
+  .start-button-container,
+  .kss-button-container {
+    margin-top: 24px;
+  }
+  
+  .start-button-container .el-button,
+  .kss-button-container .el-button {
+    padding: 12px 32px;
+    font-size: 14px;
+  }
+  
+  .stimulus-container {
+    height: 200px;
+    margin: 24px 0;
+  }
+  
+  .stimulus {
+    font-size: 80px;
+  }
+  
+  .feedback {
+    font-size: 28px;
+    padding: 12px 24px;
+  }
+  
+  .response-buttons {
+    gap: 16px;
+    margin: 24px 0;
+  }
+  
+  .response-buttons .el-button {
+    padding: 12px 24px;
+    font-size: 14px;
+  }
+  
+  .response-hint {
+    font-size: 12px;
+    padding: 10px;
+  }
+  
+  .kss-scale {
+    gap: 12px;
+    margin: 24px 0;
+  }
+  
+  .kss-item {
+    padding: 16px;
+  }
+  
+  .kss-score {
+    font-size: 24px;
+  }
+  
+  .kss-description {
+    font-size: 14px;
+  }
+  
+  .rest-timer {
+    max-width: 250px;
+    margin: 24px auto;
+  }
+  
+  .timer-circle {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 16px;
+  }
+  
+  .timer-number {
+    font-size: 36px;
+  }
+  
+  .timer-unit {
+    font-size: 16px;
+  }
+  
+  .results-container {
+    padding: 16px;
+    margin: 20px 0;
+  }
+  
+  .result-item {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  
+  .result-item span:first-child {
+    font-size: 12px;
+  }
+  
+  .result-item span:last-child {
+    font-size: 14px;
+    padding: 3px 10px;
+  }
+  
+  .kss-result-item {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  
+  .kss-score-value {
+    margin: 0 12px;
+    font-size: 14px;
+    padding: 3px 10px;
+    min-width: 40px;
+  }
+  
+  .completed-buttons {
+    margin-top: 24px;
+  }
+  
+  .completed-buttons .el-button {
+    padding: 10px 24px;
+    font-size: 12px;
+  }
+  
+  .chart {
+    height: 200px;
+  }
+  
+  .result-buttons {
+    margin-top: 24px;
+  }
+  
+  .result-buttons .el-button {
+    padding: 10px 24px;
+    font-size: 12px;
+  }
+}
+
+/* 暗模式适配 */
+.theme-dark .two-back-experiment {
+  background-color: var(--bg-page);
+  background-image: none;
+}
+
+.theme-dark .experiment-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.theme-dark .experiment-card:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .card-header {
+  background-color: var(--bg-hover);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.theme-dark .experiment-prepare h2,
+.theme-dark .kss-container h2,
+.theme-dark .rest-container h2,
+.theme-dark .experiment-completed h2,
+.theme-dark .experiment-result h2 {
+  color: var(--text-primary);
+}
+
+.theme-dark .experiment-prepare .description,
+.theme-dark .kss-container .description,
+.theme-dark .rest-container .description,
+.theme-dark .experiment-completed .description {
+  color: var(--text-secondary);
+}
+
+.theme-dark .settings-form {
+  background: linear-gradient(135deg, var(--bg-hover), var(--bg-card));
+}
+
+.theme-dark .stimulus-container {
+  background: linear-gradient(135deg, var(--bg-hover), var(--bg-card));
+}
+
+.theme-dark .stimulus {
+  color: var(--text-primary);
+}
+
+.theme-dark .feedback.correct {
+  background: linear-gradient(135deg, var(--bg-success-light), var(--bg-success));
+  color: var(--text-success);
+  border: 2px solid var(--border-success);
+}
+
+.theme-dark .feedback.incorrect {
+  background: linear-gradient(135deg, var(--bg-danger-light), var(--bg-danger));
+  color: var(--text-danger);
+  border: 2px solid var(--border-danger);
+}
+
+.theme-dark .response-hint {
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.theme-dark .kss-item {
+  background-color: var(--bg-hover);
+  border: 2px solid var(--border-color);
+}
+
+.theme-dark .kss-item:hover {
+  border-color: var(--brand-primary);
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+}
+
+.theme-dark .kss-item.active {
+  border-color: var(--brand-primary);
+  background: linear-gradient(135deg, var(--bg-primary-light), var(--bg-primary));
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.2);
+}
+
+.theme-dark .kss-score {
+  color: var(--brand-primary);
+}
+
+.theme-dark .kss-description {
+  color: var(--text-secondary);
+}
+
+.theme-dark .timer-circle {
+  background: linear-gradient(135deg, var(--bg-primary-light), var(--bg-primary));
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.2);
+}
+
+.theme-dark .timer-circle::before {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.theme-dark .timer-number {
+  color: var(--brand-primary);
+  text-shadow: 0 2px 4px rgba(64, 158, 255, 0.3);
+}
+
+.theme-dark .timer-unit {
+  color: var(--text-secondary);
+}
+
+.theme-dark .results-container {
+  background: linear-gradient(135deg, var(--bg-hover), var(--bg-card));
+}
+
+.theme-dark .result-item {
+  background-color: var(--bg-card);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark .result-item span:first-child {
+  color: var(--text-primary);
+}
+
+.theme-dark .result-item span:last-child {
+  color: var(--brand-primary);
+  background-color: rgba(64, 158, 255, 0.1);
+}
+
+.theme-dark .kss-result-item {
+  background: linear-gradient(135deg, var(--bg-primary-light), var(--bg-primary));
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+}
+
+.theme-dark .kss-score-value {
+  color: var(--brand-primary);
+  background-color: rgba(64, 158, 255, 0.2);
+}
+
+.theme-dark .kss-result-item:hover {
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+}
+
+.theme-dark .summary-table {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.theme-dark .summary-table th,
+.theme-dark .summary-table td {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.theme-dark .chart-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.theme-dark .chart-header {
+  color: var(--text-primary);
 }
 
 .experiment-result h2::after {
@@ -1572,7 +1919,7 @@ export default {
   bottom: -12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100px;
+  width: 80px;
   height: 4px;
   background: linear-gradient(90deg, #409eff, #67c23a);
   border-radius: 2px;
@@ -1608,8 +1955,6 @@ export default {
 
 .chart-container {
   margin: 36px 0;
-  animation: fadeInUp 0.6s ease-out 0.5s forwards;
-  opacity: 0;
 }
 
 .chart-card {
@@ -1635,10 +1980,12 @@ export default {
 }
 
 .chart {
-  width: 100%;
-  height: 400px;
-  padding: 24px;
+  width: 100% !important;
+  height: 300px !important;
+  min-height: 300px;
+  padding: 0;
   background-color: #fff;
+  position: relative;
 }
 
 .result-buttons {
@@ -1768,8 +2115,10 @@ export default {
   }
   
   .chart {
-    height: 300px;
-    padding: 16px;
+    width: 100% !important;
+    height: 250px !important;
+    min-height: 250px;
+    padding: 0;
   }
   
   .start-button-container .el-button,

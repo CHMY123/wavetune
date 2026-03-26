@@ -996,7 +996,7 @@ export default {
 @use '@/assets/styles/_design_tokens.scss' as *;
 
 /* === ① 全局变量 & 字体 === */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
 :root{
   --bg-music: #f5f7fa;
   --bg-card : #ffffff;
@@ -1009,7 +1009,7 @@ export default {
   --shadow-sm: 0 2px 8px rgba(0,0,0,.04);
   --shadow-md: 0 4px 16px rgba(0,0,0,.08);
   --shadow-lg: 0 12px 24px rgba(0,0,0,.12);
-  font-family: 'Inter',sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* 波形背景装饰 */
@@ -1240,7 +1240,7 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   background: var(--bg-light);
-  font-family: 'Inter', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   border-radius: 16px;
   padding: 24px;
   min-height: 100vh;
