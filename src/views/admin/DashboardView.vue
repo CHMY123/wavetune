@@ -1,6 +1,11 @@
 <template>
   <div class="dashboard-view">
-    <h1>仪表盘概览</h1>
+    <div class="dashboard-header">
+      <h1>仪表盘概览</h1>
+      <el-button type="primary" size="small" @click="handleRefresh">
+        <el-icon><Refresh /></el-icon> 刷新数据
+      </el-button>
+    </div>
     
     <!-- 关键指标卡片 -->
     <div class="stats-cards">
@@ -112,7 +117,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
-import { User, Headset, Warning, Operation } from '@element-plus/icons-vue';
+import { User, Headset, Warning, Operation, Refresh } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import { useAdminStore } from '@/stores/adminStore';
 import { ElMessage } from 'element-plus';
@@ -375,6 +380,28 @@ const handleDateChange = async (val) => {
   }
 };
 
+// 手动刷新数据
+const handleRefresh = async () => {
+  // 清除缓存
+  try {
+    localStorage.removeItem('dashboard_all');
+    if (dateRange.value && dateRange.value.length === 2) {
+      const cacheKey = `dashboard_${dateRange.value.join('_')}`;
+      localStorage.removeItem(cacheKey);
+    }
+  } catch (e) {
+    console.warn('清除缓存失败:', e);
+  }
+  
+  // 重新加载数据
+  await loadDashboardData(dateRange.value.length === 2 ? dateRange.value : null);
+  // 重新初始化图表
+  initCharts();
+  
+  // 显示刷新成功消息
+  ElMessage.success('数据刷新成功');
+};
+
 // 窗口大小变化时重新调整图表大小
 const handleResize = () => {
   userGrowthChartInstance?.resize();
@@ -398,10 +425,17 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .dashboard-view {
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
   h1 {
     font-size: 24px;
     font-weight: 600;
-    margin-bottom: 24px;
+    margin: 0;
     color: #1f2937;
     
     // 深色主题样式

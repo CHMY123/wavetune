@@ -168,6 +168,7 @@ import { VideoPlay, VideoPause, Close, ArrowLeft, ArrowRight, Refresh, RefreshLe
 import { ElMessage } from 'element-plus'
 import { usePlayerStore } from '../../stores/playerStore'
 import { useTheme } from '@/composables/useTheme'
+import { requestMethod } from '@/utils/request'
 
 // 使用 Pinia store
 const playerStore = usePlayerStore()
@@ -284,10 +285,39 @@ const togglePlay = () => {
   isPlaying.value ? pause() : play()
 }
 
+// 记录播放次数
+const recordPlayCount = async (musicId) => {
+  if (!musicId) return
+  
+  try {
+    // 确保 musicId 是数字类型
+    const id = parseInt(musicId, 10)
+    if (isNaN(id)) {
+      console.warn('无效的音乐ID:', musicId)
+      return
+    }
+    
+    console.log('记录音乐播放次数:', id)
+    // 正确传递查询参数
+    const result = await requestMethod.post('/music/play', {}, { music_id: id })
+    
+    if (result && result.code === 200) {
+      console.log('播放次数记录成功')
+    } else {
+      console.warn('播放次数记录失败:', result?.msg)
+    }
+  } catch (error) {
+    console.error('记录播放次数失败:', error)
+    // 播放次数记录失败不影响音乐播放
+  }
+}
+
 // 播放下一首
 const playNext = () => {
   const nextTrack = playerStore.playNext()
   if (nextTrack) {
+    // 记录播放次数
+    recordPlayCount(nextTrack.id)
     // 不需要手动调用play()，因为onLoaded会处理播放
     console.debug('播放下一首:', nextTrack.title)
   }
@@ -297,6 +327,8 @@ const playNext = () => {
 const playPrevious = () => {
   const prevTrack = playerStore.playPrevious()
   if (prevTrack) {
+    // 记录播放次数
+    recordPlayCount(prevTrack.id)
     // 不需要手动调用play()，因为onLoaded会处理播放
     console.debug('播放上一首:', prevTrack.title)
   }
@@ -607,6 +639,9 @@ watch([volume, isMuted], () => {
 // 监听当前歌曲变化
 watch(currentTrack, (newTrack) => {
   if (newTrack) {
+    // 记录播放次数
+    recordPlayCount(newTrack.id)
+    
     // 重置进度
     playerStore.setCurrentTime(0)
     playerStore.setDuration(0)

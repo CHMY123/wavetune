@@ -69,6 +69,7 @@ CREATE TABLE `music` (
   `fatigue_level` varchar(50) DEFAULT NULL COMMENT '适配疲劳等级',
   `match_rate` int DEFAULT '0' COMMENT '匹配度',
   `play_count` int DEFAULT '0' COMMENT '播放次数',
+  `scenes` varchar(100) DEFAULT NULL COMMENT '适用场景，多个场景用逗号分隔',
   `is_active` tinyint(1) DEFAULT '1' COMMENT '是否启用',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -438,7 +439,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `music_stats_view` AS select `m`.`id` AS `id`,`m`.`title` AS `title`,`m`.`artist` AS `artist`,`m`.`music_type` AS `music_type`,`m`.`fatigue_level` AS `fatigue_level`,`m`.`match_rate` AS `match_rate`,`m`.`play_count` AS `play_count`,`m`.`is_active` AS `is_active`,count(distinct `s`.`id`) AS `scene_usage_count` from (`music` `m` left join `scene` `s` on((`m`.`music_type` = `s`.`music_type`))) group by `m`.`id` */;
+/*!50001 VIEW `music_stats_view` AS select `m`.`id` AS `id`,`m`.`title` AS `title`,`m`.`artist` AS `artist`,`m`.`music_type` AS `music_type`,`m`.`fatigue_level` AS `fatigue_level`,`m`.`match_rate` AS `match_rate`,`m`.`play_count` AS `play_count`,`m`.`scenes` AS `scenes`,`m`.`is_active` AS `is_active`,count(distinct `s`.`id`) AS `scene_usage_count` from (`music` `m` left join `scene` `s` on((`m`.`music_type` = `s`.`music_type`))) group by `m`.`id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;

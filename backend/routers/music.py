@@ -44,6 +44,7 @@ router = APIRouter()
 @router.get("/recommend")
 async def get_music_recommendations(
     fatigue_level: str = Query(..., description="疲劳等级"),
+    scene: Optional[str] = Query(None, description="场景，可选值：work, study, drive"),
     music_type: Optional[str] = Query(None, description="音乐类型"),
     db: Session = Depends(get_db)
 ):
@@ -52,7 +53,7 @@ async def get_music_recommendations(
     根据疲劳等级和音乐类型筛选推荐音乐
     """
     try:
-        logger.info(f"接收音乐推荐请求，疲劳等级：{fatigue_level}，音乐类型：{music_type}")
+        logger.info(f"接收音乐推荐请求，疲劳等级：{fatigue_level}，场景：{scene}，音乐类型：{music_type}")
         # 兼容不同命名：前端可能传 high/Low/Medium/low 等，统一到后端使用的 light/medium/heavy
         lvl = (fatigue_level or '').strip().lower()
         if lvl == 'high':
@@ -70,6 +71,15 @@ async def get_music_recommendations(
 
         # 根据疲劳等级筛选（使用正规化后的 lvl）
         query = query.filter(Music.fatigue_level == lvl)
+        
+        # 如果指定了场景，则进一步筛选
+        if scene:
+            scene = scene.strip().lower()
+            if scene not in ['work', 'study', 'drive']:
+                logger.warning(f"场景参数无效，传入值：{scene}")
+                raise HTTPException(status_code=400, detail="场景必须是 work、study 或 drive")
+            # 筛选包含该场景的音乐
+            query = query.filter(Music.scenes.like(f"%{scene}%"))
         
         # 如果指定了音乐类型，则进一步筛选
         if music_type:
@@ -164,7 +174,8 @@ async def add_music(item: dict, db: Session = Depends(get_db)):
             music_type=item.get('music_type'),
             fatigue_level=item.get('fatigue_level'),
             match_rate=int(item.get('match_rate') or 0),
-            audio_url=audio_src
+            audio_url=audio_src,
+            scenes=item.get('scenes')
         )
         db.add(music)
         db.commit()
@@ -255,6 +266,45 @@ async def delete_music(music_id: int, delete_files: Optional[bool] = Query(False
         db.rollback()
         logger.error(f"删除音乐失败，音乐ID：{music_id}，异常信息：{str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"删除音乐失败: {str(e)}")
+
+@router.post("/play")
+async def record_music_play(
+    music_id: int = Query(..., description="音乐ID"),
+    db: Session = Depends(get_db)
+):
+    """
+    记录音乐播放次数
+    根据音乐ID增加播放次数
+    """
+    try:
+        logger.info(f"接收音乐播放记录请求，音乐ID：{music_id}")
+        music = db.query(Music).filter(Music.id == music_id).first()
+        
+        if not music:
+            logger.warning(f"音乐ID {music_id} 不存在")
+            raise HTTPException(status_code=404, detail="音乐不存在")
+        
+        # 增加播放次数
+        music.play_count = (music.play_count or 0) + 1
+        db.commit()
+        db.refresh(music)
+        
+        logger.info(f"成功记录音乐播放次数，音乐ID：{music_id}，当前播放次数：{music.play_count}")
+        return {
+            "code": 200,
+            "msg": "播放次数记录成功",
+            "data": {
+                "music_id": music_id,
+                "play_count": music.play_count
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"记录音乐播放次数失败，音乐ID：{music_id}，异常信息：{str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"记录播放次数失败: {str(e)}")
 
 # ========== 重点：上传接口（添加全流程时间统计和详细日志） ==========
 @router.post("/upload")

@@ -20,6 +20,7 @@ class MusicCreate(BaseModel):
     fatigue_level: str = Field(..., description="适用疲劳程度")
     match_rate: int = Field(..., description="匹配率")
     reason: Optional[str] = Field(None, description="推荐理由")
+    scenes: Optional[str] = Field(None, description="适用场景，多个场景用逗号分隔")
 
 
 class MusicUpdate(BaseModel):
@@ -33,6 +34,7 @@ class MusicUpdate(BaseModel):
     fatigue_level: Optional[str] = Field(None, description="适用疲劳程度")
     match_rate: Optional[int] = Field(None, description="匹配率")
     reason: Optional[str] = Field(None, description="推荐理由")
+    scenes: Optional[str] = Field(None, description="适用场景，多个场景用逗号分隔")
 
 
 class MusicResponse(BaseModel):
@@ -47,6 +49,7 @@ class MusicResponse(BaseModel):
     mood: str
     description: Optional[str]
     play_count: int
+    scenes: Optional[str] = Field(None, description="适用场景")
     created_at: datetime
 
 

@@ -75,6 +75,22 @@
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="scenes" label="适用场景" min-width="150">
+        <template #default="scope">
+          <div class="scenes-list">
+            <el-tag 
+              v-for="scene in getScenesList(scope.row.scenes)" 
+              :key="scene" 
+              size="small" 
+              type="info" 
+              effect="plain"
+            >
+              {{ scene === 'work' ? '工作' : scene === 'study' ? '学习' : scene === 'drive' ? '驾驶' : scene }}
+            </el-tag>
+            <span v-if="!scope.row.scenes || getScenesList(scope.row.scenes).length === 0" class="no-scenes">无</span>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column prop="match_rate" label="匹配率" width="100">
         <template #default="scope">
           {{ scope.row.match_rate }}%
@@ -246,6 +262,14 @@
                 <span class="slider-value">{{ musicForm.match_rate }}%</span>
               </div>
             </el-form-item>
+            <el-form-item label="适用场景" prop="scenes" class="form-item">
+              <el-checkbox-group v-model="musicForm.scenes" class="scenes-checkbox-group">
+                <el-checkbox label="work" border>工作</el-checkbox>
+                <el-checkbox label="study" border>学习</el-checkbox>
+                <el-checkbox label="drive" border>驾驶</el-checkbox>
+              </el-checkbox-group>
+              <p class="form-hint">选择这首歌适合的场景（可多选）</p>
+            </el-form-item>
             <el-form-item label="推荐理由" prop="reason" class="form-item">
               <el-input
                 v-model="musicForm.reason"
@@ -297,7 +321,8 @@ const musicForm = ref({
   music_type: 'natural',
   fatigue_level: 'medium',
   match_rate: 50,
-  reason: ''
+  reason: '',
+  scenes: []
 });
 const musicFormRef = ref(null);
 
@@ -338,6 +363,12 @@ const musicFormRules = reactive({
 
 // 音乐类型选项
 const musicTypes = ['classical', 'jazz', 'pop', 'rock', 'electronic', 'natural', 'ambient'];
+
+// 获取场景列表
+const getScenesList = (scenes) => {
+  if (!scenes) return [];
+  return scenes.split(',').map(scene => scene.trim()).filter(scene => scene);
+};
 
 // 加载音乐列表
 const loadMusicList = async () => {
@@ -408,7 +439,8 @@ const handleAddMusic = () => {
     music_type: 'natural',
     fatigue_level: 'medium',
     match_rate: 50,
-    reason: ''
+    reason: '',
+    scenes: []
   };
   dialogTitle.value = '添加音乐';
   dialogVisible.value = true;
@@ -416,6 +448,9 @@ const handleAddMusic = () => {
 
 // 处理编辑音乐
 const handleEditMusic = (music) => {
+  // 将字符串形式的 scenes 转换为数组
+  const scenesArray = music.scenes ? music.scenes.split(',').map(scene => scene.trim()).filter(scene => scene) : [];
+  
   musicForm.value = {
     id: music.id,
     title: music.title,
@@ -426,7 +461,8 @@ const handleEditMusic = (music) => {
     music_type: music.music_type || 'natural',
     fatigue_level: music.fatigue_level || 'medium',
     match_rate: music.match_rate || 50,
-    reason: music.reason || ''
+    reason: music.reason || '',
+    scenes: scenesArray
   };
   dialogTitle.value = '编辑音乐';
   dialogVisible.value = true;
@@ -479,7 +515,8 @@ const handleSaveMusic = async () => {
       music_type: musicForm.value.music_type,
       fatigue_level: musicForm.value.fatigue_level,
       match_rate: musicForm.value.match_rate,
-      reason: musicForm.value.reason
+      reason: musicForm.value.reason,
+      scenes: musicForm.value.scenes.join(',')
     };
     
     console.log('提交音乐数据:', submitData);
@@ -998,6 +1035,13 @@ onMounted(() => {
     // 表单滑块
     .form-slider {
       flex: 1;
+    }
+    
+    // 场景选择
+    .scenes-checkbox-group {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
     }
     
     // 滑块值

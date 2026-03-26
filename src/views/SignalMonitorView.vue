@@ -126,7 +126,16 @@
           </div>
 
           <!-- 跳转按钮：根据检测结果跳转到对应疲劳等级的音乐推荐 -->
-          <div class="recommendation-section" style="margin-top:12px; width:100%; display:flex; align-items:center; gap:12px;">
+          <div class="recommendation-section" style="margin-top:12px; width:100%; display:flex; flex-direction:column; gap:12px;">
+            <div v-if="detectionResult.label !== '其他'" class="scene-selection" style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:14px; font-weight:500;">选择场景：</span>
+              <el-radio-group v-model="selectedScene" size="small" style="flex:1;">
+                <el-radio-button label="">不限</el-radio-button>
+                <el-radio-button label="work">工作</el-radio-button>
+                <el-radio-button label="study">学习</el-radio-button>
+                <el-radio-button label="drive">驾驶</el-radio-button>
+              </el-radio-group>
+            </div>
             <el-button
               v-if="detectionResult.label !== '其他'"
               type="primary"
@@ -221,7 +230,9 @@ export default {
       // 数据可视化相关状态
       csvData: localStorage.getItem('chartData') ? JSON.parse(localStorage.getItem('chartData')) : null,
       eegChart: null,
-      fnirsChart: null
+      fnirsChart: null,
+      // 场景选择
+      selectedScene: ''
     }
   },
   created() {
@@ -782,14 +793,25 @@ export default {
         
         console.log('%c [SignalMonitorView] 跳转到音乐推荐，疲劳等级：', 'color: #722ed1;', fatigueLevel);
         console.log('%c [SignalMonitorView] 转换为英文疲劳等级：', 'color: #1890ff;', englishFatigueLevel);
+        console.log('%c [SignalMonitorView] 选择的场景：', 'color: #1890ff;', this.selectedScene);
         
-        // 在跳转前将当前检测等级写入 localStorage，供推荐页固定使用
+        // 在跳转前将当前检测等级和场景写入 localStorage，供推荐页使用
         localStorage.setItem('current_fatigue_level', englishFatigueLevel);
-        console.log('%c [SignalMonitorView] 已将当前疲劳等级写入localStorage：', 'color: #1890ff;', englishFatigueLevel);
+        localStorage.setItem('current_scene', this.selectedScene);
+        console.log('%c [SignalMonitorView] 已将当前疲劳等级和场景写入localStorage：', 'color: #1890ff;', {
+          fatigueLevel: englishFatigueLevel,
+          scene: this.selectedScene
+        });
         
         try {
           if (this.$router) {
-            this.$router.push({ path: '/music-recommendation' });
+            this.$router.push({ 
+              path: '/music-recommendation',
+              query: {
+                fatigue_level: englishFatigueLevel,
+                scene: this.selectedScene
+              }
+            });
             console.log('%c [SignalMonitorView] 成功跳转至音乐推荐页面', 'color: #52c41a;');
           } else {
             console.warn('%c [SignalMonitorView] 未找到$router实例，无法跳转', 'color: #faad14;');
@@ -809,12 +831,14 @@ export default {
         localStorage.removeItem('chartData');
         localStorage.removeItem('detectionResult');
         localStorage.removeItem('current_fatigue_level');
+        localStorage.removeItem('current_scene');
         
         // 清空组件状态
         this.csvData = null;
         this.detectionResult = null;
         this.selectedFile = null;
         this.selectedFileName = '';
+        this.selectedScene = '';
         
         // 销毁图表实例
         if (this.eegChart) {

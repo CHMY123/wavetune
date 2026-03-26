@@ -55,7 +55,8 @@ async def create_music(
             music_type=music_data.music_type,
             fatigue_level=music_data.fatigue_level,
             match_rate=music_data.match_rate,
-            reason=music_data.reason
+            reason=music_data.reason,
+            scenes=music_data.scenes
         )
         
         db.add(music)
@@ -667,6 +668,9 @@ async def get_dashboard_stats(
         
         # 音乐统计
         total_music = db.query(Music).count()
+        # 计算总播放量
+        from sqlalchemy import func
+        total_plays = db.query(func.sum(Music.play_count)).scalar() or 0
         
         # 反馈统计
         total_feedback = db.query(Feedback).count()
@@ -740,7 +744,7 @@ async def get_dashboard_stats(
                 },
                 "music_stats": {
                     "total_music": total_music,
-                    "total_plays": 0
+                    "total_plays": total_plays
                 },
                 "fatigue_stats": {
                     "total_detections": 0,

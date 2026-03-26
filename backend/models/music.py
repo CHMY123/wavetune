@@ -20,6 +20,8 @@ class Music(Base):
     music_type = Column(String(20), comment="音乐类型")
     fatigue_level = Column(String(50), comment="适配疲劳等级")
     match_rate = Column(Integer, default=0, comment="匹配度")
+    play_count = Column(Integer, default=0, comment="播放次数")
+    scenes = Column(String(100), comment="适用场景，多个场景用逗号分隔")
     
     def __repr__(self):
         return f"<Music(id={self.id}, title='{self.title}', artist='{self.artist}')>"
@@ -36,7 +38,9 @@ class Music(Base):
             "reason": self.reason,
             "music_type": self.music_type,
             "fatigue_level": self.fatigue_level,
-            "match_rate": self.match_rate
+            "scenes": self.scenes,
+            "match_rate": self.match_rate,
+            "play_count": self.play_count
         }
 
 

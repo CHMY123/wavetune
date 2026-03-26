@@ -24,6 +24,12 @@
             <el-option label="中度 (Medium)" value="Medium"></el-option>
             <el-option label="重度 (Heavy)" value="Heavy"></el-option>
           </el-select>
+          <el-select v-model="currentScene" size="large" @change="onSceneChange" class="scene-select">
+            <el-option label="不限" value=""></el-option>
+            <el-option label="工作" value="work"></el-option>
+            <el-option label="学习" value="study"></el-option>
+            <el-option label="驾驶" value="drive"></el-option>
+          </el-select>
           <!-- 顶部添加音乐按钮 - 已移至管理员界面 -->
           <!-- <el-button 
             type="primary" 
@@ -406,6 +412,8 @@ export default {
     return {
       // 当前固定的疲劳等级来源：路由 query 或 localStorage（优先路由），默认 Medium
       currentFatigueLevel: (this.$route?.query?.fatigue || localStorage.getItem('current_fatigue_level') || 'Medium'),
+      // 当前场景：路由 query 或 localStorage（优先路由），默认不限
+      currentScene: (this.$route?.query?.scene || localStorage.getItem('current_scene') || ''),
       loading: false,
       musicList: [],
       displayedMusicList: [], // 用于虚拟滚动或分页显示的音乐列表
@@ -598,6 +606,17 @@ export default {
       // 重新加载对应疲劳等级的音乐
       this.loadMusic()
     },
+    // 处理场景变化
+    onSceneChange() {
+      // 保存选择的场景到localStorage
+      try {
+        localStorage.setItem('current_scene', this.currentScene)
+      } catch (e) {
+        console.warn('无法保存场景到localStorage:', e)
+      }
+      // 重新加载对应场景的音乐
+      this.loadMusic()
+    },
     // 优化的滚动检测逻辑 - 使用 Intersection Observer API
     handleScroll() {
       // 兼容处理：优先使用 Intersection Observer，降级到传统方式
@@ -640,7 +659,8 @@ export default {
         // 优先尝试推荐接口，传入当前 fatigue level（后端期望小写）
         let res = null
         const fatigueParam = (this.currentFatigueLevel || 'Medium').toLowerCase()
-        const cacheKey = `music_${fatigueParam}`
+        const sceneParam = this.currentScene || ''
+        const cacheKey = `music_${fatigueParam}_${sceneParam}`
         
         // 创建一个模拟数据，用于测试音乐卡片显示
         const mockMusicData = [
@@ -694,10 +714,17 @@ export default {
         
         try {
           // 设置请求超时为5秒
-          res = await requestMethod.get('/music/recommend', { 
+          const params = { 
             fatigue_level: fatigueParam,
             timeout: 5000
-          })
+          }
+          
+          // 如果场景不为空，添加场景参数
+          if (sceneParam) {
+            params.scene = sceneParam
+          }
+          
+          res = await requestMethod.get('/music/recommend', params)
           
           if (res && res.data && res.data.music_list && res.data.music_list.length > 0) {
             this.musicList = res.data.music_list
@@ -792,8 +819,38 @@ export default {
         return
       }
 
+      // 记录播放次数
+      this.recordPlayCount(track.id)
+      
       // 使用playerStore播放音乐，传递当前音乐列表作为playlist
       this.playerStore.playTrack(track, this.displayedMusicList)
+    },
+    
+    // 记录播放次数
+    async recordPlayCount(musicId) {
+      if (!musicId) return
+      
+      try {
+        // 确保 musicId 是数字类型
+        const id = parseInt(musicId, 10)
+        if (isNaN(id)) {
+          console.warn('无效的音乐ID:', musicId)
+          return
+        }
+        
+        console.log('记录音乐播放次数:', id)
+        // 正确传递查询参数
+        const result = await requestMethod.post('/music/play', {}, { music_id: id })
+        
+        if (result && result.code === 200) {
+          console.log('播放次数记录成功')
+        } else {
+          console.warn('播放次数记录失败:', result?.msg)
+        }
+      } catch (error) {
+        console.error('记录播放次数失败:', error)
+        // 播放次数记录失败不影响音乐播放
+      }
     },
     // async addMusic() {
     //   try {
