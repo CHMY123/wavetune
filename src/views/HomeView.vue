@@ -216,23 +216,28 @@ export default {
       window.location.href = route
     }
     
-    // 获取系统运行统计数据
+    // 获取系统运行统计数据 - 并行请求优化
     const fetchSystemStats = async () => {
       try {
-        // 获取检测次数
-        const detectionResponse = await requestMethod.get('/federated/signal-detection/count')
-        if (detectionResponse && detectionResponse.code === 200) {
-          const detectionCount = detectionResponse.data?.detection_count || 0
+        // 并行发送所有请求
+        const [detectionResponse, federatedResponse, dashboardResponse] = await Promise.allSettled([
+          requestMethod.get('/federated/signal-detection/count'),
+          requestMethod.get('/federated/stats'),
+          requestMethod.get('/admin/dashboard').catch(() => null) // 单独捕获错误
+        ])
+        
+        // 处理检测次数
+        if (detectionResponse.status === 'fulfilled' && detectionResponse.value?.code === 200) {
+          const detectionCount = detectionResponse.value.data?.detection_count || 0
           const detectionStat = stats.value.find(stat => stat.label === '检测次数')
           if (detectionStat) {
             detectionStat.value = detectionCount.toString()
           }
         }
         
-        // 获取联邦学习统计数据
-        const federatedResponse = await requestMethod.get('/federated/stats')
-        if (federatedResponse && federatedResponse.code === 200) {
-          const federatedData = federatedResponse.data || {}
+        // 处理联邦学习统计数据
+        if (federatedResponse.status === 'fulfilled' && federatedResponse.value?.code === 200) {
+          const federatedData = federatedResponse.value.data || {}
           
           // 更新参与设备
           const deviceStat = stats.value.find(stat => stat.label === '参与设备')
@@ -248,19 +253,14 @@ export default {
           }
         }
         
-        // 获取音乐总播放量（干预次数）
-        try {
-          const dashboardResponse = await requestMethod.get('/admin/dashboard')
-          if (dashboardResponse && dashboardResponse.code === 200) {
-            const totalPlays = dashboardResponse.data?.music_stats?.total_plays || 0
-            const musicStat = stats.value.find(stat => stat.label === '干预次数')
-            if (musicStat) {
-              musicStat.value = totalPlays.toString()
-            }
+        // 处理音乐总播放量（干预次数）
+        if (dashboardResponse.status === 'fulfilled' && dashboardResponse.value?.code === 200) {
+          const totalPlays = dashboardResponse.value.data?.music_stats?.total_plays || 0
+          const musicStat = stats.value.find(stat => stat.label === '干预次数')
+          if (musicStat) {
+            musicStat.value = totalPlays.toString()
           }
-        } catch (error) {
-          console.error('获取音乐播放量失败:', error)
-          // 如果获取失败，暂时使用0作为默认值
+        } else {
           const musicStat = stats.value.find(stat => stat.label === '干预次数')
           if (musicStat) {
             musicStat.value = '0'

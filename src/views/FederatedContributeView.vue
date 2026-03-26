@@ -241,11 +241,7 @@ export default {
         formData.append('file', selectedFile.value)
         formData.append('rounds', trainingRounds.value)
 
-        const response = await requestMethod.post('/federated/upload-data', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        })
+        const response = await requestMethod.postForm('/federated/upload-data', formData)
 
         if (response.code === 200) {
           successDialogVisible.value = true

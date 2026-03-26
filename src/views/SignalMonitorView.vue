@@ -42,35 +42,33 @@
 
     <!-- 底部区域 -->
     <div class="bottom-section">
-      <div class="timeline-section">
-        <div class="timeline-header">
-          <span class="timeline-title">监测时间轴</span>
-          <span class="current-time">当前时间: 00:03</span>
+      <!-- 上传进度条 - 始终显示 -->
+      <div class="upload-progress-section">
+        <div class="progress-header">
+          <span class="progress-title">检测进度</span>
+          <span class="progress-percentage" :class="getProgressTextClass()">{{ uploadProgress }}%</span>
         </div>
-        <div class="timeline">
-          <div class="time-marks">
-            <span 
-              v-for="time in timeMarks" 
-              :key="time"
-              class="time-mark"
-              :class="{ 'current': time === '00:03' }"
-            >
-              {{ time }}
-            </span>
-          </div>
-          <div class="timeline-progress">
-            <div class="progress-line"></div>
-            <div class="current-indicator" style="left: 60%"></div>
-          </div>
-        </div>
+        <el-progress 
+          :percentage="uploadProgress" 
+          :status="uploadProgress === 100 ? 'success' : ''"
+          :stroke-width="20"
+          striped
+          striped-flow
+          :duration="10"
+          :show-text="false"
+        />
+        <p class="progress-status" :class="getProgressTextClass()">
+          {{ uploadStatus }}{{ detecting ? currentDots : '' }}
+          <span v-if="detecting && currentComfortWord" class="comfort-word">{{ currentComfortWord }}</span>
+        </p>
       </div>
       
       <div class="action-buttons">
         <el-button type="default" size="large">
-          <el-icon><VideoPause /></el-icon>
-          暂停监测
+          <el-icon><VideoPlay /></el-icon>
+          开始监测
         </el-button>
-        <el-button type="primary" size="large">
+        <el-button type="primary" size="large" @click="exportData">
           <el-icon><Download /></el-icon>
           导出数据
         </el-button>
@@ -103,48 +101,45 @@
           上传检测
         </el-button>
 
-        <div class="detection-result" v-if="detectionResult" style="margin-left:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap">
-          <el-tag :type="detectionResult.type || 'warning'">检测：{{ detectionResult.label_name }}</el-tag>
+        <div class="detection-result" v-if="detectionResult" style="margin-left:12px; display:flex; align-items:center; gap:8px;">
+          <el-tag :type="detectionResult.type || 'warning'" size="large">检测：{{ detectionResult.label_name }}</el-tag>
           
-          <!-- 概率分布显示 -->
-          <div class="probability-distribution" style="margin-top:8px; width:100%;">
-            <h4 style="margin:0 0 8px 0;">概率分布：</h4>
-            <div v-for="(prob, label) in detectionResult.probabilities" :key="label" style="margin-bottom:4px; display:flex; align-items:center;">
-              <span style="width:100px; font-size:14px;">{{ label }}:</span>
-              <div style="flex:1; height:12px; background-color:#f0f0f0; border-radius:6px; overflow:hidden; margin:0 8px;">
-                <div 
-                  :style="{
-                    width: `${prob}%`, 
-                    height: '100%', 
-                    backgroundColor: getProbabilityColor(label),
-                    transition: 'width 0.3s ease'
-                  }"
-                ></div>
-              </div>
-              <span style="width:60px; text-align:right; font-size:14px;">{{ prob.toFixed(2) }}%</span>
-            </div>
-          </div>
-
           <!-- 跳转按钮：根据检测结果跳转到对应疲劳等级的音乐推荐 -->
-          <div class="recommendation-section" style="margin-top:12px; width:100%; display:flex; flex-direction:column; gap:12px;">
-            <div v-if="detectionResult.label !== '其他'" class="scene-selection" style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:14px; font-weight:500;">选择场景：</span>
-              <el-radio-group v-model="selectedScene" size="small" style="flex:1;">
-                <el-radio-button label="">不限</el-radio-button>
-                <el-radio-button label="work">工作</el-radio-button>
-                <el-radio-button label="study">学习</el-radio-button>
-                <el-radio-button label="drive">驾驶</el-radio-button>
-              </el-radio-group>
-            </div>
+          <div class="recommendation-section" v-if="detectionResult.label !== '其他'" style="display:flex; align-items:center; gap:8px;">
+            <el-radio-group v-model="selectedScene" size="small">
+              <el-radio-button label="">不限</el-radio-button>
+              <el-radio-button label="work">工作</el-radio-button>
+              <el-radio-button label="study">学习</el-radio-button>
+              <el-radio-button label="drive">驾驶</el-radio-button>
+            </el-radio-group>
             <el-button
-              v-if="detectionResult.label !== '其他'"
               type="primary"
               size="small"
               @click="navigateToRecommendation"
             >
               {{ getRecommendationButtonText() }}
             </el-button>
-            <el-tag v-if="detectionResult.label === '其他'" type="info">建议再试一次</el-tag>
+          </div>
+          <el-tag v-if="detectionResult.label === '其他'" type="info" size="large">建议再试一次</el-tag>
+        </div>
+        
+        <!-- 概率分布显示 - 放在按钮下方单独一行 -->
+        <div class="probability-distribution-section" v-if="detectionResult" style="width:100%; margin-top:20px;">
+          <div class="probability-distribution">
+            <h4 class="prob-title">疲劳检测概率分布</h4>
+            <div v-for="(prob, label) in detectionResult.probabilities" :key="label" class="prob-item">
+              <span class="prob-label">{{ label }}</span>
+              <div class="prob-bar-container">
+                <div 
+                  class="prob-bar"
+                  :style="{
+                    width: `${prob}%`, 
+                    backgroundColor: getProbabilityColor(label)
+                  }"
+                ></div>
+              </div>
+              <span class="prob-value">{{ prob.toFixed(2) }}%</span>
+            </div>
           </div>
         </div>
         
@@ -162,20 +157,52 @@
       </div>
     </div>
   </div>
+  
+  <!-- 导出格式选择对话框 -->
+  <el-dialog
+    v-model="showExportDialog"
+    title="选择导出格式"
+    width="400px"
+    :close-on-click-modal="false"
+  >
+    <div class="export-dialog-content">
+      <p class="export-dialog-desc">请选择要导出的图片格式：</p>
+      <el-radio-group v-model="selectedExportFormat" class="export-format-group">
+        <el-radio 
+          v-for="format in exportFormats" 
+          :key="format.value" 
+          :label="format.value"
+          class="export-format-option"
+        >
+          {{ format.label }}
+        </el-radio>
+      </el-radio-group>
+    </div>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="showExportDialog = false">取消</el-button>
+        <el-button type="primary" @click="confirmExport">导出</el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script>
-import { VideoPause, Download, Delete } from '@element-plus/icons-vue'
+import { VideoPlay, Download, Delete } from '@element-plus/icons-vue'
 import { requestMethod } from '@/utils/request'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
+import { ElDialog, ElRadio, ElRadioGroup } from 'element-plus'
 
 export default {
   name: 'SignalMonitorView',
   components: {
-    VideoPause,
+    VideoPlay,
     Download,
-    Delete
+    Delete,
+    ElDialog,
+    ElRadio,
+    ElRadioGroup
   },
   data() {
     return {
@@ -226,13 +253,38 @@ export default {
       selectedFile: null,
       detecting: false,
       detectionResult: localStorage.getItem('detectionResult') ? JSON.parse(localStorage.getItem('detectionResult')) : null,
-      timeMarks: ['00:00', '00:01', '00:02', '00:03', '00:04', '00:05'],
+      // 上传进度相关
+      uploadProgress: Number(localStorage.getItem('uploadProgress')) || 0,
+      uploadStatus: localStorage.getItem('uploadStatus') || '等待上传文件进行检测',
+      // 动态省略号动画相关
+      dotAnimationInterval: null,
+      currentDots: '…………',
+      // 安慰词相关
+      comfortWords: ['就快了', '深呼吸', '放空大脑', '保持耐心', '马上就好', '请稍候'],
+      comfortWordInterval: null,
+      currentComfortWord: '',
       // 数据可视化相关状态
       csvData: localStorage.getItem('chartData') ? JSON.parse(localStorage.getItem('chartData')) : null,
       eegChart: null,
       fnirsChart: null,
       // 场景选择
-      selectedScene: ''
+      selectedScene: '',
+      // 导出对话框相关
+      showExportDialog: false,
+      selectedExportFormat: 'png',
+      exportFormats: [
+        { label: 'PNG 格式', value: 'png' },
+        { label: 'JPEG 格式', value: 'jpeg' },
+        { label: 'WebP 格式', value: 'webp' }
+      ]
+    }
+  },
+  watch: {
+    uploadProgress(newVal) {
+      localStorage.setItem('uploadProgress', newVal.toString())
+    },
+    uploadStatus(newVal) {
+      localStorage.setItem('uploadStatus', newVal)
     }
   },
   created() {
@@ -288,38 +340,86 @@ export default {
           return
         }
 
-        // 先解析CSV文件数据用于可视化
+        // 重置进度
+        this.uploadProgress = 0
+        this.uploadStatus = '正在读取文件'
+        this.detecting = true
+        this.detectionResult = null
+        
+        // 启动动态省略号动画
+        this.startDotAnimation()
+        // 启动安慰词轮换
+        this.startComfortWords()
+
+        // 步骤1: 读取文件 (0-10%)
+        await this.updateProgressWithDelay(5, 200)
+        this.uploadStatus = '正在解析CSV文件'
+        await this.updateProgressWithDelay(10, 300)
+        
+        // 步骤2: 解析CSV文件 (10-25%)
         await this.parseCsvFile()
+        this.uploadStatus = '正在预处理数据'
+        await this.updateProgressWithDelay(20, 400)
 
         // 构建FormData
         const form = new FormData()
         form.append('file', this.selectedFile)
+        
+        // 调试日志：检查FormData内容
         console.log('%c [SignalMonitorView] 构建FormData完成，准备上传文件', 'color: #1890ff;')
-
-        this.detecting = true
-        this.detectionResult = null
+        console.log('%c [SignalMonitorView] 选中文件信息：', 'color: #1890ff;', {
+          name: this.selectedFile?.name,
+          size: this.selectedFile?.size,
+          type: this.selectedFile?.type,
+          lastModified: this.selectedFile?.lastModified
+        })
+        console.log('%c [SignalMonitorView] FormData entries:', 'color: #1890ff;')
+        for (let [key, value] of form.entries()) {
+          console.log(`  ${key}:`, value)
+        }
+        
+        this.uploadStatus = '正在准备上传'
+        await this.updateProgressWithDelay(25, 200)
+        
         try {
           console.log('%c [SignalMonitorView] 开始上传CSV文件并执行检测，请求地址：/detection/upload', 'color: #1890ff;')
+          
+          this.uploadStatus = '正在上传文件'
           // 使用 request.js 的 postForm 发送 multipart/form-data
           const res = await requestMethod.postForm('/detection/upload', form, {
             onUploadProgress: (progressEvent) => {
-              // 可选：添加上传进度显示
+              // 更新上传进度
               if (progressEvent.total) {
-                this.uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                const uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                // 上传占25-50%
+                this.uploadProgress = 25 + Math.min(uploadProgress * 0.25, 25);
               }
             },
             timeout: 120000 // 关键：延长超时时间，解决60秒超时问题
           });
+          
+          // 上传完成，开始检测 (50%)
+          this.uploadProgress = 50;
+          this.uploadStatus = '正在分析脑电信号'
+          
           console.log('%c [SignalMonitorView] 上传检测请求响应成功：', 'color: #52c41a;', res)
           
           // request 的响应拦截器会返回 res（包含 code/msg/data）
           const payload = res.data || {}
+          
+          // 模拟检测进度 (50-95%)
+          await this.simulateDetailedDetectionProgress();
+          
           this.detectionResult = {
             label: payload.label,
             label_name: payload.label || 'Unknown',
             probabilities: payload.probabilities || payload.probs || {},
             type: (payload.label === '重度疲劳' ? 'danger' : (payload.label === '中度疲劳' || payload.label === '轻度疲劳' ? 'warning' : 'success'))
           }
+          
+          // 完成 (100%)
+          this.uploadProgress = 100;
+          this.uploadStatus = '检测完成';
           
           // 存储到localStorage
           localStorage.setItem('detectionResult', JSON.stringify(this.detectionResult))
@@ -340,10 +440,111 @@ export default {
           console.error('%c [SignalMonitorView] 上传CSV文件或检测失败：', 'color: #f5222d;', err)
           // request 已在拦截器中显示错误消息，这里可做额外提示
           ElMessage.error('上传或检测失败，请检查文件格式（20×20）并重试')
+          this.uploadStatus = '检测失败';
         } finally {
           this.detecting = false
+          // 停止动画
+          this.stopDotAnimation()
+          this.stopComfortWords()
           console.log('%c [SignalMonitorView] 上传检测流程结束，重置detecting状态', 'color: #fa8c16;')
         }
+      },
+      
+      // 带延迟的进度更新
+      updateProgressWithDelay(targetProgress, delay) {
+        return new Promise((resolve) => {
+          const startProgress = this.uploadProgress
+          const progressDiff = targetProgress - startProgress
+          const steps = 5
+          const stepDelay = delay / steps
+          let currentStep = 0
+          
+          const interval = setInterval(() => {
+            currentStep++
+            this.uploadProgress = startProgress + (progressDiff * currentStep / steps)
+            
+            if (currentStep >= steps) {
+              clearInterval(interval)
+              this.uploadProgress = targetProgress
+              resolve()
+            }
+          }, stepDelay)
+        })
+      },
+      
+      // 启动动态省略号动画
+      startDotAnimation() {
+        const dotPatterns = ['…………', '………', '……', '…', '……', '………', '…………']
+        let index = 0
+        this.dotAnimationInterval = setInterval(() => {
+          index = (index + 1) % dotPatterns.length
+          this.currentDots = dotPatterns[index]
+        }, 300)
+      },
+      
+      // 停止动态省略号动画
+      stopDotAnimation() {
+        if (this.dotAnimationInterval) {
+          clearInterval(this.dotAnimationInterval)
+          this.dotAnimationInterval = null
+        }
+        this.currentDots = '…………'
+      },
+      
+      // 启动安慰词轮换
+      startComfortWords() {
+        let index = 0
+        this.currentComfortWord = this.comfortWords[0]
+        this.comfortWordInterval = setInterval(() => {
+          index = (index + 1) % this.comfortWords.length
+          this.currentComfortWord = this.comfortWords[index]
+        }, 4000)
+      },
+      
+      // 停止安慰词轮换
+      stopComfortWords() {
+        if (this.comfortWordInterval) {
+          clearInterval(this.comfortWordInterval)
+          this.comfortWordInterval = null
+        }
+        this.currentComfortWord = ''
+      },
+      
+      // 详细的检测进度模拟
+      async simulateDetailedDetectionProgress() {
+        const steps = [
+          { progress: 60, status: '正在提取信号特征', delay: 600 },
+          { progress: 70, status: '正在进行信号滤波', delay: 500 },
+          { progress: 75, status: '正在分析频域特征', delay: 600 },
+          { progress: 80, status: '正在计算疲劳指标', delay: 500 },
+          { progress: 85, status: '正在运行深度学习模型', delay: 700 },
+          { progress: 90, status: '正在计算概率分布', delay: 500 },
+          { progress: 95, status: '正在生成检测结果', delay: 400 }
+        ]
+        
+        for (const step of steps) {
+          await this.updateProgressWithDelay(step.progress, step.delay)
+          this.uploadStatus = step.status
+        }
+      },
+      
+      // 模拟检测进度
+      simulateDetectionProgress() {
+        return new Promise((resolve) => {
+          let progress = 50;
+          const interval = setInterval(() => {
+            progress += 5;
+            this.uploadProgress = Math.min(progress, 95);
+            this.uploadStatus = '正在分析数据...';
+            
+            if (progress >= 95) {
+              clearInterval(interval);
+              this.uploadProgress = 100;
+              this.uploadStatus = '检测完成';
+              resolve();
+            }
+          }, 200);
+        });
       },
       async parseCsvFile() {
         if (!this.selectedFile) return
@@ -770,11 +971,11 @@ export default {
         
         // 依据结果跳转到对应疲劳等级的音乐推荐
         if (label === '静息态' || label === '正常' || label === '疲劳恢复期' || label === '轻度疲劳') {
-          return '跳转至轻度疲劳推荐音乐';
+          return '可跳转至轻度疲劳推荐音乐';
         } else if (label === '中度疲劳') {
-          return '跳转至中度疲劳推荐音乐';
+          return '可跳转至中度疲劳推荐音乐';
         } else if (label === '重度疲劳') {
-          return '跳转至重度疲劳推荐音乐';
+          return '可跳转至重度疲劳推荐音乐';
         }
         return '推荐音乐';
       },
@@ -843,6 +1044,8 @@ export default {
         localStorage.removeItem('detectionResult');
         localStorage.removeItem('current_fatigue_level');
         localStorage.removeItem('current_scene');
+        localStorage.removeItem('uploadProgress');
+        localStorage.removeItem('uploadStatus');
         
         // 清空组件状态
         this.csvData = null;
@@ -850,6 +1053,8 @@ export default {
         this.selectedFile = null;
         this.selectedFileName = '';
         this.selectedScene = '';
+        this.uploadProgress = 0;
+        this.uploadStatus = '等待上传文件进行检测';
         
         // 销毁图表实例
         if (this.eegChart) {
@@ -863,6 +1068,211 @@ export default {
         
         console.log('%c [SignalMonitorView] 数据清空完成', 'color: #52c41a;');
         ElMessage.success('数据已清空');
+      },
+      
+      // 导出数据为图片
+      exportData() {
+        if (!this.csvData) {
+          ElMessage.warning('请先上传并检测数据');
+          return;
+        }
+        
+        // 显示格式选择对话框
+        this.showExportDialog = true;
+      },
+      
+      // 确认导出
+      async confirmExport() {
+        const format = this.selectedExportFormat;
+        this.showExportDialog = false;
+        await this.exportCompositeImage(format);
+      },
+      
+      // 导出合成图片
+      async exportCompositeImage(format) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 设置画布尺寸
+        const width = 1600;
+        const padding = 40;
+        const headerHeight = 80;
+        const chartTitleHeight = 40; // 图表标题高度
+        const gapBetweenCharts = 30; // 两个图表之间的间距
+        
+        // 获取图表实际尺寸（保持原始宽高比）
+        const chartContainerWidth = (width - padding * 3) / 2; // 两个图表并排，中间有间距
+        const chartContainerHeight = 350; // 固定图表高度
+        
+        // 计算概率分布区域高度
+        let probSectionHeight = 0;
+        if (this.detectionResult && this.detectionResult.probabilities) {
+          const labels = Object.keys(this.detectionResult.probabilities);
+          const barHeight = 30;
+          const barGap = 15;
+          probSectionHeight = 60 + labels.length * (barHeight + barGap) + 60; // 标题 + 条形图 + 结果
+        }
+        
+        // 计算总高度
+        const totalHeight = headerHeight + chartTitleHeight + chartContainerHeight + gapBetweenCharts + probSectionHeight + padding * 2;
+        
+        canvas.width = width;
+        canvas.height = totalHeight;
+        
+        // 填充白色背景
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制标题
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 32px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('多模态生理信号监测报告', width / 2, 50);
+        
+        let currentY = headerHeight + padding;
+        
+        // 绘制EEG图表标题
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 18px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('EEG 脑电信号', padding + chartContainerWidth / 2, currentY);
+        
+        // 绘制fNIRS图表标题
+        ctx.fillText('fNIRS 近红外信号', width / 2 + padding / 2 + chartContainerWidth / 2, currentY);
+        
+        currentY += chartTitleHeight;
+        
+        // 获取EEG图表图片
+        if (this.eegChart) {
+          const eegImg = this.eegChart.getDataURL({
+            type: `image/${format}`,
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          // 计算等比例缩放后的尺寸
+          const img = await this.loadImage(eegImg);
+          const scale = Math.min(chartContainerWidth / img.width, chartContainerHeight / img.height);
+          const drawWidth = img.width * scale;
+          const drawHeight = img.height * scale;
+          
+          // 居中绘制
+          const x = padding + (chartContainerWidth - drawWidth) / 2;
+          await this.drawImageToCanvas(ctx, eegImg, x, currentY, drawWidth, drawHeight);
+        }
+        
+        // 获取fNIRS图表图片
+        if (this.fnirsChart) {
+          const fnirsImg = this.fnirsChart.getDataURL({
+            type: `image/${format}`,
+            pixelRatio: 2,
+            backgroundColor: '#ffffff'
+          });
+          
+          // 计算等比例缩放后的尺寸
+          const img = await this.loadImage(fnirsImg);
+          const scale = Math.min(chartContainerWidth / img.width, chartContainerHeight / img.height);
+          const drawWidth = img.width * scale;
+          const drawHeight = img.height * scale;
+          
+          // 居中绘制
+          const x = width / 2 + padding / 2 + (chartContainerWidth - drawWidth) / 2;
+          await this.drawImageToCanvas(ctx, fnirsImg, x, currentY, drawWidth, drawHeight);
+        }
+        
+        currentY += chartContainerHeight + gapBetweenCharts;
+        
+        // 绘制概率分布
+        if (this.detectionResult && this.detectionResult.probabilities) {
+          ctx.fillStyle = '#333333';
+          ctx.font = 'bold 20px Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('疲劳检测概率分布', width / 2, currentY);
+          
+          currentY += 40;
+          
+          const probs = this.detectionResult.probabilities;
+          const labels = Object.keys(probs);
+          const barMaxWidth = width - padding * 4 - 200; // 留出空间给标签和百分比
+          const barHeight = 25;
+          const barGap = 12;
+          
+          labels.forEach((label, index) => {
+            const prob = probs[label];
+            const barWidth = (prob / 100) * barMaxWidth;
+            const y = currentY + index * (barHeight + barGap);
+            
+            // 绘制标签
+            ctx.fillStyle = '#333333';
+            ctx.font = '14px Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(label, padding + 100, y + barHeight / 2 + 4);
+            
+            // 绘制进度条背景
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(padding + 110, y, barMaxWidth, barHeight);
+            
+            // 绘制进度条
+            ctx.fillStyle = this.getProbabilityColor(label);
+            ctx.fillRect(padding + 110, y, barWidth, barHeight);
+            
+            // 绘制百分比
+            ctx.fillStyle = '#333333';
+            ctx.font = '12px Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${prob.toFixed(2)}%`, padding + 110 + barMaxWidth + 10, y + barHeight / 2 + 4);
+          });
+          
+          // 绘制检测结果
+          currentY += labels.length * (barHeight + barGap) + 30;
+          ctx.fillStyle = this.detectionResult.type === 'danger' ? '#f56c6c' : 
+                         this.detectionResult.type === 'warning' ? '#e6a23c' : '#67c23a';
+          ctx.font = 'bold 22px Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`检测结果：${this.detectionResult.label_name}`, width / 2, currentY);
+        }
+        
+        // 下载图片
+        const link = document.createElement('a');
+        link.download = `生理信号监测报告_${new Date().toLocaleDateString()}.${format}`;
+        link.href = canvas.toDataURL(`image/${format}`);
+        link.click();
+        
+        ElMessage.success('导出成功');
+      },
+      
+      // 辅助方法：加载图片
+      loadImage(src) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      },
+      
+      // 辅助方法：将图片绘制到canvas
+      drawImageToCanvas(ctx, imgSrc, x, y, width, height) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            ctx.drawImage(img, x, y, width, height);
+            resolve();
+          };
+          img.onerror = reject;
+          img.src = imgSrc;
+        });
+      },
+      
+      // 获取进度文本样式类
+      getProgressTextClass() {
+        if (this.uploadProgress === 0) {
+          return 'progress-text-idle';
+        } else if (this.uploadProgress === 100) {
+          return 'progress-text-complete';
+        } else {
+          return 'progress-text-active';
+        }
       }
     }
   }
@@ -972,78 +1382,152 @@ export default {
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   
-  .timeline-section {
+  // 上传进度条区域
+  .upload-progress-section {
     margin-bottom: 20px;
+    padding: 20px;
+    background: #f5f7fa;
+    border-radius: 8px;
+    border: 1px solid #e4e7ed;
     
-    .timeline-header {
+    .progress-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
       
-      .timeline-title {
+      .progress-title {
         font-size: 16px;
         font-weight: 600;
         color: var(--text-primary);
       }
       
-      .current-time {
-        font-size: 14px;
-        color: var(--text-regular);
-        font-family: 'SF Mono', Monaco, monospace;
+      .progress-percentage {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333333;
+        
+        &.progress-text-idle {
+          color: #333333;
+        }
+        
+        &.progress-text-active {
+          color: #409eff;
+        }
+        
+        &.progress-text-complete {
+          color: #67c23a;
+        }
       }
     }
     
-    .timeline {
-      position: relative;
-      height: 30px;
+    .progress-status {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #333333;
+      text-align: center;
       
-      .time-marks {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        
-        .time-mark {
-          font-size: 12px;
-          color: var(--text-secondary);
-          font-family: 'SF Mono', Monaco, monospace;
-          
-          &.current {
-            color: var(--el-color-danger);
-            font-weight: bold;
-          }
-        }
+      &.progress-text-idle {
+        color: #333333;
       }
       
-      .timeline-progress {
-        position: relative;
-        height: 4px;
-        background: #e8e8e8;
-        border-radius: 2px;
-        
-        .progress-line {
-          height: 100%;
-          background: var(--el-color-primary);
-          border-radius: 2px;
-          width: 60%;
-        }
-        
-        .current-indicator {
-          position: absolute;
-          top: -6px;
-          width: 2px;
-          height: 16px;
-          background: var(--el-color-danger);
-          border-radius: 1px;
-        }
+      &.progress-text-active {
+        color: #409eff;
+      }
+      
+      &.progress-text-complete {
+        color: #67c23a;
+      }
+      
+      .comfort-word {
+        display: inline-block;
+        margin-left: 12px;
+        padding: 4px 14px;
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        color: white;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+        animation: fadeInOut 4s ease-in-out infinite;
       }
     }
+  }
+  
+  :deep(.el-progress-bar__outer) {
+    border-radius: 10px;
+    background-color: #e4e7ed;
+  }
+  
+  :deep(.el-progress-bar__inner) {
+    border-radius: 10px;
+    transition: width 0.3s ease;
   }
   
   .action-buttons {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  // 概率分布区域样式
+  .probability-distribution-section {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 24px;
+    border: 1px solid #e4e7ed;
+    
+    .probability-distribution {
+      .prob-title {
+        margin: 0 0 20px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-align: center;
+      }
+      
+      .prob-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 16px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+        
+        .prob-label {
+          width: 120px;
+          font-size: 16px;
+          color: var(--text-primary);
+          text-align: right;
+          padding-right: 16px;
+        }
+        
+        .prob-bar-container {
+          flex: 1;
+          height: 20px;
+          background-color: #e4e7ed;
+          border-radius: 10px;
+          overflow: hidden;
+          
+          .prob-bar {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+          }
+        }
+        
+        .prob-value {
+          width: 80px;
+          font-size: 14px;
+          color: var(--text-regular);
+          text-align: right;
+          padding-left: 16px;
+        }
+      }
+    }
   }
 }
 
@@ -1074,6 +1558,31 @@ export default {
         height: 400px;
         border-radius: 4px;
         min-height: 400px;
+      }
+    }
+  }
+}
+
+// 导出对话框样式
+.export-dialog-content {
+  padding: 20px 0;
+  
+  .export-dialog-desc {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: var(--text-regular);
+  }
+  
+  .export-format-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    
+    .export-format-option {
+      margin-right: 0;
+      
+      :deep(.el-radio__label) {
+        font-size: 14px;
       }
     }
   }
@@ -1126,6 +1635,17 @@ export default {
         width: 100%;
       }
     }
+  }
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
