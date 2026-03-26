@@ -419,6 +419,29 @@ export default {
     async startExperiment() {
       this.isStarting = true
       try {
+        // 尝试从缓存加载刺激序列
+        const cacheKey = `two_back_sequence_${this.experimentSettings.trialsPerBlock}_${this.experimentSettings.blockCount}`
+        try {
+          const cachedData = localStorage.getItem(cacheKey)
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData)
+            // 检查缓存是否过期（24小时）
+            if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 24 * 60 * 60 * 1000) {
+              this.stimulusSequence = parsedData.sequence
+              this.isTargetSequence = parsedData.targets
+              console.log('从缓存加载刺激序列')
+              
+              // 开始实验
+              this.experimentState = 'running'
+              this.startTrial()
+              this.isStarting = false
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('缓存读取失败:', e)
+        }
+        
         // 初始化实验会话 - 增加超时时间到30秒
         const initResponse = await this.$axios.post('/api/detection/two-back/init', this.experimentSettings, {
           timeout: 30000
@@ -441,6 +464,17 @@ export default {
           if (sequenceResponse.data.code === 200) {
             this.stimulusSequence = sequenceResponse.data.data.sequence
             this.isTargetSequence = sequenceResponse.data.data.targets
+            
+            // 缓存刺激序列
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify({
+                sequence: this.stimulusSequence,
+                targets: this.isTargetSequence,
+                timestamp: Date.now()
+              }))
+            } catch (e) {
+              console.warn('缓存保存失败:', e)
+            }
             
             // 开始实验
             this.experimentState = 'running'

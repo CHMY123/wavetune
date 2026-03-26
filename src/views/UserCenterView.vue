@@ -454,7 +454,45 @@ export default {
     const fetchUserInfo = async () => {
       try {
         const uid = getCurrentUserId()
-        const result = await requestMethod.get('/auth/profile', { user_id: uid })
+        const cacheKey = `user_info_${uid}`
+        
+        // 尝试从缓存加载
+        try {
+          const cachedData = localStorage.getItem(cacheKey)
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData)
+            // 检查缓存是否过期（1小时）
+            if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 60 * 60 * 1000) {
+              userInfo.value = parsedData.data
+              // 同步表单数据
+              Object.assign(userForm, {
+                username: parsedData.data.username || '',
+                student_id: parsedData.data.student_id || '',
+                email: parsedData.data.email || '',
+                phone: parsedData.data.phone || ''
+              })
+              
+              // 同步偏好设置
+              if (parsedData.data.preferences) {
+                Object.assign(preferencesForm, {
+                  default_fatigue_level: parsedData.data.preferences.default_fatigue_level || 'medium',
+                  preferred_music_type: parsedData.data.preferences.preferred_music_type || 'natural',
+                  notification_enabled: parsedData.data.preferences.notification_enabled === 'true',
+                  auto_play: parsedData.data.preferences.auto_play === 'true'
+                })
+              }
+              console.log('从缓存加载用户信息')
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('缓存读取失败:', e)
+        }
+        
+        const result = await requestMethod.get('/auth/profile', { 
+          user_id: uid,
+          timeout: 5000
+        })
         if (result && result.code === 200) {
           // 解析 avatar 字段为可访问 URL
           const data = result.data || {}
@@ -483,6 +521,16 @@ export default {
               notification_enabled: data.preferences.notification_enabled === 'true',
               auto_play: data.preferences.auto_play === 'true'
             })
+          }
+          
+          // 缓存用户信息
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              data: data,
+              timestamp: Date.now()
+            }))
+          } catch (e) {
+            console.warn('缓存保存失败:', e)
           }
           
           // 更新本地存储中的用户信息，确保包含role字段
@@ -521,7 +569,35 @@ export default {
       sessionsLoading.value = true
       try {
         const uid = getCurrentUserId()
-        const result = await requestMethod.get('/auth/sessions', { user_id: uid })
+        const cacheKey = `sessions_${uid}`
+        
+        // 尝试从缓存加载
+        try {
+          const cachedData = localStorage.getItem(cacheKey)
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData)
+            // 检查缓存是否过期（30分钟）
+            if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 30 * 60 * 1000) {
+              sessions.value = parsedData.sessions || []
+              // 找到当前会话
+              const currentToken = localStorage.getItem('session_token')
+              const currentSession = sessions.value.find(s => s.session_token === currentToken)
+              if (currentSession) {
+                currentSessionId.value = currentSession.id
+              }
+              console.log('从缓存加载会话列表')
+              sessionsLoading.value = false
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('缓存读取失败:', e)
+        }
+        
+        const result = await requestMethod.get('/auth/sessions', { 
+          user_id: uid,
+          timeout: 5000
+        })
         if (result && result.code === 200) {
           sessions.value = result.data.sessions || []
           // 找到当前会话
@@ -529,6 +605,16 @@ export default {
           const currentSession = sessions.value.find(s => s.session_token === currentToken)
           if (currentSession) {
             currentSessionId.value = currentSession.id
+          }
+          
+          // 缓存会话列表
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              sessions: sessions.value,
+              timestamp: Date.now()
+            }))
+          } catch (e) {
+            console.warn('缓存保存失败:', e)
           }
         }
       } catch (error) {
@@ -858,16 +944,48 @@ export default {
       feedbackLoading.value = true
       try {
         const uid = getCurrentUserId()
+        const cacheKey = `feedbacks_${uid}_${page}`
+        
+        // 尝试从缓存加载
+        try {
+          const cachedData = localStorage.getItem(cacheKey)
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData)
+            // 检查缓存是否过期（1小时）
+            if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 60 * 60 * 1000) {
+              feedbackList.value = parsedData.list || []
+              feedbackPage.value = parsedData.page || page
+              console.log('从缓存加载反馈列表')
+              feedbackLoading.value = false
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('缓存读取失败:', e)
+        }
+        
         const res = await requestMethod.get('/feedback/history',  
            { 
             user_id: uid, 
             page: page, 
-            page_size: feedbackPageSize.value 
+            page_size: feedbackPageSize.value,
+            timeout: 5000
           }
         )
         if (res && res.code === 200) {
           feedbackList.value = res.data.list || []
           feedbackPage.value = res.data.page || page
+          
+          // 缓存反馈列表
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              list: feedbackList.value,
+              page: feedbackPage.value,
+              timestamp: Date.now()
+            }))
+          } catch (e) {
+            console.warn('缓存保存失败:', e)
+          }
         }
       } catch (error) {
         console.error('获取历史反馈失败:', error)
@@ -944,9 +1062,16 @@ export default {
     
     // 组件挂载时获取数据
     onMounted(() => {
-      fetchUserInfo()
-      fetchSessions()
-      fetchFeedbacks()
+      // 并行加载数据，提高性能
+      Promise.all([
+        fetchUserInfo(),
+        fetchSessions(),
+        fetchFeedbacks()
+      ]).then(() => {
+        console.log('所有数据加载完成')
+      }).catch((error) => {
+        console.error('数据加载失败:', error)
+      })
     })
     
     return {

@@ -76,7 +76,7 @@
                 :alt="`${music.title || '未知歌曲'} - ${music.artist || '未知艺术家'}`"
                 class="music-cover"
                 fit="cover"
-                :lazy="false"
+                :lazy="true"
                 @error="handleImageError($event, music)"
                 @load="$event.target.classList.add('is-loaded')"
               >
@@ -640,6 +640,7 @@ export default {
         // 优先尝试推荐接口，传入当前 fatigue level（后端期望小写）
         let res = null
         const fatigueParam = (this.currentFatigueLevel || 'Medium').toLowerCase()
+        const cacheKey = `music_${fatigueParam}`
         
         // 创建一个模拟数据，用于测试音乐卡片显示
         const mockMusicData = [
@@ -672,18 +673,56 @@ export default {
           }
         ]
         
+        // 尝试从缓存加载数据
         try {
-          res = await requestMethod.get('/music/recommend', { fatigue_level: fatigueParam })
+          const cachedData = localStorage.getItem(cacheKey)
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData)
+            // 检查缓存是否过期（24小时）
+            if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 24 * 60 * 60 * 1000) {
+              this.musicList = parsedData.data
+              console.log('[MusicRecommendation] 从缓存加载推荐音乐:', this.musicList.length)
+              this.currentPage = 1
+              this.updateDisplayedMusicList()
+              this.loading = false
+              return
+            }
+          }
+        } catch (e) {
+          console.warn('缓存读取失败:', e)
+        }
+        
+        try {
+          // 设置请求超时为5秒
+          res = await requestMethod.get('/music/recommend', { 
+            fatigue_level: fatigueParam,
+            timeout: 5000
+          })
+          
           if (res && res.data && res.data.music_list && res.data.music_list.length > 0) {
             this.musicList = res.data.music_list
             console.log('[MusicRecommendation] 成功加载推荐音乐:', this.musicList.length)
+            
+            // 缓存数据
+            try {
+              localStorage.setItem(cacheKey, JSON.stringify({
+                data: this.musicList,
+                timestamp: Date.now()
+              }))
+            } catch (e) {
+              console.warn('缓存保存失败:', e)
+            }
           } else {
             // 如果推荐接口没有返回数据，使用模拟数据
             console.log('推荐接口返回空数据，使用模拟数据')
             this.musicList = mockMusicData
           }
         } catch (e) {
-          console.log('推荐接口调用失败，使用模拟数据进行测试', e)
+          if (e.code === 'ECONNABORTED') {
+            console.log('推荐接口请求超时，使用模拟数据')
+          } else {
+            console.log('推荐接口调用失败，使用模拟数据进行测试', e)
+          }
           this.musicList = mockMusicData
         }
 

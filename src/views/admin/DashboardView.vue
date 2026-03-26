@@ -115,6 +115,7 @@ import { useRouter } from 'vue-router';
 import { User, Headset, Warning, Operation } from '@element-plus/icons-vue';
 import * as echarts from 'echarts';
 import { useAdminStore } from '@/stores/adminStore';
+import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const adminStore = useAdminStore();
@@ -131,13 +132,43 @@ let fatigueDistributionChartInstance = null;
 // 加载仪表盘数据
 const loadDashboardData = async (dateRange = null) => {
   try {
-    loading.value = true;
-    const data = await adminStore.getDashboardData(dateRange);
-    dashboardData.value = data;
+    loading.value = true
+    const cacheKey = `dashboard_${dateRange ? dateRange.join('_') : 'all'}`
+    
+    // 尝试从缓存加载
+    try {
+      const cachedData = localStorage.getItem(cacheKey)
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData)
+        // 检查缓存是否过期（30分钟）
+        if (parsedData.timestamp && (Date.now() - parsedData.timestamp) < 30 * 60 * 1000) {
+          dashboardData.value = parsedData.data
+          loading.value = false
+          return
+        }
+      }
+    } catch (e) {
+      console.warn('缓存读取失败:', e)
+    }
+    
+    const data = await adminStore.getDashboardData(dateRange)
+    dashboardData.value = data
+    
+    // 缓存仪表盘数据
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data: data,
+        timestamp: Date.now()
+      }))
+    } catch (e) {
+      console.warn('缓存保存失败:', e)
+    }
   } catch (error) {
-    console.error('加载仪表盘数据失败:', error);
+    console.error('加载仪表盘数据失败:', error)
+    // 显示错误消息
+    ElMessage.error('加载仪表盘数据失败，请刷新页面重试')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 };
 
