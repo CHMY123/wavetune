@@ -53,22 +53,12 @@ const routes = [
   },
   {
     path: '/federated',
-    redirect: '/federated/status'
+    redirect: '/federated/contribute'
   },
   {
-    path: '/federated/status',
-    name: 'federated-status',
-    component: () => import(/* webpackChunkName: "federated" */ '../views/federated/FederatedStatusView.vue')
-  },
-  {
-    path: '/federated/progress',
-    name: 'federated-progress',
-    component: () => import(/* webpackChunkName: "federated" */ '../views/federated/FederatedProgressView.vue')
-  },
-  {
-    path: '/federated/devices',
-    name: 'federated-devices',
-    component: () => import(/* webpackChunkName: "federated" */ '../views/federated/FederatedDevicesView.vue')
+    path: '/federated/contribute',
+    name: 'federated-contribute',
+    component: () => import(/* webpackChunkName: "federated" */ '../views/FederatedContributeView.vue')
   },
   {
     path: '/about',
@@ -109,6 +99,11 @@ const routes = [
         path: 'config',
         name: 'admin-config',
         component: () => import(/* webpackChunkName: "admin" */ '../views/admin/SystemConfigView.vue')
+      },
+      {
+        path: 'federated',
+        name: 'admin-federated',
+        component: () => import(/* webpackChunkName: "admin" */ '../views/admin/FederatedManagementView.vue')
       }
     ]
   }

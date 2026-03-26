@@ -471,4 +471,98 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+--
+-- Table structure for table `federated_training`
+--
+
+DROP TABLE IF EXISTS `federated_training`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `federated_training` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `client_id` varchar(50) NOT NULL,
+  `round_number` int NOT NULL,
+  `accuracy` float DEFAULT 0,
+  `loss` float DEFAULT 0,
+  `training_time` datetime DEFAULT CURRENT_TIMESTAMP,
+  `status` enum('pending','training','completed','failed') DEFAULT 'pending',
+  `progress` float DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_federated_training_user_id` (`user_id`),
+  KEY `idx_federated_training_status` (`status`),
+  CONSTRAINT `federated_training_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `federated_device`
+--
+
+DROP TABLE IF EXISTS `federated_device`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `federated_device` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `device_id` varchar(50) NOT NULL,
+  `device_type` varchar(50) NOT NULL,
+  `status` enum('online','offline') DEFAULT 'offline',
+  `last_participate` datetime DEFAULT NULL,
+  `training_count` int DEFAULT 0,
+  `contribution` float DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_federated_device_user_id` (`user_id`),
+  KEY `idx_federated_device_status` (`status`),
+  CONSTRAINT `federated_device_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `federated_stats`
+--
+
+DROP TABLE IF EXISTS `federated_stats`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `federated_stats` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `total_participants` int DEFAULT 0,
+  `total_devices` int DEFAULT 0,
+  `total_rounds` int DEFAULT 0,
+  `average_accuracy` float DEFAULT 0,
+  `average_loss` float DEFAULT 0,
+  `last_updated` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `signal_detection_count`
+--
+
+DROP TABLE IF EXISTS `signal_detection_count`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `signal_detection_count` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `detection_count` int DEFAULT 0,
+  `last_detection` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_signal_detection_count_user_id` (`user_id`),
+  CONSTRAINT `signal_detection_count_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `federated_stats`
+--
+
+LOCK TABLES `federated_stats` WRITE;
+/*!40000 ALTER TABLE `federated_stats` DISABLE KEYS */;
+INSERT INTO `federated_stats` VALUES (1, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP);
+/*!40000 ALTER TABLE `federated_stats` ENABLE KEYS */;
+UNLOCK TABLES;
+
 -- Dump completed on 2025-11-17 11:26:28

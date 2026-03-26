@@ -91,8 +91,10 @@ async def register_user(
         
         # 创建默认偏好设置
         default_preferences = [
-            ("default_fatigue_level", "medium"),
-            ("preferred_music_type", "natural"),
+            ("default_fatigue_level", "all"),
+            ("preferred_music_type", "all"),
+            ("frequent_scene", "work"),
+            ("personalized_recommendation", "true"),
             ("notification_enabled", "true"),
             ("auto_play", "false")
         ]

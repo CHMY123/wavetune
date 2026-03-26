@@ -281,6 +281,26 @@ const pause = () => {
   }
 }
 
+// 强制停止函数
+const forceStop = () => {
+  if (!audioEl.value) return
+  try {
+    console.debug('[MusicPlayer] forceStop() called')
+    // 移除ended事件监听器，防止循环触发
+    audioEl.value.removeEventListener('ended', onEnded)
+    // 停止音频
+    audioEl.value.pause()
+    // 重置时间
+    audioEl.value.currentTime = 0
+    // 更新状态
+    playerStore.setIsPlaying(false)
+    isManualPause.value = true
+    console.info('[MusicPlayer] force stopped, isPlaying=', playerStore.isPlaying)
+  } catch (e) {
+    console.warn('强制停止音频时发生警告:', e)
+  }
+}
+
 const togglePlay = () => {
   isPlaying.value ? pause() : play()
 }
@@ -390,6 +410,12 @@ const handleAudioError = (e) => {
   // 在组件正在关闭或资源已被清理时，忽略错误
   if (isClosing.value) return
   if (!audioEl.value || audioEl.value.src === '') return
+
+  // 忽略空源导致的错误
+  if (e && e.target && e.target.error && e.target.error.code === e.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+    console.debug('忽略空源错误')
+    return
+  }
 
   console.error('音频错误:', e, '音频URL:', audioEl.value.src)
   playerStore.setIsPlaying(false)
@@ -598,9 +624,52 @@ const toggleMute = () => {
   }
 }
 
+// 重置播放器状态
+const resetPlayer = () => {
+  console.log('重置播放器状态')
+  
+  // 重置playerStore状态
+  playerStore.setIsPlaying(false)
+  playerStore.setCurrentTime(0)
+  playerStore.setDuration(0)
+  
+  // 重置音频元素
+  if (audioEl.value) {
+    try {
+      // 停止音频
+      audioEl.value.pause()
+      
+      // 重置时间
+      audioEl.value.currentTime = 0
+      
+      // 禁用自动播放
+      audioEl.value.autoplay = false
+      
+      console.log('音频元素已重置')
+    } catch (e) {
+      console.warn('重置音频元素失败:', e)
+    }
+  }
+}
+
 // 播放结束处理
 const onEnded = () => {
-  // 根据循环模式处理
+  // 直接设置为false，强制关闭自动播放，用于调试
+  const autoPlay = false
+  
+  console.log('自动播放设置:', autoPlay)
+  
+  // 如果关闭了自动播放，直接关闭播放器
+  if (!autoPlay) {
+    console.log('关闭了自动播放，准备关闭播放器')
+    
+    // 调用handleClose函数来关闭播放器
+    handleClose()
+    
+    return
+  }
+  
+  // 如果开启了自动播放，根据循环模式处理
   if (repeatMode.value === 'single') {
     // 单曲循环，重新播放
     audioEl.value.currentTime = 0

@@ -152,6 +152,7 @@
         >
           <el-form-item label="默认疲劳等级">
             <el-select v-model="preferencesForm.default_fatigue_level" @change="updatePreference('default_fatigue_level', $event)">
+              <el-option label="不限" value="all" />
               <el-option label="轻度疲劳" value="light" />
               <el-option label="中度疲劳" value="medium" />
               <el-option label="重度疲劳" value="heavy" />
@@ -160,11 +161,29 @@
           
           <el-form-item label="偏好音乐类型">
             <el-select v-model="preferencesForm.preferred_music_type" @change="updatePreference('preferred_music_type', $event)">
+              <el-option label="不限" value="all" />
               <el-option label="自然音效" value="natural" />
               <el-option label="钢琴音乐" value="piano" />
               <el-option label="白噪音" value="whitenoise" />
               <el-option label="混合音乐" value="mix" />
             </el-select>
+          </el-form-item>
+          
+          <el-form-item label="常处场景">
+            <el-select v-model="preferencesForm.frequent_scene" @change="updatePreference('frequent_scene', $event)">
+              <el-option label="工作" value="work" />
+              <el-option label="学习" value="study" />
+              <el-option label="驾驶" value="driving" />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="个性化推荐">
+            <el-switch
+              v-model="preferencesForm.personalized_recommendation"
+              active-text="开启"
+              inactive-text="关闭"
+              @change="updatePreference('personalized_recommendation', $event ? 'true' : 'false')"
+            />
           </el-form-item>
           
           <el-form-item label="通知设置">
@@ -383,8 +402,10 @@ export default {
     
     // 偏好设置表单数据
     const preferencesForm = reactive({
-      default_fatigue_level: 'medium',
-      preferred_music_type: 'natural',
+      default_fatigue_level: 'all',
+      preferred_music_type: 'all',
+      frequent_scene: 'work',
+      personalized_recommendation: true,
       notification_enabled: true,
       auto_play: false
     })
@@ -475,8 +496,10 @@ export default {
               // 同步偏好设置
               if (parsedData.data.preferences) {
                 Object.assign(preferencesForm, {
-                  default_fatigue_level: parsedData.data.preferences.default_fatigue_level || 'medium',
-                  preferred_music_type: parsedData.data.preferences.preferred_music_type || 'natural',
+                  default_fatigue_level: parsedData.data.preferences.default_fatigue_level || 'all',
+                  preferred_music_type: parsedData.data.preferences.preferred_music_type || 'all',
+                  frequent_scene: parsedData.data.preferences.frequent_scene || 'work',
+                  personalized_recommendation: parsedData.data.preferences.personalized_recommendation === 'true',
                   notification_enabled: parsedData.data.preferences.notification_enabled === 'true',
                   auto_play: parsedData.data.preferences.auto_play === 'true'
                 })
@@ -516,8 +539,10 @@ export default {
           // 同步偏好设置
           if (data.preferences) {
             Object.assign(preferencesForm, {
-              default_fatigue_level: data.preferences.default_fatigue_level || 'medium',
-              preferred_music_type: data.preferences.preferred_music_type || 'natural',
+              default_fatigue_level: data.preferences.default_fatigue_level || 'all',
+              preferred_music_type: data.preferences.preferred_music_type || 'all',
+              frequent_scene: data.preferences.frequent_scene || 'work',
+              personalized_recommendation: data.preferences.personalized_recommendation === 'true',
               notification_enabled: data.preferences.notification_enabled === 'true',
               auto_play: data.preferences.auto_play === 'true'
             })
@@ -691,6 +716,25 @@ export default {
         }, { user_id: uid })
         if (result && result.code === 200) {
           ElMessage.success('偏好设置已更新')
+          
+          // 更新本地缓存
+          try {
+            const cacheKey = `user_info_${uid}`
+            const cachedData = localStorage.getItem(cacheKey)
+            if (cachedData) {
+              const parsedData = JSON.parse(cachedData)
+              if (!parsedData.data.preferences) {
+                parsedData.data.preferences = {}
+              }
+              parsedData.data.preferences[key] = value
+              localStorage.setItem(cacheKey, JSON.stringify({
+                data: parsedData.data,
+                timestamp: Date.now()
+              }))
+            }
+          } catch (e) {
+            console.warn('更新缓存失败:', e)
+          }
         } else {
           ElMessage.error(result?.msg || '更新失败')
         }

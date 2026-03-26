@@ -44,15 +44,10 @@
           <span>信号监测</span>
         </el-menu-item>
         
-        <el-sub-menu index="/federated">
-          <template #title>
-            <el-icon><Connection /></el-icon>
-            <span>联邦学习</span>
-          </template>
-          <el-menu-item index="/federated/status">参与状态</el-menu-item>
-          <el-menu-item index="/federated/progress">训练进度</el-menu-item>
-          <el-menu-item index="/federated/devices">设备管理</el-menu-item>
-        </el-sub-menu>
+        <el-menu-item index="/federated/contribute">
+          <el-icon><Connection /></el-icon>
+          <span>联邦学习</span>
+        </el-menu-item>
         
         <el-menu-item index="/user">
           <el-icon><User /></el-icon>

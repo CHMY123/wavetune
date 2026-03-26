@@ -16,7 +16,7 @@ try {
   }
   // 本地开发环境兜底（避免未配置时请求404）
   else if (env.NODE_ENV === 'development' && baseURL === '/api') {
-    baseURL = 'http://127.0.0.1:8002/api';
+    baseURL = '/api';
     console.warn('[request] 本地开发模式，默认API地址：', baseURL);
   }
 } catch (e) {

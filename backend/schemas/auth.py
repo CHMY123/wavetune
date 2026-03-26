@@ -106,4 +106,9 @@ class UserPreferenceUpdate(BaseModel):
             raise ValueError('偏好键不能为空')
         return v.strip()
 
+class TokenData(BaseModel):
+    """令牌数据模型"""
+    user_id: Optional[int] = None
+    student_id: Optional[str] = None
+
 

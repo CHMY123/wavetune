@@ -23,7 +23,7 @@
             <li><router-link to="/quick-detection">检测结果</router-link></li>
             <li><router-link to="/music-recommendation">音乐推荐</router-link></li>
             <li><router-link to="/signal-monitor">信号监测</router-link></li>
-            <li><router-link to="/federated/status">联邦学习</router-link></li>
+            <li><router-link to="/federated/contribute">联邦学习</router-link></li>
           </ul>
         </div>
         

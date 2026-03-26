@@ -19,17 +19,23 @@
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <el-tag class="fatigue-tag" :type="fatigueTagType" size="large">{{ currentFatigueLevel }} 疲劳专属</el-tag>
-          <el-select v-model="currentFatigueLevel" size="large" @change="onFatigueLevelChange" class="fatigue-select">
-            <el-option label="轻度 (Light)" value="Light"></el-option>
-            <el-option label="中度 (Medium)" value="Medium"></el-option>
-            <el-option label="重度 (Heavy)" value="Heavy"></el-option>
+          <el-select v-model="combinedFilter" size="large" @change="onCombinedFilterChange" class="combined-select">
+            <el-option label="轻度疲劳 - 不限场景" value="Light:"></el-option>
+            <el-option label="轻度疲劳 - 工作" value="Light:work"></el-option>
+            <el-option label="轻度疲劳 - 学习" value="Light:study"></el-option>
+            <el-option label="轻度疲劳 - 驾驶" value="Light:drive"></el-option>
+            <el-option label="中度疲劳 - 不限场景" value="Medium:"></el-option>
+            <el-option label="中度疲劳 - 工作" value="Medium:work"></el-option>
+            <el-option label="中度疲劳 - 学习" value="Medium:study"></el-option>
+            <el-option label="中度疲劳 - 驾驶" value="Medium:drive"></el-option>
+            <el-option label="重度疲劳 - 不限场景" value="Heavy:"></el-option>
+            <el-option label="重度疲劳 - 工作" value="Heavy:work"></el-option>
+            <el-option label="重度疲劳 - 学习" value="Heavy:study"></el-option>
+            <el-option label="重度疲劳 - 驾驶" value="Heavy:drive"></el-option>
           </el-select>
-          <el-select v-model="currentScene" size="large" @change="onSceneChange" class="scene-select">
-            <el-option label="不限" value=""></el-option>
-            <el-option label="工作" value="work"></el-option>
-            <el-option label="学习" value="study"></el-option>
-            <el-option label="驾驶" value="drive"></el-option>
-          </el-select>
+          <el-button v-if="isFromSignalMonitor" type="primary" size="large" @click="restoreDefaultRecommendation">
+            恢复默认推荐
+          </el-button>
           <!-- 顶部添加音乐按钮 - 已移至管理员界面 -->
           <!-- <el-button 
             type="primary" 
@@ -414,6 +420,12 @@ export default {
       currentFatigueLevel: (this.$route?.query?.fatigue || localStorage.getItem('current_fatigue_level') || 'Medium'),
       // 当前场景：路由 query 或 localStorage（优先路由），默认不限
       currentScene: (this.$route?.query?.scene || localStorage.getItem('current_scene') || ''),
+      // 当前音乐类型：localStorage，默认不限
+      currentMusicType: (localStorage.getItem('current_music_type') || ''),
+      // 是否从信号监测界面跳转
+      isFromSignalMonitor: (this.$route?.query?.from_signal_monitor === 'true' || localStorage.getItem('from_signal_monitor') === 'true'),
+      // 统一的筛选值
+      combinedFilter: '',
       loading: false,
       musicList: [],
       displayedMusicList: [], // 用于虚拟滚动或分页显示的音乐列表
@@ -595,7 +607,44 @@ export default {
         music.cover = resolveMedia('/static/music_cover/placeholder.png')
       }
     },
-    // 处理疲劳等级变化
+    // 处理统一筛选变化
+    onCombinedFilterChange() {
+      if (this.combinedFilter) {
+        const [fatigueLevel, scene] = this.combinedFilter.split(':')
+        this.currentFatigueLevel = fatigueLevel
+        this.currentScene = scene || ''
+        
+        // 保存到localStorage
+        try {
+          localStorage.setItem('current_fatigue_level', this.currentFatigueLevel)
+          localStorage.setItem('current_scene', this.currentScene)
+        } catch (e) {
+          console.warn('无法保存筛选设置到localStorage:', e)
+        }
+        
+        // 重新加载音乐
+        this.loadMusic()
+      }
+    },
+    // 恢复默认推荐
+    restoreDefaultRecommendation() {
+      // 清除从信号监测界面的标记
+      this.isFromSignalMonitor = false
+      try {
+        localStorage.removeItem('from_signal_monitor')
+      } catch (e) {}
+      
+      // 清除URL查询参数
+      if (this.$router) {
+        this.$router.replace({ query: {} })
+      }
+      
+      // 重新检查用户偏好设置
+      this.checkUserPreferences()
+      
+      ElMessage.success('已恢复默认推荐')
+    },
+    // 处理疲劳等级变化（保留向后兼容）
     onFatigueLevelChange() {
       // 保存选择的疲劳等级到localStorage
       try {
@@ -606,7 +655,7 @@ export default {
       // 重新加载对应疲劳等级的音乐
       this.loadMusic()
     },
-    // 处理场景变化
+    // 处理场景变化（保留向后兼容）
     onSceneChange() {
       // 保存选择的场景到localStorage
       try {
@@ -660,7 +709,8 @@ export default {
         let res = null
         const fatigueParam = (this.currentFatigueLevel || 'Medium').toLowerCase()
         const sceneParam = this.currentScene || ''
-        const cacheKey = `music_${fatigueParam}_${sceneParam}`
+        const musicTypeParam = this.currentMusicType || ''
+        const cacheKey = `music_${fatigueParam}_${sceneParam}_${musicTypeParam}`
         
         // 创建一个模拟数据，用于测试音乐卡片显示
         const mockMusicData = [
@@ -722,6 +772,11 @@ export default {
           // 如果场景不为空，添加场景参数
           if (sceneParam) {
             params.scene = sceneParam
+          }
+          
+          // 如果音乐类型不为空，添加音乐类型参数
+          if (musicTypeParam) {
+            params.music_type = musicTypeParam
           }
           
           res = await requestMethod.get('/music/recommend', params)
@@ -1020,22 +1075,135 @@ export default {
       if (!music) return
       this.currentMusicDetails = music
       this.showDetailsDialog = true
+    },
+    // 检查用户偏好设置
+    async checkUserPreferences() {
+      try {
+        // 检查是否从信号监测界面跳转（最高优先级）
+        if (this.isFromSignalMonitor) {
+          // 从路由或localStorage获取参数
+          const fatigueLevelFromQuery = this.$route?.query?.fatigue_level
+          const sceneFromQuery = this.$route?.query?.scene
+          
+          if (fatigueLevelFromQuery) {
+            this.currentFatigueLevel = fatigueLevelFromQuery
+          } else {
+            this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+          }
+          
+          if (sceneFromQuery !== undefined) {
+            this.currentScene = sceneFromQuery
+          } else {
+            this.currentScene = localStorage.getItem('current_scene') || ''
+          }
+          
+          // 设置统一的筛选值
+          this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
+          
+          // 不使用用户的偏好音乐类型
+          this.currentMusicType = ''
+          
+          console.log('[MusicRecommendation] 从信号监测界面跳转，使用最高优先筛选:', {
+            fatigueLevel: this.currentFatigueLevel,
+            scene: this.currentScene
+          })
+          
+          // 加载音乐
+          this.loadMusic()
+          return
+        }
+        
+        // 从本地存储获取用户信息
+        const userStr = localStorage.getItem('user')
+        if (!userStr) {
+          // 如果没有用户信息，使用默认值
+          this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+          this.currentScene = ''
+          this.currentMusicType = ''
+          // 设置统一的筛选值
+          this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
+          this.loadMusic()
+          return
+        }
+        
+        const user = JSON.parse(userStr)
+        const userId = user.id
+        
+        // 获取用户偏好设置
+        const result = await requestMethod.get('/auth/profile', { user_id: userId })
+        if (result && result.code === 200 && result.data && result.data.preferences) {
+          const preferences = result.data.preferences
+          
+          // 检查是否开启个性化推荐
+          const personalized = preferences.personalized_recommendation === 'true'
+          
+          if (personalized) {
+            // 使用用户的默认疲劳等级
+            const defaultLevel = preferences.default_fatigue_level || 'all'
+            if (defaultLevel !== 'all') {
+              // 映射疲劳等级到前端显示格式
+              let displayLevel = 'Medium'
+              if (defaultLevel === 'light') displayLevel = 'Light'
+              if (defaultLevel === 'heavy') displayLevel = 'Heavy'
+              
+              this.currentFatigueLevel = displayLevel
+              try { localStorage.setItem('current_fatigue_level', displayLevel) } catch (e) {}
+            }
+            
+            // 使用用户的常处场景
+            const frequentScene = preferences.frequent_scene || ''
+            if (frequentScene) {
+              this.currentScene = frequentScene
+              try { localStorage.setItem('current_scene', frequentScene) } catch (e) {}
+            }
+            
+            // 使用用户的偏好音乐类型
+            const preferredMusicType = preferences.preferred_music_type || ''
+            if (preferredMusicType && preferredMusicType !== 'all') {
+              this.currentMusicType = preferredMusicType
+              try { localStorage.setItem('current_music_type', preferredMusicType) } catch (e) {}
+            } else {
+              this.currentMusicType = ''
+              try { localStorage.setItem('current_music_type', '') } catch (e) {}
+            }
+          } else {
+            // 如果关闭个性化推荐，使用上次的设置
+            this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+            this.currentScene = '' // 场景改为不限
+            this.currentMusicType = '' // 音乐类型改为不限
+            try { localStorage.setItem('current_scene', '') } catch (e) {}
+            try { localStorage.setItem('current_music_type', '') } catch (e) {}
+          }
+        } else {
+          // 如果获取偏好设置失败，使用默认值
+          this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+          this.currentScene = ''
+          this.currentMusicType = ''
+        }
+        
+        // 设置统一的筛选值
+        this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
+        
+        // 加载音乐
+        this.loadMusic()
+      } catch (error) {
+        console.error('获取用户偏好设置失败:', error)
+        // 出错时使用默认值
+        this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+        this.currentScene = ''
+        this.currentMusicType = ''
+        // 设置统一的筛选值
+        this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
+        this.loadMusic()
+      }
     }
   },
   mounted() {
     // 初始化playerStore
     this.playerStore = usePlayerStore()
     
-    // 当页面挂载时，优先从路由 query 或 localStorage 读取固定的疲劳等级
-    const routeLevel = this.$route?.query?.fatigue
-    if (routeLevel) {
-      try { localStorage.setItem('current_fatigue_level', routeLevel) } catch (e) {}
-      this.currentFatigueLevel = routeLevel
-    } else {
-      this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || this.currentFatigueLevel
-    }
-    // 设置 tag 类型并加载音乐
-    this.loadMusic()
+    // 当页面挂载时，检查用户偏好设置
+    this.checkUserPreferences()
     
     // 初始化加载更多观察器
     this.$nextTick(() => {
@@ -1081,8 +1249,6 @@ export default {
     if (this.loadMoreObserver) {
       this.loadMoreObserver.disconnect()
     }
-    // 清理滚动事件监听
-    window.removeEventListener('scroll', this.handleScroll)
   },
 }
 </script>

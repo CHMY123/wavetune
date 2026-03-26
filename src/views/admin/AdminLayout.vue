@@ -33,6 +33,12 @@
             </router-link>
           </li>
           <li>
+            <router-link to="/admin/federated" class="nav-item">
+              <el-icon><DataAnalysis /></el-icon>
+              <span v-if="!sidebarCollapsed">联邦学习管理</span>
+            </router-link>
+          </li>
+          <li>
             <router-link to="/admin/config" class="nav-item">
               <el-icon><Setting /></el-icon>
               <span v-if="!sidebarCollapsed">系统配置</span>
@@ -90,7 +96,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { House, Headset, User, ChatDotRound, Setting, ArrowDown, SwitchButton, Menu, Close } from '@element-plus/icons-vue';
+import { House, Headset, User, ChatDotRound, Setting, ArrowDown, SwitchButton, Menu, Close, DataAnalysis } from '@element-plus/icons-vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -127,7 +133,8 @@ const updateBreadcrumb = () => {
     '/admin/music': ['音乐管理'],
     '/admin/users': ['用户管理'],
     '/admin/feedback': ['反馈管理'],
-    '/admin/config': ['系统配置']
+    '/admin/config': ['系统配置'],
+    '/admin/federated': ['联邦学习管理']
   };
   
   breadcrumb.value = breadcrumbMap[path] || ['仪表盘'];

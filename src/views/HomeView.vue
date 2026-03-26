@@ -62,13 +62,13 @@
         </el-row>
       </div>
 
-      <!-- 系统统计信息 -->
+      <!-- 系统运行统计 -->
       <div class="stats-section">
         <CardContainer title="系统运行统计" waveStyle gradientBorder>
           <el-row :gutter="20">
             <el-col :xs="12" :sm="6" :md="6" :lg="6" :xl="6" v-for="stat in stats" :key="stat.id">
               <div class="stat-item">
-                <div class="stat-icon" :class="stat.iconClass">
+                <div class="stat-icon">
                   <img :src="stat.iconSrc" class="stat-inner-icon" :alt="stat.label" />
                 </div>
                 <div class="stat-content">
@@ -78,36 +78,6 @@
               </div>
             </el-col>
           </el-row>
-        </CardContainer>
-      </div>
-
-      <!-- 联邦学习状态 -->
-      <div class="federated-section">
-        <CardContainer title="联邦学习状态" waveStyle gradientBorder>
-          <div class="federated-status">
-            <div class="status-info">
-              <div class="status-item">
-                <span class="status-label">参与设备：</span>
-                <span class="status-value primary">12 台</span>
-              </div>
-              <div class="status-item">
-                <span class="status-label">训练轮次：</span>
-                <span class="status-value success">第 3/10 轮</span>
-              </div>
-              <div class="status-item">
-                <span class="status-label">模型准确率：</span>
-                <span class="status-value warning">89.2%</span>
-              </div>
-            </div>
-            <div class="status-actions">
-              <el-button class="primary-btn" @click="$router.push('/federated/status')">
-                查看详情
-                <el-icon class="btn-icon">
-                  <ArrowRight />
-                </el-icon>
-              </el-button>
-            </div>
-          </div>
         </CardContainer>
       </div>
 
@@ -154,6 +124,8 @@
 <script>
 import CardContainer from '@/components/global/CardContainer.vue'
 import { ArrowRight, User } from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { requestMethod } from '@/utils/request'
 
 export default {
   name: 'HomeView',
@@ -162,87 +134,153 @@ export default {
     ArrowRight,
     User
   },
-  data() {
-    return {
-      features: [
-        {
-          id: 1,
-          title: '脑疲劳检测',
-          description: '实时监测脑疲劳状态，提供准确的疲劳等级评估',
-          iconSrc: '/static/icon/result.png',
-          iconClass: 'detection',
-          route: '/quick-detection',
-          buttonText: '查看结果'
-        },
-        {
-          id: 2,
-          title: '音乐干预',
-          description: '根据疲劳等级和个人偏好，智能推荐个性化轻音乐进行干预',
-          iconSrc: '/static/icon/music.png',
-          iconClass: 'music',
-          route: '/music-recommendation',
-          buttonText: '开始推荐'
-        },
-        {
-          id: 3,
-          title: '信号监测',
-          description: '实时监测EEG、fNIRS等多模态生理信号，可视化展示数据',
-          iconSrc: '/static/icon/detection.png',
-          iconClass: 'monitor',
-          route: '/signal-monitor',
-          buttonText: '开始监测'
-        },
-        {
-          id: 4,
-          title: '联邦学习',
-          description: '采用联邦学习技术保护隐私，协同优化模型性能，增强用户参与',
-          iconSrc: '/static/icon/federation.png',
-          iconClass: 'federated',
-          route: '/federated/status',
-          buttonText: '参与学习'
-        }
-      ],
-      stats: [
-        {
-          id: 1,
-          value: '256',
-          label: '检测次数',
-          iconSrc: '/static/icon/result.png',
-          iconClass: 'detection'
-        },
-        {
-          id: 2,
-          value: '85',
-          label: '干预次数',
-          iconSrc: '/static/icon/intervene.png',
-          iconClass: 'music'
-        },
-        {
-          id: 3,
-          value: '12',
-          label: '参与设备',
-          iconSrc: '/static/icon/federation.png',
-          iconClass: 'devices'
-        },
-        {
-          id: 4,
-          value: '89.2%',
-          label: '模型准确率',
-          iconSrc: '/static/icon/model.png',
-          iconClass: 'accuracy'
-        }
-      ],
-      contributors: [
-        '赖文韬',
-        '李洋',
-        '钟红红',
-        '梁炜琳'
-      ]
+  setup() {
+    const features = ref([
+      {
+        id: 1,
+        title: '脑疲劳检测',
+        description: '实时监测脑疲劳状态，提供准确的疲劳等级评估',
+        iconSrc: '/static/icon/result.png',
+        iconClass: 'detection',
+        route: '/quick-detection',
+        buttonText: '查看结果'
+      },
+      {
+        id: 2,
+        title: '音乐干预',
+        description: '根据疲劳等级和个人偏好，智能推荐个性化轻音乐进行干预',
+        iconSrc: '/static/icon/music.png',
+        iconClass: 'music',
+        route: '/music-recommendation',
+        buttonText: '开始推荐'
+      },
+      {
+        id: 3,
+        title: '信号监测',
+        description: '实时监测EEG、fNIRS等多模态生理信号，可视化展示数据',
+        iconSrc: '/static/icon/detection.png',
+        iconClass: 'monitor',
+        route: '/signal-monitor',
+        buttonText: '开始监测'
+      },
+      {
+        id: 4,
+        title: '联邦学习',
+        description: '采用联邦学习技术保护隐私，协同优化模型性能，增强用户参与',
+        iconSrc: '/static/icon/federation.png',
+        iconClass: 'federated',
+        route: '/federated/contribute',
+        buttonText: '参与学习'
+      }
+    ])
+    
+    const stats = ref([
+      {
+        id: 1,
+        value: '0',
+        label: '检测次数',
+        iconSrc: '/static/icon/result.png',
+        iconClass: 'detection'
+      },
+      {
+        id: 2,
+        value: '0',
+        label: '干预次数',
+        iconSrc: '/static/icon/intervene.png',
+        iconClass: 'music'
+      },
+      {
+        id: 3,
+        value: '0',
+        label: '参与设备',
+        iconSrc: '/static/icon/federation.png',
+        iconClass: 'devices'
+      },
+      {
+        id: 4,
+        value: '0%',
+        label: '模型准确率',
+        iconSrc: '/static/icon/model.png',
+        iconClass: 'accuracy'
+      }
+    ])
+    
+    const contributors = ref([
+      '赖文韬',
+      '李洋',
+      '钟红红',
+      '梁炜琳'
+    ])
+    
+    const navigateTo = (route) => {
+      window.location.href = route
     }
-  },
-  methods: {
-    navigateTo(route) {
-      this.$router.push(route)
+    
+    // 获取系统运行统计数据
+    const fetchSystemStats = async () => {
+      try {
+        // 获取检测次数
+        const detectionResponse = await requestMethod.get('/federated/signal-detection/count')
+        if (detectionResponse && detectionResponse.code === 200) {
+          const detectionCount = detectionResponse.data?.detection_count || 0
+          const detectionStat = stats.value.find(stat => stat.label === '检测次数')
+          if (detectionStat) {
+            detectionStat.value = detectionCount.toString()
+          }
+        }
+        
+        // 获取联邦学习统计数据
+        const federatedResponse = await requestMethod.get('/federated/stats')
+        if (federatedResponse && federatedResponse.code === 200) {
+          const federatedData = federatedResponse.data || {}
+          
+          // 更新参与设备
+          const deviceStat = stats.value.find(stat => stat.label === '参与设备')
+          if (deviceStat) {
+            deviceStat.value = federatedData.total_devices?.toString() || '0'
+          }
+          
+          // 更新模型准确率
+          const accuracyStat = stats.value.find(stat => stat.label === '模型准确率')
+          if (accuracyStat) {
+            const accuracy = federatedData.average_accuracy || 0
+            accuracyStat.value = `${(accuracy * 100).toFixed(1)}%`
+          }
+        }
+        
+        // 获取音乐总播放量（干预次数）
+        try {
+          const dashboardResponse = await requestMethod.get('/admin/dashboard')
+          if (dashboardResponse && dashboardResponse.code === 200) {
+            const totalPlays = dashboardResponse.data?.music_stats?.total_plays || 0
+            const musicStat = stats.value.find(stat => stat.label === '干预次数')
+            if (musicStat) {
+              musicStat.value = totalPlays.toString()
+            }
+          }
+        } catch (error) {
+          console.error('获取音乐播放量失败:', error)
+          // 如果获取失败，暂时使用0作为默认值
+          const musicStat = stats.value.find(stat => stat.label === '干预次数')
+          if (musicStat) {
+            musicStat.value = '0'
+          }
+        }
+      } catch (error) {
+        console.error('获取系统统计数据失败:', error)
+      }
+    }
+    
+    // 页面加载时获取数据
+    onMounted(() => {
+      fetchSystemStats()
+    })
+    
+    return {
+      features,
+      stats,
+      contributors,
+      navigateTo
     }
   }
 }
@@ -516,13 +554,7 @@ export default {
       font-size: 22px;
       color: white;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-      
-      &.detection,
-      &.music,
-      &.devices,
-      &.accuracy {
-        background: linear-gradient(135deg, var(--wave-blue), var(--wave-purple));
-      }
+      background: linear-gradient(135deg, var(--wave-blue), var(--wave-purple));
       
       .stat-inner-icon {
         font-size: 28px;
@@ -641,13 +673,13 @@ export default {
     }
     
     .action-btn {
-      height: 80px;
+      height: 90px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      border-radius: 10px;
+      gap: 8px;
+      border-radius: 12px;
       border: none;
       transition: all 0.3s ease;
       
@@ -657,13 +689,13 @@ export default {
       }
       
       .btn-icon-large {
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         object-fit: contain;
       }
       
       span {
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 500;
       }
     }
@@ -719,10 +751,10 @@ export default {
     .contributor-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 16px;
+      gap: 10px;
+      padding: 12px 20px;
       background: var(--bg-hover);
-      border-radius: 10px;
+      border-radius: 12px;
       transition: all 0.3s ease;
       
       &:hover {
@@ -732,19 +764,19 @@ export default {
       }
       
       .contributor-avatar {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         background: linear-gradient(135deg, #6b46c1, #9f7aea);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 16px;
+        font-size: 18px;
       }
       
       .contributor-name {
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--text-primary);
       }

@@ -324,6 +324,14 @@ export default {
           // 存储到localStorage
           localStorage.setItem('detectionResult', JSON.stringify(this.detectionResult))
           
+          // 记录检测次数
+          try {
+            await requestMethod.post('/federated/signal-detection/count')
+            console.log('%c [SignalMonitorView] 检测次数记录成功', 'color: #52c41a;')
+          } catch (error) {
+            console.error('%c [SignalMonitorView] 记录检测次数失败：', 'color: #f5222d;', error)
+          }
+          
           // 日志：记录检测结果
           console.log('%c [SignalMonitorView] 脑疲劳检测结果解析完成并存储：', 'color: #722ed1;', this.detectionResult)
           ElMessage.success(`检测完成：${this.detectionResult.label_name}`)
@@ -798,9 +806,11 @@ export default {
         // 在跳转前将当前检测等级和场景写入 localStorage，供推荐页使用
         localStorage.setItem('current_fatigue_level', englishFatigueLevel);
         localStorage.setItem('current_scene', this.selectedScene);
+        localStorage.setItem('from_signal_monitor', 'true');
         console.log('%c [SignalMonitorView] 已将当前疲劳等级和场景写入localStorage：', 'color: #1890ff;', {
           fatigueLevel: englishFatigueLevel,
-          scene: this.selectedScene
+          scene: this.selectedScene,
+          from_signal_monitor: 'true'
         });
         
         try {
@@ -809,7 +819,8 @@ export default {
               path: '/music-recommendation',
               query: {
                 fatigue_level: englishFatigueLevel,
-                scene: this.selectedScene
+                scene: this.selectedScene,
+                from_signal_monitor: 'true'
               }
             });
             console.log('%c [SignalMonitorView] 成功跳转至音乐推荐页面', 'color: #52c41a;');

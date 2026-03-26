@@ -7,7 +7,6 @@ from .user import User
 from .feedback import Feedback
 from .music import Music
 from .scene import Scene
-from .system_stats import SystemStats
 from .user_session import UserSession
 from .user_preference import UserPreference
 from .operation_log import OperationLog
@@ -19,7 +18,6 @@ __all__ = [
     "Feedback", 
     "Music",
     "Scene",
-    "SystemStats",
     "UserSession",
     "UserPreference",
     "OperationLog",

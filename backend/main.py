@@ -36,6 +36,7 @@ detection_router = APIRouter()
 admin_router = APIRouter()
 analytics_router = APIRouter()
 ai_router = APIRouter()
+federated_router = APIRouter()
 
 # 2. 逐个导入路由模块，提取内部的 router 实例（避免一个模块失败影响全部）
 try:
@@ -44,12 +45,6 @@ try:
     auth_router = auth.router if hasattr(auth, 'router') else APIRouter()
 except ImportError as e:
     logging.warning(f"⚠️  auth 路由模块导入失败：{e}，请确保 routers/auth.py 存在并正确")
-
-try:
-    from routers import system
-    system_router = system.router if hasattr(system, 'router') else APIRouter()
-except ImportError as e:
-    logging.warning(f"⚠️  system 路由模块导入失败：{e}，请确保 routers/system.py 存在并正确")
 
 try:
     from routers import user
@@ -98,6 +93,12 @@ try:
     ai_router = ai.router if hasattr(ai, 'router') else APIRouter()
 except ImportError as e:
     logging.warning(f"⚠️  ai 路由模块导入失败：{e}，请确保 routers/ai.py 存在并正确")
+
+try:
+    from routers import federated
+    federated_router = federated.router if hasattr(federated, 'router') else APIRouter()
+except ImportError as e:
+    logging.warning(f"⚠️  federated 路由模块导入失败：{e}，请确保 routers/federated.py 存在并正确")
 
 # 导入数据库配置（如果缺少，临时注释避免报错）
 try:
@@ -171,6 +172,7 @@ app.include_router(detection_router, prefix="/api/detection", tags=["快速检�
 app.include_router(admin_router, prefix="/api", tags=["CMS管理"])
 app.include_router(analytics_router, prefix="/api", tags=["数据分析"])
 app.include_router(ai_router, tags=["AI助手"])
+app.include_router(federated_router, tags=["联邦学习"])
 
 # ========== 全局异常处理器 ==========
 @app.exception_handler(HTTPException)
@@ -220,13 +222,6 @@ if STATIC_ROOT.exists():
         name="static_root"
     )
     logging.info(f"✅ 成功挂载前端静态资源：{STATIC_ROOT}")
-    # 额外检查子目录是否存在
-    icon_dir = STATIC_ROOT / "icon"
-    logo_dir = STATIC_ROOT / "logo"
-    if not icon_dir.exists():
-        logging.error(f"❌ static/icon 目录不存在：{icon_dir}")
-    if not logo_dir.exists():
-        logging.error(f"❌ static/logo 目录不存在：{logo_dir}")
 else:
     logging.error(f"❌ 项目根目录static不存在：{STATIC_ROOT}")
     # 自动创建空目录避免完全无法访问
