@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onMounted } from 'vue'
 import { usePlayerStore } from '../../stores/playerStore'
 import { requestMethod } from '../../utils/request'
 import axios from 'axios'
@@ -87,16 +87,36 @@ const props = defineProps({
 
 const emit = defineEmits(['update:isOpen'])
 
-const messages = ref([
-  {
-    role: 'assistant',
-    content: '您好！我是您的AI助手，有什么可以帮助您的吗？'
+// 初始化消息列表，从本地存储加载
+const initMessages = () => {
+  try {
+    const savedMessages = localStorage.getItem('ai_assistant_messages')
+    if (savedMessages) {
+      const parsedMessages = JSON.parse(savedMessages)
+      return parsedMessages.length > 0 ? parsedMessages : [
+        {
+          role: 'assistant',
+          content: '您好！我是您的AI助手，有什么可以帮助您的吗？'
+        }
+      ]
+    }
+  } catch (error) {
+    console.error('加载消息历史失败:', error)
   }
-])
+  return [
+    {
+      role: 'assistant',
+      content: '您好！我是您的AI助手，有什么可以帮助您的吗？'
+    }
+  ]
+}
+
+const messages = ref(initMessages())
 const userInput = ref('')
 const messageList = ref(null)
 const playerStore = usePlayerStore()
 const isLoading = ref(false)
+const showGuide = ref(false)
 
 // 获取用户信息和头像
 const userInfo = computed(() => {
@@ -123,6 +143,10 @@ const toggleSidebar = () => {
 
 // 解析markdown格式
 const parseMarkdown = (text) => {
+  // 解析标题
+  text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+  text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
+  text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
   // 解析粗体
   text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   // 解析斜体
@@ -133,8 +157,8 @@ const parseMarkdown = (text) => {
   // 解析有序列表
   text = text.replace(/^\s*\d+\.\s+(.*?)$/gm, '<li>$1</li>');
   text = text.replace(/(<li>.*?<\/li>)/s, '<ol>$1</ol>');
-  // 解析段落
-  text = text.replace(/^(?!<ul>|<ol>|<li>)(.*?)$/gm, '<p>$1</p>');
+  // 解析段落（排除标题）
+  text = text.replace(/^(?!<h[1-3]>|<ul>|<ol>|<li>)(.*?)$/gm, '<p>$1</p>');
   // 移除多余的空行
   text = text.replace(/\n{3,}/g, '\n\n');
   return text;
@@ -157,33 +181,63 @@ const sendMessage = async () => {
   await nextTick()
   scrollToBottom()
   
+  // 添加AI消息占位符
+  const aiMessageIndex = messages.value.length
+  messages.value.push({
+    role: 'assistant',
+    content: ''
+  })
+  
+  // 滚动到底部
+  await nextTick()
+  scrollToBottom()
+  
   // 调用后端API
   try {
     const response = await requestMethod.post('/ai/chat', {
       message: input
     })
     
-    // 添加AI回复
-    messages.value.push({
-      role: 'assistant',
-      content: response.response
-    })
+    // 逐字显示AI回复
+    const aiResponse = response.response
+    let currentText = ''
+    let index = 0
     
-    // 滚动到底部
-    await nextTick()
-    scrollToBottom()
+    const typingInterval = setInterval(() => {
+      if (index < aiResponse.length) {
+        currentText += aiResponse.charAt(index)
+        messages.value[aiMessageIndex].content = currentText
+        index++
+        // 滚动到底部
+        nextTick(() => {
+          scrollToBottom()
+        })
+      } else {
+        clearInterval(typingInterval)
+        isLoading.value = false
+      }
+    }, 30) // 控制打字速度
   } catch (error) {
     console.error('AI API 调用失败:', error)
-    messages.value.push({
-      role: 'assistant',
-      content: '抱歉，系统出现错误，请稍后再试。'
-    })
+    // 逐字显示错误消息
+    const errorMessage = '抱歉，系统出现错误，请稍后再试。'
+    let currentText = ''
+    let index = 0
     
-    // 滚动到底部
-    await nextTick()
-    scrollToBottom()
-  } finally {
-    isLoading.value = false
+    const typingInterval = setInterval(() => {
+      if (index < errorMessage.length) {
+        currentText += errorMessage.charAt(index)
+        messages.value[aiMessageIndex].content = currentText
+        index++
+        // 滚动到底部
+        nextTick(() => {
+          scrollToBottom()
+        })
+      } else {
+        clearInterval(typingInterval)
+        isLoading.value = false
+      }
+    }, 50)
   }
 }
 
@@ -193,12 +247,56 @@ const scrollToBottom = () => {
   }
 }
 
-// 监听消息变化，自动滚动到底部
+// 保存消息历史到本地存储
+const saveMessagesToStorage = () => {
+  try {
+    // 只保存最近3条对话（6条消息，因为每条对话包含用户和AI的消息）
+    const recentMessages = messages.value.slice(-6)
+    localStorage.setItem('ai_assistant_messages', JSON.stringify(recentMessages))
+  } catch (error) {
+    console.error('保存消息历史失败:', error)
+  }
+}
+
+// 监听消息变化，自动滚动到底部并保存到本地存储
 watch(messages, () => {
   nextTick(() => {
     scrollToBottom()
+    saveMessagesToStorage()
   })
 }, { deep: true })
+
+// 组件挂载时检查是否是新用户，并确保初始化消息被保存
+onMounted(() => {
+  checkNewUser()
+  // 确保初始化消息被保存到本地存储
+  saveMessagesToStorage()
+})
+
+// 检查是否是新用户并显示引导
+const checkNewUser = () => {
+  try {
+    const user = localStorage.getItem('user')
+    const hasSeenGuide = localStorage.getItem('has_seen_ai_guide')
+    
+    if (user && !hasSeenGuide) {
+      // 显示新用户引导
+      showGuide.value = true
+      // 标记用户已看过引导
+      localStorage.setItem('has_seen_ai_guide', 'true')
+      
+      // 添加引导消息
+      setTimeout(() => {
+        messages.value.push({
+          role: 'assistant',
+          content: '欢迎使用WaveTune智能脑疲劳检测系统！\n\n我是您的AI助手，为您提供以下服务：\n\n- 脑疲劳检测结果解读\n- 音乐推荐与干预方案\n- 系统功能使用指导\n- 常见问题解答\n\n您可以随时向我咨询任何问题，我会尽力为您提供帮助！'
+        })
+      }, 1000)
+    }
+  } catch (error) {
+    console.error('检查新用户状态失败:', error)
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -211,7 +309,7 @@ watch(messages, () => {
   background-color: var(--bg-card);
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
   transition: right 0.3s ease;
-  z-index: 1000;
+  z-index: 2100;
   display: flex;
   flex-direction: column;
   
@@ -297,11 +395,13 @@ watch(messages, () => {
     display: flex;
     flex-direction: column;
     padding: 20px;
+    min-height: 0; /* 确保flex子元素能够正确收缩 */
     
     .message-list {
       flex: 1;
       overflow-y: auto;
       margin-bottom: 20px;
+      max-height: calc(100vh - 200px); /* 限制最大高度，确保输入框有空间 */
       
       .message {
         margin-bottom: 16px;

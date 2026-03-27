@@ -3,9 +3,15 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 import os
+import sys
 
-# 导入师兄的 API (确保 processing_fNIRS_new.py 在同级目录)
-from processing_fNIRS_new import get_processing_from_origin_data_48_ch, process_origin_to_fNIRS
+# 添加backend目录到路径，以便导入utils模块
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
+# 从utils目录导入处理函数
+from utils.processing_fNIRS_new import get_processing_from_origin_data_48_ch, process_origin_to_fNIRS
 
 class DualBranchFatigueDataset(Dataset):
     def __init__(self, csv_files, window_size_sec=2, step_size_sec=1, is_train=True, eeg_scaler=None, fnirs_scaler=None, label_to_index=None, auto_label_map=True, max_data_points=None):

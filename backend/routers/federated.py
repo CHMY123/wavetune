@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from models.federated import FederatedTraining, FederatedDevice, FederatedStats, SignalDetectionCount
 from models.user import User
 from schemas.auth import TokenData
-from middleware.auth import get_current_user, require_admin
+from middleware.auth import get_current_user, get_current_user_optional, require_admin
 from config.database import get_db
 from typing import List, Optional
 import os
@@ -351,7 +351,7 @@ async def get_training_records(
 
 @router.get("/stats")
 async def get_federated_stats(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
@@ -491,18 +491,22 @@ async def record_signal_detection(
 
 @router.get("/signal-detection/count")
 async def get_signal_detection_count(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
     获取信号检测次数
     """
     try:
-        detection_count = db.query(SignalDetectionCount).filter(
-            SignalDetectionCount.user_id == current_user.id
-        ).first()
-        
-        count = detection_count.detection_count if detection_count else 0
+        if current_user:
+            detection_count = db.query(SignalDetectionCount).filter(
+                SignalDetectionCount.user_id == current_user.id
+            ).first()
+            
+            count = detection_count.detection_count if detection_count else 0
+        else:
+            # 未登录用户，返回0
+            count = 0
         
         return {
             "code": 200,

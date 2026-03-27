@@ -825,7 +825,7 @@ onBeforeUnmount(() => {
   border-radius: var(--player-radius);
   box-shadow: var(--shadow-light);
   overflow: hidden;
-  z-index: 2000;
+  z-index: 1900;
   transition: var(--transition-normal);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.18);

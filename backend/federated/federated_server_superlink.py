@@ -7,9 +7,9 @@ import json
 from datetime import datetime
 import time
 
-# 添加上级目录到 Python 路径
+# 添加backend目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from models import MultimodalFatigueModel
+from utils.models import MultimodalFatigueModel
 
 # 获取项目根目录
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

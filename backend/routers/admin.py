@@ -25,7 +25,7 @@ from schemas.admin import (
     BatchDeleteRequest, BatchUpdateRequest,
     PaginationRequest, PaginationResponse, AdminResponse
 )
-from middleware.auth import require_admin
+from middleware.auth import require_admin, get_current_user_optional
 from routers.auth import log_operation, get_client_ip, get_user_agent
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -652,7 +652,7 @@ async def upload_file(
 # 系统统计
 @router.get("/dashboard")
 async def get_dashboard_stats(
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None
@@ -661,102 +661,119 @@ async def get_dashboard_stats(
     获取仪表盘统计数据
     """
     try:
-        # 用户统计
-        total_users = db.query(User).count()
-        active_users = db.query(User).filter(User.is_active == True).count()
-        admin_users = db.query(User).filter(User.role == "admin").count()
-        
-        # 音乐统计
+        # 音乐统计（所有用户都可以访问）
         total_music = db.query(Music).count()
         # 计算总播放量
         from sqlalchemy import func
         total_plays = db.query(func.sum(Music.play_count)).scalar() or 0
         
-        # 反馈统计
-        total_feedback = db.query(Feedback).count()
-        # 由于Feedback模型没有status字段，这里使用所有反馈数
-        pending_feedback = total_feedback
+        # 基础音乐统计数据
+        music_stats = {
+            "total_music": total_music,
+            "total_plays": total_plays
+        }
         
-        # 操作日志统计（最近7天）
-        seven_days_ago = datetime.now() - timedelta(days=7)
-        recent_operations = db.query(OperationLog).filter(
-            OperationLog.create_time >= seven_days_ago
-        ).count()
-        
-        # 计算用户增长趋势
-        growth_trend = []
-        today = datetime.now().date()
-        
-        # 确定日期范围
-        if start_date and end_date:
-            # 使用用户指定的日期范围
-            try:
-                start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                end = datetime.strptime(end_date, "%Y-%m-%d").date()
-            except ValueError:
-                # 如果日期格式不正确，使用默认的最近7天
-                start = today - timedelta(days=6)
-                end = today
-        else:
-            # 默认显示最近7天
-            start = today - timedelta(days=6)
-            end = today
-        
-        # 统计指定日期范围内每天的注册用户数
-        current_date = start
-        while current_date <= end:
-            start_of_day = datetime.combine(current_date, datetime.min.time())
-            end_of_day = datetime.combine(current_date, datetime.max.time())
+        # 如果是管理员，返回完整统计数据
+        if current_user and current_user.role == "admin":
+            # 用户统计
+            total_users = db.query(User).count()
+            active_users = db.query(User).filter(User.is_active == True).count()
+            admin_users = db.query(User).filter(User.role == "admin").count()
             
-            # 统计当天注册的用户数
-            user_count = db.query(User).filter(
-                User.create_time >= start_of_day,
-                User.create_time <= end_of_day
+            # 反馈统计
+            total_feedback = db.query(Feedback).count()
+            # 由于Feedback模型没有status字段，这里使用所有反馈数
+            pending_feedback = total_feedback
+            
+            # 操作日志统计（最近7天）
+            seven_days_ago = datetime.now() - timedelta(days=7)
+            recent_operations = db.query(OperationLog).filter(
+                OperationLog.create_time >= seven_days_ago
             ).count()
             
-            growth_trend.append({
-                "date": current_date.strftime("%Y-%m-%d"),
-                "count": user_count
-            })
+            # 计算用户增长趋势
+            growth_trend = []
+            today = datetime.now().date()
             
-            current_date += timedelta(days=1)
-        
-        # 计算今日新增用户数
-        start_of_today = datetime.combine(today, datetime.min.time())
-        end_of_today = datetime.combine(today, datetime.max.time())
-        new_users_today = db.query(User).filter(
-            User.create_time >= start_of_today,
-            User.create_time <= end_of_today
-        ).count()
-        
-        return {
-            "code": 200,
-            "msg": "获取仪表盘统计数据成功",
-            "data": {
-                "user_stats": {
-                    "total_users": total_users,
-                    "new_users_today": new_users_today,
-                    "growth_trend": growth_trend,
-                    "role_distribution": {
-                        "admin": admin_users,
-                        "user": total_users - admin_users
+            # 确定日期范围
+            if start_date and end_date:
+                # 使用用户指定的日期范围
+                try:
+                    start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                    end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                except ValueError:
+                    # 如果日期格式不正确，使用默认的最近7天
+                    start = today - timedelta(days=6)
+                    end = today
+            else:
+                # 默认显示最近7天
+                start = today - timedelta(days=6)
+                end = today
+            
+            # 统计指定日期范围内每天的注册用户数
+            current_date = start
+            while current_date <= end:
+                start_of_day = datetime.combine(current_date, datetime.min.time())
+                end_of_day = datetime.combine(current_date, datetime.max.time())
+                
+                # 统计当天注册的用户数
+                user_count = db.query(User).filter(
+                    User.create_time >= start_of_day,
+                    User.create_time <= end_of_day
+                ).count()
+                
+                growth_trend.append({
+                    "date": current_date.strftime("%Y-%m-%d"),
+                    "count": user_count
+                })
+                
+                current_date += timedelta(days=1)
+            
+            # 计算今日新增用户数
+            start_of_today = datetime.combine(today, datetime.min.time())
+            end_of_today = datetime.combine(today, datetime.max.time())
+            new_users_today = db.query(User).filter(
+                User.create_time >= start_of_today,
+                User.create_time <= end_of_today
+            ).count()
+            
+            return {
+                "code": 200,
+                "msg": "获取仪表盘统计数据成功",
+                "data": {
+                    "user_stats": {
+                        "total_users": total_users,
+                        "new_users_today": new_users_today,
+                        "growth_trend": growth_trend,
+                        "role_distribution": {
+                            "admin": admin_users,
+                            "user": total_users - admin_users
+                        }
+                    },
+                    "music_stats": {
+                        "total_music": total_music,
+                        "total_plays": total_plays
+                    },
+                    "fatigue_stats": {
+                        "total_detections": 0,
+                        "avg_fatigue_level": 0,
+                        "level_distribution": {}
+                    },
+                    "system_stats": {
+                        "total_operations": recent_operations,
+                        "error_rate": 0
                     }
-                },
-                "music_stats": {
-                    "total_music": total_music,
-                    "total_plays": total_plays
-                },
-                "fatigue_stats": {
-                    "total_detections": 0,
-                    "avg_fatigue_level": 0,
-                    "level_distribution": {}
-                },
-                "system_stats": {
-                    "total_operations": recent_operations,
-                    "error_rate": 0
                 }
             }
-        }
+        else:
+            # 非管理员用户，只返回音乐统计数据
+            return {
+                "code": 200,
+                "msg": "获取统计数据成功",
+                "data": {
+                    "music_stats": music_stats
+                }
+            }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取仪表盘统计数据失败: {str(e)}")

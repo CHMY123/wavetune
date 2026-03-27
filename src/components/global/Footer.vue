@@ -68,7 +68,7 @@ export default {
   padding: 0;
   margin-top: auto; 
   width: 100%; 
-  z-index: 9999;
+  z-index: 999;
   flex-shrink: 0; 
   box-sizing: border-box;
   position: relative; // 确保层级，防止被遮挡

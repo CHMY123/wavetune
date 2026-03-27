@@ -7,9 +7,9 @@ import glob
 import torch.optim as optim
 import torch.nn as nn
 
-# 添加上级目录到 Python 路径
+# 添加backend目录到 Python 路径
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from models import MultimodalFatigueModel
+from utils.models import MultimodalFatigueModel
 from data_loader import DualBranchFatigueDataset, create_dataloaders
 
 class FedClient(fl.client.Client):
