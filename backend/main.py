@@ -34,7 +34,6 @@ music_router = APIRouter()
 scene_router = APIRouter()
 detection_router = APIRouter()
 admin_router = APIRouter()
-analytics_router = APIRouter()
 ai_router = APIRouter()
 federated_router = APIRouter()
 
@@ -81,12 +80,6 @@ try:
     admin_router = admin.router if hasattr(admin, 'router') else APIRouter()
 except ImportError as e:
     logging.warning(f"⚠️  admin 路由模块导入失败：{e}，请确保 routers/admin.py 存在并正确")
-
-try:
-    from routers import analytics
-    analytics_router = analytics.router if hasattr(analytics, 'router') else APIRouter()
-except ImportError as e:
-    logging.warning(f"⚠️  analytics 路由模块导入失败：{e}，请确保 routers/analytics.py 存在并正确")
 
 try:
     from routers import ai
@@ -170,7 +163,6 @@ app.include_router(music_router, prefix="/api/music", tags=["音乐推荐"])
 app.include_router(scene_router, prefix="/api/scene", tags=["场景配置"])
 app.include_router(detection_router, prefix="/api/detection", tags=["快速检测"])
 app.include_router(admin_router, prefix="/api", tags=["CMS管理"])
-app.include_router(analytics_router, prefix="/api", tags=["数据分析"])
 app.include_router(ai_router, tags=["AI助手"])
 app.include_router(federated_router, tags=["联邦学习"])
 

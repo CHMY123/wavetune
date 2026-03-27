@@ -47,14 +47,6 @@ def _client():
             endpoint_url=S3_ENDPOINT,
             config=cfg
         )
-        logger.info("S3 客户端创建成功，尝试验证 bucket（若配置）")
-        # 尝试验证 bucket，但不要因验证失败阻止客户端返回（有些 S3 兼容服务对 head_bucket 权限有限制）
-        if S3_BUCKET:
-            try:
-                client.head_bucket(Bucket=S3_BUCKET)
-            except ClientError as e:
-                # 记录但不失败返回客户端
-                logger.warning(f"S3 head_bucket 检查失败（忽略）：{e.response.get('Error', {}).get('Message', str(e))}")
         return client
     except ClientError as e:
         logger.error(f"S3 客户端创建失败: {e.response['Error']['Message']}")
