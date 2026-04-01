@@ -84,6 +84,10 @@ request.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status;
+    const errorData = error.response?.data;
+    
+    // 优先显示后端返回的详细错误信息
+    const errorMessage = errorData?.detail || errorData?.msg || error.message || '操作失败';
 
     switch (status) {
       case 401:
@@ -106,7 +110,7 @@ request.interceptors.response.use(
         ElMessage.error('服务器内部错误，请稍后重试');
         break;
       default:
-        ElMessage.error(`请求失败（${status || '未知错误'}）`);
+        ElMessage.error(errorMessage);
     }
 
     return Promise.reject(error);

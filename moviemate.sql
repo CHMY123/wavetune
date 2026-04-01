@@ -460,6 +460,78 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Table structure for table `two_back_experiment`
+--
+
+
+DROP TABLE IF EXISTS `two_back_experiment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `two_back_experiment` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL COMMENT '用户ID',
+  `experiment_id` varchar(100) NOT NULL COMMENT '实验唯一标识',
+  `config` json DEFAULT NULL COMMENT '实验配置',
+  `results` json DEFAULT NULL COMMENT '实验结果',
+  `score` int DEFAULT NULL COMMENT '实验得分',
+  `accuracy` float DEFAULT NULL COMMENT '准确率',
+  `reaction_time` int DEFAULT NULL COMMENT '平均反应时间(ms)',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `experiment_id` (`experiment_id`),
+  KEY `idx_two_back_user_id` (`user_id`),
+  KEY `idx_two_back_create_time` (`create_time`),
+  CONSTRAINT `two_back_experiment_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `federated_learning`
+--
+
+
+DROP TABLE IF EXISTS `federated_learning`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `federated_learning` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL COMMENT '用户ID',
+  `device_id` varchar(100) NOT NULL COMMENT '设备ID',
+  `model_version` varchar(50) DEFAULT NULL COMMENT '模型版本',
+  `is_participating` tinyint(1) DEFAULT '0' COMMENT '是否参与',
+  `training_progress` int DEFAULT '0' COMMENT '训练进度(%)',
+  `last_training_time` datetime DEFAULT NULL COMMENT '最后训练时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`,`device_id`),
+  KEY `idx_federated_user_id` (`user_id`),
+  KEY `idx_federated_device_id` (`device_id`),
+  KEY `idx_federated_is_participating` (`is_participating`),
+  CONSTRAINT `federated_learning_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;; 
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `update_federated_time` BEFORE UPDATE ON `federated_learning` FOR EACH ROW BEGIN
+    SET NEW.`update_time` = CURRENT_TIMESTAMP;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

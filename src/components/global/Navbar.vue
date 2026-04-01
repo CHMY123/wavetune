@@ -4,7 +4,7 @@
     
     <div class="navbar-content">
       <!-- 系统名称 -->
-      <div class="navbar-brand">
+      <div class="navbar-brand" @click="goToHome">
         <!-- SCNU Logo容器 -->
         <div class="brand-logo-container">
           <img src="/static/logo/logo.png" alt="SCNU Logo" class="brand-logo-image" />
@@ -171,6 +171,10 @@ const updateActiveIndex = () => {
 const handleSelect = (key) => {
   activeIndex.value = key
   router.push(key)
+}
+
+const goToHome = () => {
+  router.push('/')
 }
 
 const handleUserCommand = (command) => {

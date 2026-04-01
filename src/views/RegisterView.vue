@@ -397,7 +397,9 @@ export default {
           result = await requestMethod.post('/auth/register', registerData)
         } catch (err) {
           console.error('注册错误:', err)
-          ElMessage.error(err.message || '注册失败，请检查网络连接')
+          // 优先展示后端返回的详细错误信息
+          const errorMessage = err.response?.data?.detail || err.response?.data?.msg || err.message || '注册失败，请检查网络连接'
+          ElMessage.error(errorMessage)
           return
         }
 

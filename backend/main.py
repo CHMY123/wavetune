@@ -148,7 +148,7 @@ app = FastAPI(
 # ========== 配置CORS跨域 ==========
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://wavetune-6xb1.onrender.com", "http://localhost:8080", "http://localhost:8081"],
+    allow_origins=["https://wavetune-6xb1.onrender.com", "http://localhost:8080", "http://localhost:8081", "https://4facb562.r25.cpolar.top"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

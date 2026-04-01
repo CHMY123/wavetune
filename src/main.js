@@ -27,7 +27,7 @@ app.use(router)
 
 // 创建 axios 实例
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'

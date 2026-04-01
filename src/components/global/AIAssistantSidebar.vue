@@ -193,52 +193,59 @@ const sendMessage = async () => {
   scrollToBottom()
   
   // 调用后端API
-  try {
-    const response = await requestMethod.post('/ai/chat', {
-      message: input
-    })
-    
-    // 逐字显示AI回复
-    const aiResponse = response.response
-    let currentText = ''
-    let index = 0
-    
-    const typingInterval = setInterval(() => {
-      if (index < aiResponse.length) {
-        currentText += aiResponse.charAt(index)
-        messages.value[aiMessageIndex].content = currentText
-        index++
-        // 滚动到底部
-        nextTick(() => {
-          scrollToBottom()
-        })
-      } else {
-        clearInterval(typingInterval)
-        isLoading.value = false
-      }
-    }, 30) // 控制打字速度
-  } catch (error) {
-    console.error('AI API 调用失败:', error)
-    // 逐字显示错误消息
-    const errorMessage = '抱歉，系统出现错误，请稍后再试。'
-    let currentText = ''
-    let index = 0
-    
-    const typingInterval = setInterval(() => {
-      if (index < errorMessage.length) {
-        currentText += errorMessage.charAt(index)
-        messages.value[aiMessageIndex].content = currentText
-        index++
-        // 滚动到底部
-        nextTick(() => {
-          scrollToBottom()
-        })
-      } else {
-        clearInterval(typingInterval)
-        isLoading.value = false
-      }
-    }, 50)
-  }
+    try {
+      // 准备历史消息，只发送最近的3条对话（6条消息）
+      const history = messages.value.slice(-6).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+      
+      const response = await requestMethod.post('/ai/chat', {
+        message: input,
+        history: history
+      })
+      
+      // 逐字显示AI回复
+      const aiResponse = response.response
+      let currentText = ''
+      let index = 0
+      
+      const typingInterval = setInterval(() => {
+        if (index < aiResponse.length) {
+          currentText += aiResponse.charAt(index)
+          messages.value[aiMessageIndex].content = currentText
+          index++
+          // 滚动到底部
+          nextTick(() => {
+            scrollToBottom()
+          })
+        } else {
+          clearInterval(typingInterval)
+          isLoading.value = false
+        }
+      }, 30) // 控制打字速度
+    } catch (error) {
+      console.error('AI API 调用失败:', error)
+      // 逐字显示错误消息
+      const errorMessage = '抱歉，系统出现错误，请稍后再试。'
+      let currentText = ''
+      let index = 0
+      
+      const typingInterval = setInterval(() => {
+        if (index < errorMessage.length) {
+          currentText += errorMessage.charAt(index)
+          messages.value[aiMessageIndex].content = currentText
+          index++
+          // 滚动到底部
+          nextTick(() => {
+            scrollToBottom()
+          })
+        } else {
+          clearInterval(typingInterval)
+          isLoading.value = false
+        }
+      }, 50)
+    }
 }
 
 const scrollToBottom = () => {

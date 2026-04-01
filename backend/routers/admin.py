@@ -459,7 +459,7 @@ async def get_feedback_list(
         
         # 筛选
         if type:
-            query = query.filter(Feedback.type == type)
+            query = query.filter(Feedback.feedback_type == type)
         if status:
             query = query.filter(Feedback.status == status)
         
@@ -475,6 +475,7 @@ async def get_feedback_list(
         for feedback in feedback_list:
             data = feedback.to_dict()
             data["username"] = feedback.user.username if feedback.user else "未知用户"
+            data["avatar"] = feedback.user.avatar if feedback.user else None
             feedback_data.append(data)
         
         return {
@@ -514,7 +515,12 @@ async def update_feedback(
         # 更新反馈信息
         update_data = feedback_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
-            setattr(feedback, field, value)
+            if field == 'reply':
+                setattr(feedback, 'admin_reply', value)
+                # 更新回复时间
+                setattr(feedback, 'reply_time', datetime.now())
+            else:
+                setattr(feedback, field, value)
         
         db.commit()
         db.refresh(feedback)

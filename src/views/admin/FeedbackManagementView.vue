@@ -19,9 +19,9 @@
         clearable
         style="width: 160px; margin-right: 16px;"
       >
-        <el-option label="功能建议" value="suggestion" />
-        <el-option label="bug报告" value="bug" />
-        <el-option label="其他" value="other" />
+        <el-option label="脑疲劳检测准确性" value="accuracy" />
+        <el-option label="轻音乐推荐效果" value="music" />
+        <el-option label="系统功能建议" value="function" />
       </el-select>
       <el-select
         v-model="filterStatus"
@@ -88,9 +88,9 @@
           <span v-else class="no-reply">未回复</span>
         </template>
       </el-table-column>
-      <el-table-column prop="created_at" label="创建时间" width="180">
+      <el-table-column prop="submit_time" label="创建时间" width="180">
         <template #default="scope">
-          {{ formatDate(scope.row.created_at) }}
+          {{ formatDate(scope.row.submit_time) }}
         </template>
       </el-table-column>
       <el-table-column label="操作" width="200">

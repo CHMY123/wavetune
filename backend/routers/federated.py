@@ -5,6 +5,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from models.federated import FederatedTraining, FederatedDevice, FederatedStats, SignalDetectionCount
 from models.user import User
 from schemas.auth import TokenData
@@ -35,6 +36,7 @@ training_progress_store = {}
 async def upload_federated_data(
     file: UploadFile = File(...),
     rounds: int = Form(..., ge=1, le=10),
+    fatigue_status: str = Form(...),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -43,6 +45,7 @@ async def upload_federated_data(
     
     - **file**: CSV数据文件
     - **rounds**: 训练轮次（1-10）
+    - **fatigue_status**: 疲劳状态
     """
     try:
         # 保存上传的文件
@@ -61,7 +64,9 @@ async def upload_federated_data(
             user_id=current_user.id,
             client_id=client_id,
             round_number=rounds,
-            status="pending"
+            status="pending",
+            fatigue_status=fatigue_status,
+            training_time=datetime.now(BEIJING_TZ)
         )
         db.add(training)
         db.commit()
@@ -326,7 +331,8 @@ async def get_training_records(
                 "accuracy": record.accuracy,
                 "loss": record.loss,
                 "training_time": record.training_time.isoformat() if record.training_time else None,
-                "status": record.status
+                "status": record.status,
+                "fatigue_status": record.fatigue_status
             })
         
         return {
@@ -491,28 +497,20 @@ async def record_signal_detection(
 
 @router.get("/signal-detection/count")
 async def get_signal_detection_count(
-    current_user: User = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
-    获取信号检测次数
+    获取信号检测次数（所有用户的总次数）
     """
     try:
-        if current_user:
-            detection_count = db.query(SignalDetectionCount).filter(
-                SignalDetectionCount.user_id == current_user.id
-            ).first()
-            
-            count = detection_count.detection_count if detection_count else 0
-        else:
-            # 未登录用户，返回0
-            count = 0
+        # 计算所有用户的总检测次数
+        total_count = db.query(func.sum(SignalDetectionCount.detection_count)).scalar() or 0
         
         return {
             "code": 200,
             "msg": "获取检测次数成功",
             "data": {
-                "detection_count": count
+                "detection_count": total_count
             }
         }
         

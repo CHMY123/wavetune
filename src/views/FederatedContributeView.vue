@@ -85,6 +85,19 @@
               />
               <div class="form-hint">建议设置为3-5轮，平衡训练效果和时间</div>
             </el-form-item>
+            
+            <!-- 疲劳状态选择 -->
+            <el-form-item label="疲劳状态">
+              <el-select v-model="selectedFatigueStatus" placeholder="请选择疲劳状态" :disabled="loading">
+                <el-option label="静息态" value="静息态" />
+                <el-option label="正常" value="正常" />
+                <el-option label="轻度疲劳" value="轻度疲劳" />
+                <el-option label="中度疲劳" value="中度疲劳" />
+                <el-option label="重度疲劳" value="重度疲劳" />
+                <el-option label="疲劳恢复期" value="疲劳恢复期" />
+                <el-option label="其他" value="其他" />
+              </el-select>
+            </el-form-item>
           </div>
         </div>
 
@@ -211,6 +224,7 @@ export default {
   setup() {
     const selectedFile = ref(null)
     const trainingRounds = ref(3)
+    const selectedFatigueStatus = ref('')
     const loading = ref(false)
     const successDialogVisible = ref(false)
     const trainingRecords = ref([])
@@ -234,12 +248,18 @@ export default {
         ElMessage.error('请选择CSV文件')
         return
       }
+      
+      if (!selectedFatigueStatus.value) {
+        ElMessage.error('请选择疲劳状态')
+        return
+      }
 
       loading.value = true
       try {
         const formData = new FormData()
         formData.append('file', selectedFile.value)
         formData.append('rounds', trainingRounds.value)
+        formData.append('fatigue_status', selectedFatigueStatus.value)
 
         const response = await requestMethod.postForm('/federated/upload-data', formData)
 
@@ -275,6 +295,7 @@ export default {
     const resetForm = () => {
       selectedFile.value = null
       trainingRounds.value = 3
+      selectedFatigueStatus.value = ''
     }
 
     // 加载训练记录
@@ -311,12 +332,10 @@ export default {
       return textMap[status] || status
     }
 
-    // 格式化时间（转换为北京时间）
+    // 格式化时间（直接使用北京时间）
     const formatTime = (timeStr) => {
       if (!timeStr) return ''
       const date = new Date(timeStr)
-      // 转换为北京时间（+8小时）
-      date.setHours(date.getHours() + 8)
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
@@ -328,13 +347,14 @@ export default {
 
     // 格式化进度条显示
     const formatProgress = (percentage) => {
-      return `${percentage}%`
+      return `${percentage.toFixed(2)}%`
     }
 
     // 轮询训练状态
     const pollTrainingStatus = (trainingId) => {
       let lastProgress = -1
       let lastMessage = ''
+      let notificationShown = false
       
       pollingInterval.value = setInterval(async () => {
         try {
@@ -362,7 +382,8 @@ export default {
               lastMessage = currentMessage
             }
             
-            if (data.status === 'completed') {
+            if (data.status === 'completed' && !notificationShown) {
+              notificationShown = true
               progressStatus.value = 'success'
               // 添加完成日志
               trainingLogs.value.push({
@@ -455,6 +476,7 @@ export default {
     return {
       selectedFile,
       trainingRounds,
+      selectedFatigueStatus,
       loading,
       successDialogVisible,
       trainingRecords,

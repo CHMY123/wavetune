@@ -1,8 +1,8 @@
 <template>
-  <div class="admin-layout" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-    <!-- 侧边导航 -->
-    <aside class="admin-sidebar" :class="{ 'collapsed': sidebarCollapsed }">
-      <div class="admin-sidebar-header">
+  <div class="admin-layout" :class="{ 'sidebar-collapsed': sidebarCollapsed, 'is-mobile': isMobile }">
+    <!-- 桌面端侧边导航 -->
+    <aside v-if="!isMobile" class="admin-sidebar" :class="{ 'collapsed': sidebarCollapsed }">
+      <div class="admin-sidebar-header" @click="goToHome">
         <h2 v-if="!sidebarCollapsed">WaveTune CMS</h2>
         <el-icon v-else class="sidebar-logo"><House /></el-icon>
       </div>
@@ -47,13 +47,72 @@
         </ul>
       </nav>
     </aside>
-    
+
+    <!-- 移动端侧边栏（悬浮窗模式） -->
+    <aside v-if="isMobile" class="mobile-sidebar" :class="{ 'sidebar-open': mobileSidebarOpen }">
+      <div class="mobile-sidebar-header" @click="goToHome">
+        <h2>WaveTune CMS</h2>
+        <button class="close-btn" @click="toggleMobileSidebar">
+          <span class="close-icon">×</span>
+        </button>
+      </div>
+      <nav class="mobile-nav">
+        <ul>
+          <li>
+            <router-link to="/admin/dashboard" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><House /></el-icon>
+              <span>仪表盘</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/admin/music" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><Headset /></el-icon>
+              <span>音乐管理</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/admin/users" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><User /></el-icon>
+              <span>用户管理</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/admin/feedback" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><ChatDotRound /></el-icon>
+              <span>反馈管理</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/admin/federated" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><DataAnalysis /></el-icon>
+              <span>联邦学习管理</span>
+            </router-link>
+          </li>
+          <li>
+            <router-link to="/admin/config" class="nav-item" @click="toggleMobileSidebar">
+              <el-icon><Setting /></el-icon>
+              <span>系统配置</span>
+            </router-link>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- 移动端遮罩层 -->
+    <div v-if="isMobile && mobileSidebarOpen" class="mobile-backdrop" @click="toggleMobileSidebar"></div>
+
+    <!-- 移动端悬浮按钮 -->
+    <button v-if="isMobile" class="mobile-toggle-btn" @click="toggleMobileSidebar" :class="{ 'btn-open': mobileSidebarOpen }">
+      <el-icon v-if="!mobileSidebarOpen"><Menu /></el-icon>
+      <el-icon v-else><Close /></el-icon>
+    </button>
+
     <!-- 主内容区 -->
     <main class="admin-content">
       <!-- 顶部栏 -->
       <header class="admin-header">
         <div class="admin-header-left">
-          <el-button type="text" @click="toggleSidebar" class="sidebar-toggle" :icon="sidebarCollapsed ? Menu : Close" />
+          <el-button v-if="!isMobile" type="text" @click="toggleSidebar" class="sidebar-toggle" :icon="sidebarCollapsed ? Menu : Close" />
           <el-breadcrumb separator="/">
             <el-breadcrumb-item v-for="(item, index) in breadcrumb" :key="index">
               {{ item }}
@@ -80,7 +139,7 @@
           </el-dropdown>
         </div>
       </header>
-      
+
       <!-- 内容区域 -->
       <div class="admin-main">
         <router-view v-slot="{ Component }">
@@ -105,6 +164,7 @@ const userInfo = ref({});
 const breadcrumb = ref([]);
 const sidebarCollapsed = ref(false);
 const isMobile = ref(false);
+const mobileSidebarOpen = ref(false);
 
 // 计算当前激活的菜单
 const activeMenu = computed(() => {
@@ -120,9 +180,19 @@ const checkIsMobile = () => {
   }
 };
 
-// 切换侧边栏
+// 切换侧边栏（桌面端）
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
+};
+
+// 切换移动端侧边栏
+const toggleMobileSidebar = () => {
+  mobileSidebarOpen.value = !mobileSidebarOpen.value;
+};
+
+// 跳转到首页
+const goToHome = () => {
+  router.push('/');
 };
 
 // 计算面包屑
@@ -136,7 +206,7 @@ const updateBreadcrumb = () => {
     '/admin/config': ['系统配置'],
     '/admin/federated': ['联邦学习管理']
   };
-  
+
   breadcrumb.value = breadcrumbMap[path] || ['仪表盘'];
 };
 
@@ -168,19 +238,22 @@ const checkAdminPermission = () => {
     router.push('/login');
     return false;
   }
-  
+
   const user = getUserInfoFromLocalStorage();
   if (!user.role || user.role !== 'admin') {
     router.push('/user-center');
     return false;
   }
-  
+
   return true;
 };
 
 // 监听窗口大小变化
 const handleResize = () => {
   checkIsMobile();
+  if (!isMobile.value) {
+    mobileSidebarOpen.value = false;
+  }
 };
 
 // 初始化
@@ -196,10 +269,6 @@ onMounted(() => {
 // 监听路由变化
 watch(() => route.path, () => {
   updateBreadcrumb();
-  // 在移动设备上，切换路由后自动收起侧边栏
-  if (isMobile.value) {
-    sidebarCollapsed.value = true;
-  }
 });
 
 // 清理事件监听
@@ -215,12 +284,12 @@ onUnmounted(() => {
   background-color: #f5f7fa;
   transition: all 0.3s ease;
   position: relative;
-  
+
   // 深色主题样式
   :global(.theme-dark) & {
     background-color: #111827;
   }
-  
+
   .admin-sidebar {
     width: 240px;
     background-color: #1f2937;
@@ -228,37 +297,37 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     transition: all 0.3s ease;
-    
+
     &.collapsed {
       width: 64px;
-      
+
       .admin-sidebar-header {
         padding: 16px;
         display: flex;
         justify-content: center;
-        
+
         h2 {
           display: none;
         }
-        
+
         .sidebar-logo {
           display: block;
           font-size: 24px;
           color: #ffffff;
         }
       }
-      
+
       .admin-nav {
         ul {
           li {
             .nav-item {
               padding: 12px 8px;
               justify-content: center;
-              
+
               el-icon {
                 margin-right: 0;
               }
-              
+
               span {
                 display: none;
               }
@@ -267,34 +336,40 @@ onUnmounted(() => {
         }
       }
     }
-    
+
     .admin-sidebar-header {
       padding: 20px;
       border-bottom: 1px solid #374151;
-      
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
       h2 {
         font-size: 18px;
         font-weight: 600;
         margin: 0;
       }
-      
+
       .sidebar-logo {
         display: none;
       }
     }
-    
+
     .admin-nav {
       flex: 1;
       padding: 20px 0;
-      
+
       ul {
         list-style: none;
         padding: 0;
         margin: 0;
-        
+
         li {
           margin: 0;
-          
+
           .nav-item {
             display: flex;
             align-items: center;
@@ -302,17 +377,17 @@ onUnmounted(() => {
             color: #d1d5db;
             text-decoration: none;
             transition: all 0.3s ease;
-            
+
             el-icon {
               margin-right: 10px;
               font-size: 18px;
             }
-            
+
             &:hover {
               background-color: #374151;
               color: #ffffff;
             }
-            
+
             &.router-link-active {
               background-color: #3b82f6;
               color: #ffffff;
@@ -322,13 +397,13 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   .admin-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    
+
     .admin-header {
       display: flex;
       justify-content: space-between;
@@ -338,44 +413,44 @@ onUnmounted(() => {
       background-color: #ffffff;
       border-bottom: 1px solid #e5e7eb;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      
+
       // 深色主题样式
       :global(.theme-dark) & {
         background-color: #1f2937;
         border-bottom: 1px solid #374151;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-        
+
         .admin-header-left {
           el-breadcrumb {
             color: #d1d5db;
           }
         }
-        
+
         .admin-header-right {
           .admin-user {
             color: #d1d5db;
-            
+
             &:hover {
               background-color: #374151;
             }
           }
         }
       }
-      
+
       .admin-header-left {
         display: flex;
         align-items: center;
         gap: 12px;
-        
+
         .sidebar-toggle {
           display: none;
         }
-        
+
         el-breadcrumb {
           font-size: 14px;
         }
       }
-      
+
       .admin-header-right {
         .admin-user {
           display: flex;
@@ -384,28 +459,28 @@ onUnmounted(() => {
           padding: 8px 12px;
           border-radius: 6px;
           transition: all 0.3s ease;
-          
+
           &:hover {
             background-color: #f3f4f6;
           }
-          
+
           el-avatar {
             margin-right: 10px;
           }
-          
+
           span {
             margin-right: 5px;
           }
         }
       }
     }
-    
+
     .admin-main {
       flex: 1;
       padding: 20px;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      
+
       // 深色主题样式
       :global(.theme-dark) & {
         background-color: #111827;
@@ -413,77 +488,214 @@ onUnmounted(() => {
       }
     }
   }
-  
-  // 移动设备适配
-  @media (max-width: 768px) {
-    height: 100vh;
-    overflow: hidden;
-    
-    .admin-sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      height: 100vh;
-      z-index: 1000;
-      transform: translateX(-100%);
-      
-      &.collapsed {
-        transform: translateX(0);
-      }
-    }
-    
-    .admin-content {
-      width: 100%;
-      height: 100vh;
-      
-      .admin-header {
-        padding: 0 16px;
-        
-        .admin-header-left {
-          .sidebar-toggle {
-            display: block;
-          }
-          
-          el-breadcrumb {
-            font-size: 12px;
-          }
-        }
-      }
-      
-      .admin-main {
-        padding: 16px;
-        height: calc(100vh - 60px);
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-    }
-  }
-  
+
   // 平板设备适配
   @media (min-width: 769px) and (max-width: 1024px) {
     .admin-sidebar {
       width: 200px;
-      
+
       .admin-sidebar-header {
         padding: 16px;
-        
+
         h2 {
           font-size: 16px;
         }
       }
-      
+
       .admin-nav {
         ul {
           li {
             .nav-item {
               padding: 10px 16px;
-              
+
               el-icon {
                 font-size: 16px;
               }
             }
           }
         }
+      }
+    }
+  }
+}
+
+// 移动端悬浮窗模式
+.mobile-sidebar {
+  position: fixed;
+  left: -280px;
+  top: 0;
+  width: 280px;
+  height: 100vh;
+  background-color: #1f2937;
+  color: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  transition: left 0.3s ease;
+  z-index: 2100;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
+
+  &.sidebar-open {
+    left: 0;
+  }
+
+  .mobile-sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #d1d5db;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: #374151;
+          color: #ffffff;
+        }
+      }
+    }
+
+  .mobile-nav {
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+
+      li {
+        margin: 0;
+
+        .nav-item {
+          display: flex;
+          align-items: center;
+          padding: 14px 20px;
+          color: #d1d5db;
+          text-decoration: none;
+          transition: all 0.3s ease;
+
+          el-icon {
+            margin-right: 12px;
+            font-size: 20px;
+          }
+
+          span {
+            font-size: 15px;
+          }
+
+          &:hover {
+            background-color: #374151;
+            color: #ffffff;
+          }
+
+          &.router-link-active {
+            background-color: #3b82f6;
+            color: #ffffff;
+          }
+        }
+      }
+    }
+  }
+}
+
+.mobile-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2099;
+  display: block;
+}
+
+.mobile-toggle-btn {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  transition: all 0.3s ease;
+  z-index: 999;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.5);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &.btn-open {
+    left: 300px;
+  }
+
+  .el-icon {
+    font-size: 24px;
+  }
+}
+
+// 移动端适配
+@media (max-width: 768px) {
+  .admin-layout {
+    height: 100vh;
+    overflow: hidden;
+
+    .admin-content {
+      width: 100%;
+      height: 100vh;
+
+      .admin-header {
+        padding: 0 16px;
+
+        .admin-header-left {
+          el-breadcrumb {
+            font-size: 12px;
+          }
+        }
+      }
+
+      .admin-main {
+        padding: 16px;
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
     }
   }

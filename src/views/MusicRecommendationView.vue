@@ -614,10 +614,14 @@ export default {
         this.currentFatigueLevel = fatigueLevel
         this.currentScene = scene || ''
         
+        // 当用户手动选择筛选条件时，清除音乐类型偏好，确保完全按照用户选择的条件筛选
+        this.currentMusicType = ''
+        
         // 保存到localStorage
         try {
           localStorage.setItem('current_fatigue_level', this.currentFatigueLevel)
           localStorage.setItem('current_scene', this.currentScene)
+          localStorage.setItem('current_music_type', '')
         } catch (e) {
           console.warn('无法保存筛选设置到localStorage:', e)
         }
@@ -632,6 +636,10 @@ export default {
       this.isFromSignalMonitor = false
       try {
         localStorage.removeItem('from_signal_monitor')
+        // 清除保存的筛选条件，确保使用用户偏好设置
+        localStorage.removeItem('current_fatigue_level')
+        localStorage.removeItem('current_scene')
+        localStorage.removeItem('current_music_type')
       } catch (e) {}
       
       // 清除URL查询参数
@@ -1113,11 +1121,34 @@ export default {
           return
         }
         
+        // 检查是否有手动设置的筛选条件（localStorage中已保存）
+        const savedFatigueLevel = localStorage.getItem('current_fatigue_level')
+        const savedScene = localStorage.getItem('current_scene')
+        
+        // 如果存在保存的筛选条件，使用它们
+        if (savedFatigueLevel) {
+          this.currentFatigueLevel = savedFatigueLevel
+          this.currentScene = savedScene || ''
+          this.currentMusicType = '' // 清除音乐类型偏好
+          
+          // 设置统一的筛选值
+          this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
+          
+          console.log('[MusicRecommendation] 使用保存的筛选条件:', {
+            fatigueLevel: this.currentFatigueLevel,
+            scene: this.currentScene
+          })
+          
+          // 加载音乐
+          this.loadMusic()
+          return
+        }
+        
         // 从本地存储获取用户信息
         const userStr = localStorage.getItem('user')
         if (!userStr) {
           // 如果没有用户信息，使用默认值
-          this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+          this.currentFatigueLevel = 'Medium'
           this.currentScene = ''
           this.currentMusicType = ''
           // 设置统一的筛选值
@@ -1147,36 +1178,30 @@ export default {
               if (defaultLevel === 'heavy') displayLevel = 'Heavy'
               
               this.currentFatigueLevel = displayLevel
-              try { localStorage.setItem('current_fatigue_level', displayLevel) } catch (e) {}
+            } else {
+              this.currentFatigueLevel = 'Medium'
             }
             
             // 使用用户的常处场景
             const frequentScene = preferences.frequent_scene || ''
-            if (frequentScene) {
-              this.currentScene = frequentScene
-              try { localStorage.setItem('current_scene', frequentScene) } catch (e) {}
-            }
+            this.currentScene = frequentScene
             
             // 使用用户的偏好音乐类型
             const preferredMusicType = preferences.preferred_music_type || ''
             if (preferredMusicType && preferredMusicType !== 'all') {
               this.currentMusicType = preferredMusicType
-              try { localStorage.setItem('current_music_type', preferredMusicType) } catch (e) {}
             } else {
               this.currentMusicType = ''
-              try { localStorage.setItem('current_music_type', '') } catch (e) {}
             }
           } else {
-            // 如果关闭个性化推荐，使用上次的设置
-            this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+            // 如果关闭个性化推荐，使用默认值
+            this.currentFatigueLevel = 'Medium'
             this.currentScene = '' // 场景改为不限
             this.currentMusicType = '' // 音乐类型改为不限
-            try { localStorage.setItem('current_scene', '') } catch (e) {}
-            try { localStorage.setItem('current_music_type', '') } catch (e) {}
           }
         } else {
           // 如果获取偏好设置失败，使用默认值
-          this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+          this.currentFatigueLevel = 'Medium'
           this.currentScene = ''
           this.currentMusicType = ''
         }
@@ -1184,12 +1209,21 @@ export default {
         // 设置统一的筛选值
         this.combinedFilter = `${this.currentFatigueLevel}:${this.currentScene}`
         
+        // 保存到localStorage
+        try {
+          localStorage.setItem('current_fatigue_level', this.currentFatigueLevel)
+          localStorage.setItem('current_scene', this.currentScene)
+          localStorage.setItem('current_music_type', this.currentMusicType)
+        } catch (e) {
+          console.warn('无法保存偏好设置到localStorage:', e)
+        }
+        
         // 加载音乐
         this.loadMusic()
       } catch (error) {
         console.error('获取用户偏好设置失败:', error)
         // 出错时使用默认值
-        this.currentFatigueLevel = localStorage.getItem('current_fatigue_level') || 'Medium'
+        this.currentFatigueLevel = 'Medium'
         this.currentScene = ''
         this.currentMusicType = ''
         // 设置统一的筛选值

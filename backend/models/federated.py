@@ -32,6 +32,7 @@ class FederatedTraining(Base):
     loss = Column(Float, default=0)
     training_time = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(Enum(TrainingStatus), default=TrainingStatus.PENDING)
+    fatigue_status = Column(String(50), nullable=True)
 
 class FederatedDevice(Base):
     """联邦学习设备表"""

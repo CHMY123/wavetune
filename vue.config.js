@@ -8,6 +8,12 @@ module.exports = defineConfig({
   devServer: {
     port: 8080,
     
+    // 允许的主机名，添加内网穿透域名
+    allowedHosts: [
+      'localhost',
+      '4facb562.r25.cpolar.top'
+    ],
+    
     // 仅保留默认的 public 目录作为静态资源根目录（无需额外配置）
     // 删掉多余的 static 数组配置，使用 Vue CLI 默认的 public 目录映射
     static: {
@@ -30,13 +36,7 @@ module.exports = defineConfig({
     client: {
       overlay: {
         warnings: false,
-        errors: false,
-        runtimeErrors: (error) => {
-          if (error.message && error.message.includes('ResizeObserver loop completed with undelivered notifications')) {
-            return false
-          }
-          return true
-        }
+        errors: true
       }
     }
   },

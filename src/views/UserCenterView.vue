@@ -680,6 +680,9 @@ export default {
 
         if (result && result.code === 200) {
           ElMessage.success('资料更新成功')
+          // 清除用户信息缓存
+          const cacheKey = `user_info_${uid}`
+          localStorage.removeItem(cacheKey)
           // 更新本地存储
           try { 
             const localUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -919,12 +922,12 @@ export default {
         })
         if (result && result.code === 200) {
           ElMessage.success('头像上传成功')
-          // 确保头像URL可访问
-          try {
-            userInfo.value.avatar = resolveMedia(result.data.avatar_url)
-          } catch (e) {
-            userInfo.value.avatar = resolveMedia('/static/avatar/default.jpg')
-          }
+          // 清除用户信息缓存
+          const uid = getCurrentUserId()
+          const cacheKey = `user_info_${uid}`
+          localStorage.removeItem(cacheKey)
+          // 重新获取用户信息，确保头像和资料都更新
+          await fetchUserInfo()
           // 更新本地存储
           try { 
             const localUser = JSON.parse(localStorage.getItem('user') || '{}')

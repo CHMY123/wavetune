@@ -8,7 +8,7 @@
             <h1 class="system-title gradient-text">WaveTune</h1>
             <p class="system-subtitle">基于多模态生理信号的脑疲劳检测和轻音乐个性化干预系统</p>
             <p class="system-desc">
-              采用联邦学习技术保护用户隐私，通过EEG、EOG、HRV等多模态生理信号实时监测脑疲劳状态，
+              采用联邦学习技术保护用户隐私，通过EEG、fNIRS等多模态生理信号实时监测脑疲劳状态，
               并提供个性化轻音乐干预方案，帮助用户缓解疲劳、提升专注力。
             </p>
             <div class="hero-actions">
@@ -106,13 +106,18 @@
 
       <!-- 贡献者名单 -->
       <div class="contributors-section">
-        <CardContainer title="贡献者" waveStyle gradientBorder>
-          <div class="contributors-list">
-            <div class="contributor-item" v-for="(contributor, index) in contributors" :key="index">
-              <div class="contributor-avatar">
-                <el-icon><User /></el-icon>
+        <CardContainer title="团队成员" waveStyle gradientBorder>
+          <div class="team-members-list">
+            <div class="team-member-card" v-for="(member, index) in teamMembers" :key="index">
+              <div class="member-avatar">
+                <img :src="member.avatar" :alt="member.name" v-if="member.avatar" />
+                <div class="avatar-placeholder" v-else>{{ member.name.charAt(0) }}</div>
               </div>
-              <span class="contributor-name">{{ contributor }}</span>
+              <div class="member-info">
+                <h4 class="member-name">{{ member.name }}</h4>
+                <p class="member-position">职位：{{ member.position }}</p>
+                <p class="member-wechat">微信号：{{ member.wechat }}</p>
+              </div>
             </div>
           </div>
         </CardContainer>
@@ -205,11 +210,31 @@ export default {
       }
     ])
     
-    const contributors = ref([
-      '赖文韬',
-      '李洋',
-      '钟红红',
-      '梁炜琳'
+    const teamMembers = ref([
+      {
+        name: '钟红红',
+        position: '项目负责人',
+        wechat: 'red9267426426',
+        avatar: 'static/avatar/zhh.jpg'
+      },
+      {
+        name: '赖文韬',
+        position: '全栈开发工程师',
+        wechat: 'laiwentao0618',
+        avatar: 'static/avatar/default.jpg'
+      },
+      {
+        name: '李洋',
+        position: '模型开发工程师',
+        wechat: 'ymyxcyntz2004',
+        avatar: 'static/avatar/ly.jpg'
+      },
+      {
+        name: '梁炜琳',
+        position: '架构工程师',
+        wechat: 'ForestJacqueline14',
+        avatar: 'static/avatar/lwl.jpg'
+      }
     ])
     
     const navigateTo = (route) => {
@@ -279,7 +304,7 @@ export default {
     return {
       features,
       stats,
-      contributors,
+      teamMembers,
       navigateTo
     }
   }
@@ -740,45 +765,71 @@ export default {
   .contributors-section {
     margin-top: 16px;
     
-    .contributors-list {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
+    .team-members-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
       padding: 12px 0;
     }
     
-    .contributor-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      background: var(--bg-hover);
-      border-radius: 12px;
+    .team-member-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       transition: all 0.3s ease;
       
       &:hover {
-        background: var(--bg-active);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       }
       
-      .contributor-avatar {
-        width: 36px;
-        height: 36px;
+      .member-avatar {
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
+        margin: 0 auto 16px;
+        overflow: hidden;
         background: linear-gradient(135deg, #6b46c1, #9f7aea);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 18px;
+        
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .avatar-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 32px;
+          font-weight: 700;
+        }
       }
       
-      .contributor-name {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--text-primary);
+      .member-info {
+        .member-name {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin: 0 0 8px 0;
+        }
+        
+        .member-position {
+          font-size: 14px;
+          color: var(--text-secondary);
+          margin: 0 0 8px 0;
+        }
+        
+        .member-wechat {
+          font-size: 14px;
+          color: var(--text-tertiary);
+          margin: 0;
+        }
       }
     }
   }

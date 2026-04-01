@@ -17,7 +17,10 @@ class Feedback(Base):
     feedback_type = Column(String(20), nullable=False, comment="反馈类型")
     content = Column(Text, nullable=False, comment="反馈内容")
     score = Column(Integer, nullable=False, comment="满意度评分")
+    status = Column(String(20), default="pending", comment="处理状态")
+    admin_reply = Column(Text, comment="管理员回复")
     submit_time = Column(DateTime, default=func.now(), comment="提交时间")
+    reply_time = Column(DateTime, comment="回复时间")
     
     # 关联关系
     user = relationship("User", back_populates="feedbacks")
@@ -35,8 +38,9 @@ class Feedback(Base):
             "content": self.content,
             "score": self.score,
             "submit_time": self.submit_time.isoformat() if self.submit_time else None,
-            # 当前系统没有审核状态字段，使用默认 'pending'（可由后台管理接口更新）
-            "status": 'pending'
+            "status": getattr(self, 'status', 'pending'),
+            "reply": getattr(self, 'admin_reply', None),
+            "reply_time": self.reply_time.isoformat() if getattr(self, 'reply_time', None) else None
         }
     
     def get_feedback_type_name(self):

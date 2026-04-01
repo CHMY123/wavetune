@@ -431,11 +431,24 @@ export default {
               this.isTargetSequence = parsedData.targets
               console.log('从缓存加载刺激序列')
               
-              // 开始实验
-              this.experimentState = 'running'
-              this.startTrial()
-              this.isStarting = false
-              return
+              // 初始化实验会话 - 增加超时时间到30秒
+              const initResponse = await this.$axios.post('/api/detection/two-back/init', this.experimentSettings, {
+                timeout: 30000
+              })
+              console.log('初始化实验 - 响应:', initResponse.data)
+              if (initResponse.data.code === 200) {
+                this.sessionId = initResponse.data.data.session_id
+                this.participantId = initResponse.data.data.participant_id
+                console.log('初始化实验 - 会话 ID:', this.sessionId)
+                
+                // 开始实验
+                this.experimentState = 'running'
+                this.startTrial()
+                this.isStarting = false
+                return
+              } else {
+                this.errorMessage = '初始化实验失败'
+              }
             }
           }
         } catch (e) {
