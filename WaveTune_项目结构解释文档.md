@@ -2,360 +2,313 @@
 
 ## 项目概述
 
-WaveTune 是一个基于 Vue 3 + FastAPI 的脑疲劳检测与音乐干预系统，采用前后端分离架构，提供完整的用户认证、音乐推荐、场景配置、反馈管理等功能。
+WaveTune 是一个基于 Vue 3 + FastAPI 的脑疲劳检测与音乐干预系统。本项目采用前后端分离架构，提供用户管理、脑疲劳检测、音乐推荐、联邦学习等功能。
 
-## 整体架构
+## 技术栈
 
-```
-WaveTune 系统架构
-├── 前端层 (Vue 3 + Element Plus)
-│   ├── 用户界面
-│   ├── 状态管理 (Pinia)
-│   └── 路由管理 (Vue Router)
-├── 后端层 (FastAPI + SQLAlchemy)
-│   ├── API 接口层
-│   ├── 业务逻辑层
-│   └── 数据访问层
-└── 数据层 (MySQL/SQLite)
-    ├── 用户数据
-    ├── 音乐数据
-    └── 系统数据
-```
+### 前端
+- **框架**: Vue 3 (Composition API)
+- **构建工具**: Vite
+- **UI组件库**: Element Plus
+- **状态管理**: Pinia
+- **路由**: Vue Router 4
+- **HTTP客户端**: Axios
+- **图表库**: ECharts
+- **样式**: CSS3 + Element Plus 主题定制
 
-## 项目目录结构
+### 后端
+- **框架**: FastAPI (Python 3.11.14)
+- **数据库**: TiDB Cloud (MySQL 兼容)
+- **ORM**: SQLAlchemy 2.x
+- **认证**: JWT (JSON Web Token)
+- **数据验证**: Pydantic
+- **机器学习**: PyTorch (用于联邦学习)
+- **云存储**: 缤纷云 S3 兼容存储
+
+## 目录结构
 
 ```
 wavetune/
-├── src/                                    # Vue 3 前端项目
-│   ├── components/                         # 组件目录
-│   │   ├── business/                      # 业务组件
-│   │   │   ├── fatigue/                   # 疲劳检测相关组件
-│   │   │   ├── federated/                 # 联邦学习相关组件
-│   │   │   └── music/                     # 音乐推荐相关组件
-│   │   └── global/                        # 全局通用组件
-│   │       ├── CardContainer.vue          # 卡片容器组件
-│   │       ├── Footer.vue                 # 页脚组件
-│   │       └── Navbar.vue                 # 导航栏组件
-│   ├── views/                             # 页面视图
-│   │   ├── federated/                     # 联邦学习页面
-│   │   │   ├── FederatedDevicesView.vue   # 设备管理页面
-│   │   │   ├── FederatedProgressView.vue  # 训练进度页面
-│   │   │   └── FederatedStatusView.vue    # 参与状态页面
-│   │   ├── AboutView.vue                  # 关于页面
-│   │   ├── FatigueResultView.vue          # 疲劳检测结果页面
-│   │   ├── HomeView.vue                   # 首页
-│   │   ├── MusicRecommendationView.vue    # 音乐推荐页面
-│   │   ├── SignalMonitorView.vue          # 信号监测页面
-│   │   └── UserFeedbackView.vue           # 用户反馈页面
-│   ├── router/                            # 路由配置
-│   │   └── index.js                       # 路由定义
-│   ├── store/                             # 状态管理
-│   │   └── index.js                       # Pinia 状态定义
-│   ├── assets/                            # 静态资源
-│   │   ├── styles/                        # 样式文件
-│   │   │   ├── breakpoints.scss           # 响应式断点
-│   │   │   ├── element-variables.scss     # Element Plus 变量
-│   │   │   └── global.scss                # 全局样式
-│   │   └── logo.png                       # 项目 Logo
-│   ├── utils/                             # 工具函数
-│   │   └── errorHandler.js                # 错误处理工具
-│   ├── App.vue                            # 根组件
-│   └── main.js                            # 应用入口
-├── backend/                               # FastAPI 后端项目
-│   ├── main.py                            # 主入口文件
-│   ├── start.py                           # 启动脚本
-│   ├── init_db.py                         # 数据库初始化脚本
-│   ├── test_api.py                        # API 测试脚本
-│   ├── requirements.txt                   # Python 依赖
-│   ├── env.example                        # 环境配置示例
-│   ├── README.md                          # 后端说明文档
-│   ├── config/                            # 配置文件
-│   │   └── database.py                    # 数据库配置
-│   ├── models/                            # 数据模型
-│   │   ├── __init__.py                    # 模型初始化
-│   │   ├── user.py                        # 用户模型
-│   │   ├── feedback.py                    # 反馈模型
-│   │   ├── music.py                       # 音乐模型
-│   │   ├── scene.py                       # 场景模型
-│   │   ├── system_stats.py                # 系统统计模型
-│   │   ├── user_session.py                # 用户会话模型
-│   │   ├── user_preference.py             # 用户偏好模型
-│   │   └── operation_log.py               # 操作日志模型
-│   ├── schemas/                           # 数据验证模型
-│   │   ├── user.py                        # 用户验证模型
-│   │   ├── feedback.py                    # 反馈验证模型
-│   │   ├── scene.py                       # 场景验证模型
-│   │   └── auth.py                        # 认证验证模型
-│   ├── routers/                           # API 路由
-│   │   ├── __init__.py                    # 路由初始化
-│   │   ├── auth.py                        # 认证路由
-│   │   ├── system.py                      # 系统统计路由
-│   │   ├── user.py                        # 用户管理路由
-│   │   ├── feedback.py                    # 反馈路由
-│   │   ├── music.py                       # 音乐推荐路由
-│   │   └── scene.py                       # 场景配置路由
-│   ├── middleware/                        # 中间件
-│   │   ├── __init__.py                    # 中间件初始化
-│   │   └── auth.py                        # 认证中间件
-│   ├── database/                          # 数据库脚本
-│   │   └── create_tables.sql              # 建表 SQL 脚本
-│   ├── static/                            # 静态文件目录
-│   │   ├── avatar/                        # 用户头像
-│   │   └── music_cover/                   # 音乐封面
-│   └── logs/                              # 日志文件目录
-├── public/                                # 公共静态资源
-│   ├── favicon.ico                        # 网站图标
-│   └── index.html                         # HTML 模板
-├── 大创项目后端功能实现提示词文档（聚焦非核心检测类功能）.md  # 功能实现文档
-├── WaveTune_API接口文档.md                # API 接口文档
-├── WaveTune_数据库设计说明文档.md         # 数据库设计文档
-├── WaveTune_启动指南.md                   # 启动指南
-├── WaveTune_项目结构解释文档.md           # 项目结构文档
-├── package.json                           # 前端依赖配置
-├── vue.config.js                          # Vue 配置
-├── babel.config.js                        # Babel 配置
-├── jsconfig.json                          # JavaScript 配置
-└── README.md                              # 项目说明文档
+├── src/                          # 前端源代码
+│   ├── assets/                   # 静态资源
+│   │   ├── css/                  # 全局样式文件
+│   │   │   ├── variables.css     # CSS变量定义
+│   │   │   ├── animations.css    # 动画效果
+│   │   │   └── global.css        # 全局样式
+│   │   ├── images/               # 图片资源
+│   │   │   ├── logo.png          # 应用Logo
+│   │   │   ├── default-avatar.png # 默认头像
+│   │   │   └── backgrounds/      # 背景图片
+│   │   └── audio/                # 音频资源
+│   │       ├── notification.mp3  # 提示音
+│   │       └── sounds/           # 音效文件
+│   ├── components/               # 公共组件
+│   │   ├── common/               # 通用组件
+│   │   │   ├── LoadingSpinner.vue    # 加载动画
+│   │   │   ├── EmptyState.vue        # 空状态
+│   │   │   └── ErrorBoundary.vue     # 错误边界
+│   │   ├── layout/               # 布局组件
+│   │   │   ├── MainLayout.vue    # 主布局
+│   │   │   ├── AdminLayout.vue   # 管理后台布局
+│   │   │   └── Sidebar.vue       # 侧边栏
+│   │   └── charts/               # 图表组件
+│   │       ├── LineChart.vue     # 折线图
+│   │       ├── BarChart.vue      # 柱状图
+│   │       └── PieChart.vue      # 饼图
+│   ├── views/                    # 页面视图
+│   │   ├── HomeView.vue          # 首页
+│   │   ├── LoginView.vue         # 登录页
+│   │   ├── RegisterView.vue      # 注册页
+│   │   ├── DetectionView.vue     # 疲劳检测页
+│   │   ├── InterventionView.vue  # 音乐干预页
+│   │   ├── MusicRecommendationView.vue  # 音乐推荐页
+│   │   ├── FederatedContributeView.vue  # 联邦学习贡献页
+│   │   ├── SignalMonitorView.vue        # 信号监测页
+│   │   ├── UserCenterView.vue           # 用户中心页
+│   │   ├── TwoBackView.vue              # 2-back实验页
+│   │   ├── FeedbackView.vue             # 反馈页面
+│   │   └── admin/                       # 管理后台页面
+│   │       ├── Dashboard.vue            # 仪表盘
+│   │       ├── UserManagement.vue       # 用户管理
+│   │       ├── MusicManagement.vue      # 音乐管理
+│   │       ├── SystemStats.vue          # 系统统计
+│   │       └── FeedbackManagement.vue   # 反馈管理
+│   ├── router/                   # 路由配置
+│   │   └── index.js              # 路由定义
+│   ├── stores/                   # Pinia状态管理
+│   │   ├── user.js               # 用户状态
+│   │   ├── music.js              # 音乐状态
+│   │   ├── detection.js          # 检测状态
+│   │   └── settings.js           # 设置状态
+│   ├── api/                      # API接口封装
+│   │   ├── auth.js               # 认证相关API
+│   │   ├── user.js               # 用户相关API
+│   │   ├── detection.js          # 检测相关API
+│   │   ├── music.js              # 音乐相关API
+│   │   ├── federated.js          # 联邦学习API
+│   │   └── feedback.js           # 反馈相关API
+│   ├── utils/                    # 工具函数
+│   │   ├── request.js            # Axios封装
+│   │   ├── storage.js            # 本地存储封装
+│   │   ├── format.js             # 格式化工具
+│   │   └── validators.js         # 表单验证
+│   ├── composables/              # Vue组合式函数
+│   │   ├── useAuth.js            # 认证逻辑
+│   │   ├── useDetection.js       # 检测逻辑
+│   │   ├── useMusic.js           # 音乐逻辑
+│   │   └── useFederated.js       # 联邦学习逻辑
+│   ├── constants/                # 常量定义
+│   │   ├── api.js                # API常量
+│   │   ├── enums.js              # 枚举值
+│   │   └── config.js             # 配置常量
+│   ├── App.vue                   # 根组件
+│   └── main.js                   # 入口文件
+├── backend/                      # 后端源代码
+│   ├── routers/                  # API路由
+│   │   ├── auth.py               # 认证路由
+│   │   ├── user.py               # 用户路由
+│   │   ├── detection.py          # 检测路由
+│   │   ├── music.py              # 音乐路由
+│   │   ├── federated.py          # 联邦学习路由
+│   │   ├── feedback.py           # 反馈路由
+│   │   ├── stats.py              # 统计路由
+│   │   └── admin.py              # 管理后台路由
+│   ├── models/                   # 数据模型
+│   │   ├── user.py               # 用户模型
+│   │   ├── detection.py          # 检测模型
+│   │   ├── music.py              # 音乐模型
+│   │   ├── federated.py          # 联邦学习模型
+│   │   └── feedback.py           # 反馈模型
+│   ├── schemas/                  # Pydantic模式
+│   │   ├── user.py               # 用户模式
+│   │   ├── detection.py          # 检测模式
+│   │   ├── music.py              # 音乐模式
+│   │   └── federated.py          # 联邦学习模式
+│   ├── services/                 # 业务逻辑
+│   │   ├── auth_service.py       # 认证服务
+│   │   ├── user_service.py       # 用户服务
+│   │   ├── detection_service.py  # 检测服务
+│   │   ├── music_service.py      # 音乐服务
+│   │   └── federated_service.py  # 联邦学习服务
+│   ├── utils/                    # 工具函数
+│   │   ├── database.py           # 数据库连接
+│   │   ├── security.py           # 安全工具
+│   │   ├── s3_helper.py          # 云存储工具
+│   │   └── email.py              # 邮件服务
+│   ├── database/                 # 数据库相关
+│   │   └── create_tables.sql     # 建表SQL
+│   ├── ml/                       # 机器学习模块
+│   │   ├── models/               # 模型定义
+│   │   │   ├── fatigue_detector.py   # 疲劳检测模型
+│   │   │   └── federated_model.py    # 联邦学习模型
+│   │   ├── training/             # 训练相关
+│   │   │   ├── trainer.py        # 训练器
+│   │   │   └── data_loader.py    # 数据加载器
+│   │   └── utils/                # ML工具
+│   │       ├── preprocessing.py  # 数据预处理
+│   │       └── metrics.py        # 评估指标
+│   ├── config.py                 # 配置文件
+│   ├── main.py                   # 应用入口
+│   └── requirements.txt          # Python依赖
+├── public/                       # 静态资源
+│   ├── favicon.ico               # 网站图标
+│   └── index.html                # HTML模板
+├── nginx.conf                    # Nginx配置
+├── vue.config.js                 # Vue配置
+├── vite.config.js                # Vite配置
+├── package.json                  # Node依赖
+├── .env                          # 环境变量
+├── .env.development              # 开发环境变量
+├── .env.production               # 生产环境变量
+├── .gitignore                    # Git忽略文件
+├── jsconfig.json                 # JS配置
+└── README.md                     # 项目说明
 ```
 
-## 前端项目结构详解
+## 核心模块说明
 
-### 1. 组件架构 (components/)
+### 前端核心模块
 
-#### 全局组件 (global/)
-- **CardContainer.vue**: 通用卡片容器组件，提供统一的卡片样式和布局
-- **Navbar.vue**: 顶部导航栏组件，包含系统 Logo、导航菜单和用户头像
-- **Footer.vue**: 页脚组件，显示版权信息和系统状态
+#### 1. 用户认证模块 (Auth)
+- **文件**: `src/views/LoginView.vue`, `src/views/RegisterView.vue`
+- **功能**: 用户登录、注册、密码重置
+- **状态管理**: `src/stores/user.js`
+- **API**: `src/api/auth.js`
 
-#### 业务组件 (business/)
-- **fatigue/**: 疲劳检测相关组件
-- **federated/**: 联邦学习相关组件  
-- **music/**: 音乐推荐相关组件
+#### 2. 疲劳检测模块 (Detection)
+- **文件**: `src/views/DetectionView.vue`
+- **功能**: EEG信号采集、疲劳状态检测、结果展示
+- **状态管理**: `src/stores/detection.js`
+- **API**: `src/api/detection.js`
 
-### 2. 页面视图 (views/)
+#### 3. 音乐干预模块 (Intervention)
+- **文件**: `src/views/InterventionView.vue`, `src/views/MusicRecommendationView.vue`
+- **功能**: 音乐播放、疲劳干预、推荐算法
+- **状态管理**: `src/stores/music.js`
+- **API**: `src/api/music.js`
 
-#### 核心功能页面
-- **HomeView.vue**: 系统首页，展示功能模块、统计数据、联邦学习状态
-- **FatigueResultView.vue**: 脑疲劳检测结果页面，显示检测数据和图表
-- **MusicRecommendationView.vue**: 音乐推荐页面，基于疲劳等级推荐音乐
-- **SignalMonitorView.vue**: 信号监测页面，实时监测多模态生理信号
-- **UserFeedbackView.vue**: 用户反馈页面，包含用户信息展示和反馈提交
+#### 4. 联邦学习模块 (Federated Learning)
+- **文件**: `src/views/FederatedContributeView.vue`
+- **功能**: 数据贡献、模型训练、进度监控
+- **状态管理**: 使用本地存储持久化训练状态
+- **API**: `src/api/federated.js`
 
-#### 联邦学习页面 (federated/)
-- **FederatedStatusView.vue**: 联邦学习参与状态页面
-- **FederatedProgressView.vue**: 训练进度页面
-- **FederatedDevicesView.vue**: 设备管理页面
+#### 5. 信号监测模块 (Signal Monitor)
+- **文件**: `src/views/SignalMonitorView.vue`
+- **功能**: EEG信号可视化、实时监测、CSV文件上传分析
+- **API**: `src/api/detection.js`
 
-### 3. 路由配置 (router/)
+### 后端核心模块
 
-- **index.js**: 定义所有页面路由，包括路由守卫和懒加载配置
+#### 1. 认证服务 (Auth Service)
+- **文件**: `backend/routers/auth.py`, `backend/services/auth_service.py`
+- **功能**: JWT认证、用户注册登录、会话管理
+- **安全**: 密码哈希、Token刷新、权限验证
 
-### 4. 状态管理 (store/)
+#### 2. 检测服务 (Detection Service)
+- **文件**: `backend/routers/detection.py`, `backend/services/detection_service.py`
+- **功能**: 疲劳检测算法、信号处理、结果分析
+- **ML模块**: `backend/ml/models/fatigue_detector.py`
 
-- **index.js**: 使用 Pinia 进行全局状态管理，管理用户信息、系统状态等
+#### 3. 联邦学习服务 (Federated Service)
+- **文件**: `backend/routers/federated.py`, `backend/services/federated_service.py`
+- **功能**: 模型训练、参数聚合、设备管理
+- **ML模块**: `backend/ml/models/federated_model.py`
+- **云存储**: 使用缤纷云S3存储训练数据
 
-### 5. 样式系统 (assets/styles/)
+#### 4. 音乐服务 (Music Service)
+- **文件**: `backend/routers/music.py`, `backend/services/music_service.py`
+- **功能**: 音乐库管理、推荐算法、播放统计
 
-- **global.scss**: 全局样式定义，包含 CSS 变量、通用类等
-- **element-variables.scss**: Element Plus 组件库的样式定制
-- **breakpoints.scss**: 响应式设计的断点定义
+#### 5. 云存储服务 (Cloud Storage)
+- **文件**: `backend/utils/s3_helper.py`
+- **功能**: 文件上传下载、预签名URL生成
+- **存储桶**: 缤纷云 wavetune 存储桶
 
-## 后端项目结构详解
-
-### 1. 应用入口 (main.py)
-
-- **FastAPI 应用实例**: 创建 FastAPI 应用，配置中间件、路由、异常处理
-- **CORS 配置**: 允许前端跨域访问
-- **静态文件服务**: 提供头像、音乐封面等静态文件访问
-- **全局异常处理**: 统一处理 HTTP 异常和通用异常
-
-### 2. 数据模型层 (models/)
-
-#### 核心业务模型
-- **User**: 用户信息模型，包含认证、个人信息、统计数据
-- **Feedback**: 用户反馈模型，支持反馈类型、评分、状态管理
-- **Music**: 音乐数据模型，包含音乐信息、推荐参数、播放统计
-- **Scene**: 场景配置模型，支持用户自定义场景和系统默认场景
-- **SystemStats**: 系统统计模型，存储系统运行统计数据
-
-#### 认证和会话模型
-- **UserSession**: 用户会话模型，管理登录会话和令牌
-- **UserPreference**: 用户偏好模型，存储个性化设置
-- **OperationLog**: 操作日志模型，记录系统操作和审计信息
-
-### 3. 数据验证层 (schemas/)
-
-使用 Pydantic 进行请求参数验证：
-- **auth.py**: 认证相关验证（注册、登录、密码修改等）
-- **user.py**: 用户信息验证
-- **feedback.py**: 反馈数据验证
-- **scene.py**: 场景配置验证
-
-### 4. API 路由层 (routers/)
-
-#### 认证路由 (auth.py)
-- `POST /api/auth/register`: 用户注册
-- `POST /api/auth/login`: 用户登录
-- `POST /api/auth/logout`: 用户登出
-- `POST /api/auth/change-password`: 修改密码
-- `GET /api/auth/profile`: 获取用户资料
-- `PUT /api/auth/profile`: 更新用户资料
-- `PUT /api/auth/preference`: 更新用户偏好
-- `GET /api/auth/sessions`: 获取用户会话列表
-- `DELETE /api/auth/session/{id}`: 撤销会话
-
-#### 系统统计路由 (system.py)
-- `GET /api/system/stats`: 获取系统统计数据
-
-#### 用户管理路由 (user.py)
-- `GET /api/user/info`: 获取用户信息
-- `PUT /api/user/update`: 更新用户信息
-- `POST /api/user/avatar/upload`: 上传用户头像
-- `PUT /api/user/count/update`: 更新用户统计次数
-
-#### 反馈管理路由 (feedback.py)
-- `POST /api/feedback/submit`: 提交用户反馈
-- `GET /api/feedback/history`: 查询历史反馈
-
-#### 音乐推荐路由 (music.py)
-- `GET /api/music/recommend`: 获取音乐推荐列表
-- `GET /api/music/detail`: 获取音乐详情
-
-#### 场景配置路由 (scene.py)
-- `GET /api/scene/list`: 获取场景列表
-- `POST /api/scene/create`: 创建场景
-- `GET /api/scene/apply`: 应用场景
-- `DELETE /api/scene/delete`: 删除场景
-
-### 5. 中间件层 (middleware/)
-
-#### 认证中间件 (auth.py)
-- **AuthManager**: 认证管理器，处理用户身份验证
-- **get_current_user**: 获取当前用户（必需认证）
-- **get_current_user_optional**: 获取当前用户（可选认证）
-- **require_auth**: 要求认证的依赖注入
-- **require_admin**: 要求管理员权限的依赖注入
-
-### 6. 配置层 (config/)
-
-#### 数据库配置 (database.py)
-- **数据库连接**: 支持 SQLite 和 MySQL
-- **会话管理**: SQLAlchemy 会话工厂
-- **连接池**: 数据库连接池配置
-
-### 7. 数据库脚本 (database/)
-
-#### 建表脚本 (create_tables.sql)
-- 完整的数据库表结构定义
-- 索引和外键约束
-- 初始数据插入
-- 支持 MySQL 和 SQLite
-
-## 数据流架构
+## 数据流说明
 
 ### 1. 用户认证流程
-
 ```
-用户登录 → 验证凭据 → 创建会话 → 返回令牌 → 前端存储令牌
-```
-
-### 2. API 请求流程
-
-```
-前端请求 → 认证中间件 → 路由处理 → 业务逻辑 → 数据库操作 → 返回响应
+用户输入 → 前端验证 → API请求 → 后端验证 → JWT生成 → 返回Token → 前端存储 → 路由跳转
 ```
 
-### 3. 数据持久化流程
-
+### 2. 疲劳检测流程
 ```
-业务数据 → 数据验证 → 数据模型 → SQLAlchemy ORM → 数据库存储
-```
-
-## 技术栈说明
-
-### 前端技术栈
-- **Vue 3**: 渐进式 JavaScript 框架
-- **Element Plus**: Vue 3 组件库
-- **Pinia**: Vue 3 状态管理
-- **Vue Router**: Vue 3 路由管理
-- **SCSS**: CSS 预处理器
-- **ECharts**: 数据可视化图表库
-
-### 后端技术栈
-- **FastAPI**: 现代、快速的 Python Web 框架
-- **SQLAlchemy**: Python SQL 工具包和对象关系映射
-- **Pydantic**: 数据验证和设置管理
-- **Uvicorn**: ASGI 服务器
-- **Python-multipart**: 文件上传支持
-
-### 数据库技术
-- **MySQL**: 生产环境关系型数据库
-- **SQLite**: 开发环境轻量级数据库
-- **数据库连接池**: 提高数据库访问性能
-
-## 安全机制
-
-### 1. 认证安全
-- **密码加密**: 使用 PBKDF2 算法加密存储密码
-- **会话管理**: 基于令牌的会话管理，支持过期控制
-- **设备绑定**: 记录登录设备信息，支持多设备管理
-
-### 2. 数据安全
-- **参数验证**: 使用 Pydantic 严格验证请求参数
-- **SQL 注入防护**: 使用 ORM 防止 SQL 注入攻击
-- **CORS 配置**: 限制跨域访问来源
-
-### 3. 操作审计
-- **操作日志**: 记录所有重要操作和访问日志
-- **错误追踪**: 详细的错误日志和异常处理
-- **性能监控**: 记录请求执行时间和性能指标
-
-## 部署架构
-
-### 开发环境
-```
-前端 (Vue Dev Server) ←→ 后端 (FastAPI) ←→ 数据库 (SQLite)
+采集数据 → 前端展示 → 发送检测请求 → 后端处理 → ML模型推理 → 返回结果 → 前端展示
 ```
 
-### 生产环境建议
+### 3. 联邦学习流程
 ```
-前端 (Nginx) ←→ 后端 (Gunicorn + FastAPI) ←→ 数据库 (MySQL)
+选择文件 → 上传至云存储 → 后端下载 → 数据预处理 → 模型训练 → 进度更新 → 结果返回
 ```
 
-## 扩展性设计
+### 4. 信号监测流程
+```
+上传CSV → 云存储 → 后端下载 → 信号解析 → 可视化数据 → 疲劳检测 → 结果展示
+```
 
-### 1. 水平扩展
-- **无状态设计**: 后端服务无状态，支持负载均衡
-- **数据库分离**: 支持读写分离和分库分表
-- **缓存层**: 可集成 Redis 缓存
+## 配置文件说明
 
-### 2. 功能扩展
-- **插件化架构**: 支持功能模块插件化
-- **API 版本控制**: 支持 API 版本管理
-- **微服务拆分**: 可拆分为多个微服务
+### 前端配置
 
-### 3. 数据扩展
-- **数据迁移**: 支持数据库结构升级
-- **数据备份**: 完整的备份和恢复机制
-- **数据分析**: 支持数据分析和报表功能
+#### vite.config.js
+- 开发服务器配置
+- 代理设置
+- 构建优化
+- 插件配置
+
+#### vue.config.js
+- 允许的内网穿透地址
+- 构建输出配置
+
+### 后端配置
+
+#### backend/config.py
+- 数据库连接配置
+- JWT密钥配置
+- 云存储配置
+- 邮件服务配置
+
+#### backend/.env
+- 环境变量
+- 敏感信息（数据库密码、API密钥等）
 
 ## 开发规范
 
-### 1. 代码规范
-- **Python**: 遵循 PEP 8 编码规范
-- **JavaScript**: 使用 ESLint 代码检查
-- **Git**: 使用语义化提交信息
+### 前端规范
+- 使用 Composition API
+- 组件名使用 PascalCase
+- 文件名使用 camelCase
+- 使用 Pinia 进行状态管理
+- API 请求统一封装
 
-### 2. 文档规范
-- **API 文档**: 使用 FastAPI 自动生成
-- **代码注释**: 详细的函数和类注释
-- **README**: 完整的项目说明文档
+### 后端规范
+- 使用 FastAPI 异步路由
+- Pydantic 进行数据验证
+- SQLAlchemy 2.x 进行数据库操作
+- 统一响应格式
+- 异常处理封装
 
-### 3. 测试规范
-- **单元测试**: 核心业务逻辑单元测试
-- **集成测试**: API 接口集成测试
-- **端到端测试**: 完整业务流程测试
+## 部署说明
 
-这个项目结构为 WaveTune 系统提供了完整的技术架构，支持用户认证、音乐推荐、场景配置等核心功能，同时具备良好的可维护性、可扩展性和安全性。
+### 前端部署
+1. 构建生产版本: `npm run build`
+2. 输出目录: `dist/`
+3. 使用 Nginx 或类似服务器托管
 
+### 后端部署
+1. 安装依赖: `pip install -r requirements.txt`
+2. 配置环境变量
+3. 启动服务: `uvicorn main:app --host 0.0.0.0 --port 8000`
 
+### 数据库部署
+- 使用 TiDB Cloud 托管服务
+- 执行 `backend/database/create_tables.sql` 初始化表结构
+
+## 注意事项
+
+1. **环境变量**: 确保 `.env` 文件中的敏感信息不被提交到版本控制
+2. **数据库连接**: 生产环境使用连接池管理
+3. **文件上传**: 大文件使用分片上传
+4. **跨域配置**: 开发环境配置代理，生产环境配置 CORS
+5. **错误处理**: 统一错误处理和日志记录

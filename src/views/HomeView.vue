@@ -1,3 +1,19 @@
+<!--
+  HomeView.vue - WaveTune 首页组件
+  
+  功能说明：
+  - 展示系统介绍和核心功能模块
+  - 显示系统运行统计数据
+  - 提供快速操作入口
+  - 展示团队成员信息
+  
+  主要模块：
+  1. 系统介绍区域（hero-section）：展示系统名称、简介和操作按钮
+  2. 功能模块卡片（features-section）：展示四大核心功能
+  3. 系统运行统计（stats-section）：展示检测次数、干预次数等数据
+  4. 快速操作（quick-actions）：提供快捷导航按钮
+  5. 团队成员（contributors-section）：展示团队成员信息
+-->
 <template>
   <div class="home-view">
     <div class="container">
@@ -5,12 +21,16 @@
       <div class="hero-section">
         <div class="hero-content">
           <div class="hero-text">
+            <!-- 系统标题 -->
             <h1 class="system-title gradient-text">WaveTune</h1>
+            <!-- 系统副标题 -->
             <p class="system-subtitle">基于多模态生理信号的脑疲劳检测和轻音乐个性化干预系统</p>
+            <!-- 系统描述 -->
             <p class="system-desc">
               采用联邦学习技术保护用户隐私，通过EEG、fNIRS等多模态生理信号实时监测脑疲劳状态，
               并提供个性化轻音乐干预方案，帮助用户缓解疲劳、提升专注力。
             </p>
+            <!-- 操作按钮组 -->
             <div class="hero-actions">
               <el-button class="primary-btn" size="large" @click="$router.push('/signal-monitor')">
                 <img src="/static/icon/detection.png" class="btn-icon" alt="开始监测" 
@@ -24,6 +44,7 @@
               </el-button>
             </div>
           </div>
+          <!-- 系统 Logo 展示 -->
           <div class="hero-image">
             <div class="system-icon">
               <img src="/static/logo/logo.png" class="hero-main-icon" alt="WaveTune" 
@@ -44,11 +65,15 @@
               waveStyle 
               gradientBorder
             >
+              <!-- 功能图标 -->
               <div class="feature-icon" :class="feature.iconClass">
                 <img :src="feature.iconSrc" class="feature-inner-icon" :alt="feature.title" />
               </div>
+              <!-- 功能标题 -->
               <h3 class="feature-title">{{ feature.title }}</h3>
+              <!-- 功能描述 -->
               <p class="feature-desc">{{ feature.description }}</p>
+              <!-- 功能按钮 -->
               <div class="feature-actions">
                 <el-button class="feature-btn" size="small">
                   {{ feature.buttonText }}
@@ -68,9 +93,11 @@
           <el-row :gutter="20">
             <el-col :xs="12" :sm="6" :md="6" :lg="6" :xl="6" v-for="stat in stats" :key="stat.id">
               <div class="stat-item">
+                <!-- 统计图标 -->
                 <div class="stat-icon">
                   <img :src="stat.iconSrc" class="stat-inner-icon" :alt="stat.label" />
                 </div>
+                <!-- 统计内容 -->
                 <div class="stat-content">
                   <div class="stat-value">{{ stat.value }}</div>
                   <div class="stat-label">{{ stat.label }}</div>
@@ -108,11 +135,14 @@
       <div class="contributors-section">
         <CardContainer title="团队成员" waveStyle gradientBorder>
           <div class="team-members-list">
+            <!-- 团队成员卡片 -->
             <div class="team-member-card" v-for="(member, index) in teamMembers" :key="index">
+              <!-- 成员头像 -->
               <div class="member-avatar">
                 <img :src="member.avatar" :alt="member.name" v-if="member.avatar" />
                 <div class="avatar-placeholder" v-else>{{ member.name.charAt(0) }}</div>
               </div>
+              <!-- 成员信息 -->
               <div class="member-info">
                 <h4 class="member-name">{{ member.name }}</h4>
                 <p class="member-position">职位：{{ member.position }}</p>
@@ -127,6 +157,17 @@
 </template>
 
 <script>
+/**
+ * HomeView 首页组件
+ * 
+ * 使用 Vue 3 组合式 API 实现
+ * 主要功能：
+ * - 展示系统介绍和核心功能
+ * - 获取并显示系统运行统计数据
+ * - 提供快速导航功能
+ */
+
+// 导入依赖
 import CardContainer from '@/components/global/CardContainer.vue'
 import { ArrowRight, User } from '@element-plus/icons-vue'
 import { ref, onMounted } from 'vue'
@@ -140,6 +181,12 @@ export default {
     User
   },
   setup() {
+    // ==================== 响应式数据 ====================
+    
+    /**
+     * 功能模块列表
+     * 包含四大核心功能：脑疲劳检测、音乐干预、信号监测、联邦学习
+     */
     const features = ref([
       {
         id: 1,
@@ -179,6 +226,10 @@ export default {
       }
     ])
     
+    /**
+     * 系统统计数据
+     * 包括检测次数、干预次数、参与设备数、模型准确率
+     */
     const stats = ref([
       {
         id: 1,
@@ -210,6 +261,10 @@ export default {
       }
     ])
     
+    /**
+     * 团队成员列表
+     * 包含团队成员的姓名、职位、微信号和头像
+     */
     const teamMembers = ref([
       {
         name: '钟红红',
@@ -237,18 +292,30 @@ export default {
       }
     ])
     
+    // ==================== 方法 ====================
+    
+    /**
+     * 导航到指定路由
+     * @param {string} route - 目标路由路径
+     */
     const navigateTo = (route) => {
       window.location.href = route
     }
     
-    // 获取系统运行统计数据 - 并行请求优化
+    /**
+     * 获取系统运行统计数据
+     * 并行请求多个接口以提高性能
+     * - 检测次数：从联邦学习接口获取
+     * - 联邦学习统计：参与设备数和模型准确率
+     * - 干预次数：从管理员仪表盘获取音乐总播放量
+     */
     const fetchSystemStats = async () => {
       try {
-        // 并行发送所有请求
+        // 并行发送所有请求，提高加载速度
         const [detectionResponse, federatedResponse, dashboardResponse] = await Promise.allSettled([
           requestMethod.get('/federated/signal-detection/count'),
           requestMethod.get('/federated/stats'),
-          requestMethod.get('/admin/dashboard').catch(() => null) // 单独捕获错误
+          requestMethod.get('/admin/dashboard').catch(() => null) // 单独捕获错误，避免影响其他请求
         ])
         
         // 处理检测次数
@@ -264,7 +331,7 @@ export default {
         if (federatedResponse.status === 'fulfilled' && federatedResponse.value?.code === 200) {
           const federatedData = federatedResponse.value.data || {}
           
-          // 更新参与设备
+          // 更新参与设备数
           const deviceStat = stats.value.find(stat => stat.label === '参与设备')
           if (deviceStat) {
             deviceStat.value = federatedData.total_devices?.toString() || '0'
@@ -286,6 +353,7 @@ export default {
             musicStat.value = totalPlays.toString()
           }
         } else {
+          // 如果请求失败，显示默认值 0
           const musicStat = stats.value.find(stat => stat.label === '干预次数')
           if (musicStat) {
             musicStat.value = '0'
@@ -296,11 +364,16 @@ export default {
       }
     }
     
-    // 页面加载时获取数据
+    // ==================== 生命周期钩子 ====================
+    
+    /**
+     * 页面加载时获取系统统计数据
+     */
     onMounted(() => {
       fetchSystemStats()
     })
     
+    // 返回需要在模板中使用的数据和方法
     return {
       features,
       stats,
@@ -312,7 +385,10 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// 导入设计令牌
 @use '@/assets/styles/_design_tokens.scss' as *;
+
+// ==================== 页面整体样式 ====================
 
 .home-view {
   position: relative;
@@ -325,6 +401,8 @@ export default {
   margin: 0 auto;
   padding: 0 20px;
 }
+
+// ==================== 系统介绍区域 ====================
 
 .hero-section {
   background: linear-gradient(135deg, var(--wave-purple) 0%, var(--wave-blue) 100%);
@@ -400,6 +478,8 @@ export default {
   }
 }
 
+// ==================== 通用样式 ====================
+
 .gradient-text {
   background: linear-gradient(90deg, var(--wave-blue), var(--wave-purple), var(--wave-pink));
   -webkit-background-clip: text;
@@ -428,6 +508,8 @@ export default {
     border-radius: 2px;
   }
 }
+
+// ==================== 功能模块区域 ====================
 
 .features-section,
 .stats-section,
@@ -554,6 +636,8 @@ export default {
     }
   }
 
+// ==================== 系统统计区域 ====================
+
 .stats-section {
   .stat-item {
     display: flex;
@@ -611,6 +695,8 @@ export default {
     }
   }
 }
+
+// ==================== 联邦学习状态区域 ====================
 
 .federated-section {
   .federated-status {
@@ -690,6 +776,8 @@ export default {
   }
 }
 
+// ==================== 快速操作区域 ====================
+
 .quick-actions {
     .action-buttons {
       display: grid;
@@ -761,78 +849,82 @@ export default {
       }
     }
   }
+
+// ==================== 团队成员区域 ====================
+
+.contributors-section {
+  margin-top: 16px;
   
-  .contributors-section {
-    margin-top: 16px;
+  .team-members-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 12px 0;
+  }
+  
+  .team-member-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
     
-    .team-members-list {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      padding: 12px 0;
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     }
     
-    .team-member-card {
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 24px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
+    .member-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #6b46c1, #9f7aea);
       
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
       }
       
-      .member-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        margin: 0 auto 16px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #6b46c1, #9f7aea);
-        
-        img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        
-        .avatar-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 32px;
-          font-weight: 700;
-        }
+      .avatar-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 32px;
+        font-weight: 700;
+      }
+    }
+    
+    .member-info {
+      .member-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 8px 0;
       }
       
-      .member-info {
-        .member-name {
-          font-size: 18px;
-          font-weight: 700;
-          color: var(--text-primary);
-          margin: 0 0 8px 0;
-        }
-        
-        .member-position {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin: 0 0 8px 0;
-        }
-        
-        .member-wechat {
-          font-size: 14px;
-          color: var(--text-tertiary);
-          margin: 0;
-        }
+      .member-position {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0 0 8px 0;
+      }
+      
+      .member-wechat {
+        font-size: 14px;
+        color: var(--text-tertiary);
+        margin: 0;
       }
     }
   }
+}
+
+// ==================== 按钮样式 ====================
 
 .primary-btn {
   background: linear-gradient(135deg, var(--wave-blue), var(--wave-purple));
@@ -875,6 +967,8 @@ export default {
   transform: translateX(4px);
 }
 
+// ==================== 深色主题适配 ====================
+
 .theme-dark {
   .hero-section {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
@@ -899,6 +993,8 @@ export default {
     }
   }
 }
+
+// ==================== 响应式布局 ====================
 
 @media (max-width: 1024px) {
   .hero-section {

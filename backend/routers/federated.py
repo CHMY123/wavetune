@@ -18,7 +18,7 @@ import subprocess
 import time
 import json
 from datetime import datetime, timezone, timedelta
-from utils.s3_helper import upload_file
+from utils.s3_helper import upload_file, upload_bytes, generate_presigned_get_url
 
 # 北京时间时区
 BEIJING_TZ = timezone(timedelta(hours=8))
@@ -48,16 +48,12 @@ async def upload_federated_data(
     - **fatigue_status**: 疲劳状态
     """
     try:
-        # 保存上传的文件
+        # 生成客户端ID和文件ID
         file_id = str(uuid.uuid4())
-        file_path = os.path.join(TEMP_DIR, f"{file_id}.csv")
-        
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
-        
-        # 生成客户端ID
         client_id = f"client_{current_user.id}_{int(time.time())}"
+        
+        # 读取文件内容（在主线程中读取，避免后台线程中文件被关闭）
+        content = await file.read()
         
         # 记录训练任务
         training = FederatedTraining(
@@ -72,9 +68,61 @@ async def upload_federated_data(
         db.commit()
         db.refresh(training)
         
+        # 立即初始化进度存储
+        training_progress_store[training.id] = {
+            "progress": 0,
+            "message": "准备上传..."
+        }
+        
         # 启动联邦学习训练
         def run_client():
             try:
+                # 文件内容已经在主线程中读取，直接使用
+                
+                # 2. 上传到缤纷云存储桶
+                timestamp = int(time.time())
+                s3_key = f"federated/data/{file_id}_{timestamp}.csv"
+                
+                file_path = os.path.join(TEMP_DIR, f"{file_id}.csv")
+                
+                try:
+                    # 上传文件到缤纷云
+                    training_progress_store[training.id] = {
+                        "progress": 5,
+                        "message": "正在上传数据到云存储..."
+                    }
+                    print(f"[联邦学习] 初始化进度: 5% - 正在上传数据到云存储...")
+                    
+                    upload_bytes(content, s3_key)
+                    print(f"[联邦学习] 数据文件已上传到缤纷云存储桶: {s3_key}")
+                except Exception as e:
+                    print(f"[联邦学习] 上传文件到缤纷云失败: {str(e)}")
+                    # 回退到本地存储
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                else:
+                    # 3. 从缤纷云下载到本地临时目录
+                    training_progress_store[training.id] = {
+                        "progress": 15,
+                        "message": "正在从云存储下载数据到后端..."
+                    }
+                    print(f"[联邦学习] 初始化进度: 15% - 正在从云存储下载数据到后端...")
+                    
+                    try:
+                        # 生成预签名URL并下载
+                        presigned_url = generate_presigned_get_url(s3_key)
+                        import requests
+                        response = requests.get(presigned_url)
+                        response.raise_for_status()
+                        with open(file_path, "wb") as f:
+                            f.write(response.content)
+                        print(f"[联邦学习] 数据文件已从缤纷云下载到本地: {file_path}")
+                    except Exception as e:
+                        print(f"[联邦学习] 从缤纷云下载文件失败: {str(e)}")
+                        # 回退到使用原始内容
+                        with open(file_path, "wb") as f:
+                            f.write(content)
+                
                 # 在子线程中重新获取数据库会话
                 from config.database import get_db
                 from models.user import User
@@ -106,10 +154,10 @@ async def upload_federated_data(
                 print(f"[联邦学习] 开始初始化训练器...")
                 # 先更新初始化进度
                 training_progress_store[training.id] = {
-                    "progress": 10,
+                    "progress": 20,
                     "message": "正在初始化训练器..."
                 }
-                print(f"[联邦学习] 初始化进度: 10% - 正在初始化训练器...")
+                print(f"[联邦学习] 初始化进度: 20% - 正在初始化训练器...")
                 
                 trainer = FederatedTrainer(
                     data_path=TEMP_DIR,
@@ -122,10 +170,10 @@ async def upload_federated_data(
                 
                 # 初始化完成，更新进度
                 training_progress_store[training.id] = {
-                    "progress": 20,
+                    "progress": 30,
                     "message": "训练器初始化完成，准备开始训练"
                 }
-                print(f"[联邦学习] 初始化进度: 20% - 训练器初始化完成，准备开始训练")
+                print(f"[联邦学习] 初始化进度: 30% - 训练器初始化完成，准备开始训练")
                 
                 # 进度回调函数
                 progress_data = {"current": 0}
@@ -232,7 +280,7 @@ async def upload_federated_data(
                 print(f"[联邦学习] 客户端训练失败: {str(e)}")
             finally:
                 # 清理临时文件
-                if os.path.exists(file_path):
+                if 'file_path' in locals() and os.path.exists(file_path):
                     os.remove(file_path)
                     print(f"[联邦学习] 清理临时文件: {file_path}")
                 result_file = os.path.join(TEMP_DIR, f"{client_id}_result.json")

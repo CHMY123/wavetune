@@ -119,6 +119,25 @@ wavetune/
 │   ├── middleware/                        # 中间件
 │   │   ├── __init__.py                    # 中间件初始化
 │   │   └── auth.py                        # 认证中间件
+│   ├── federated/                         # 联邦学习相关
+│   │   ├── README.md                      # 联邦学习说明
+│   │   ├── data_loader.py                 # 数据加载器
+│   │   ├── federated_client.py            # 联邦学习客户端
+│   │   ├── federated_client_supernode.py  # 超级节点客户端
+│   │   ├── federated_server.py            # 联邦学习服务器
+│   │   ├── federated_server_superlink.py  # 超级链接服务器
+│   │   └── federated_trainer.py           # 联邦学习训练器
+│   ├── services/                          # 服务
+│   │   ├── data_storage.py                # 数据存储服务
+│   │   └── two_back_service.py            # 2-back 实验服务
+│   ├── utils/                             # 工具
+│   │   ├── boardInfo.json                 # 板卡信息
+│   │   ├── models.py                      # 模型工具
+│   │   ├── multimodal_fatigue_model.pth   # 多模态疲劳模型
+│   │   ├── processing_fNIRS_new.py        # fNIRS 处理
+│   │   ├── procutil_get_extinctions.py    # 消光处理
+│   │   ├── quick_detect.py                # 快速检测
+│   │   └── s3_helper.py                   # S3 云存储助手
 │   ├── database/                          # 数据库脚本
 │   │   ├── create_tables.sql              # 建表 SQL 脚本
 │   │   └── federated_tables.sql           # 联邦学习表脚本
@@ -283,10 +302,11 @@ python start.py
 ## 注意事项
 
 1. **完整系统**: 本项目包含完整的前后端实现，支持实际功能逻辑
-2. **数据存储**: 使用 TiDB Cloud 存储数据
+2. **数据存储**: 使用 TiDB Cloud 存储数据，文件上传采用 S3 兼容云存储（缤纷云）
 3. **隐私保护**: 联邦学习技术保护用户隐私
 4. **响应式设计**: 所有页面均适配不同屏幕尺寸
 5. **AI 集成**: 集成了 AI 助手功能，提供智能交互
+6. **云存储流程**: 文件上传采用先上传到云存储，再下载到后端处理的流程，提高存储可靠性
 
 ## 许可证
 
@@ -296,4 +316,4 @@ python start.py
 
 如有问题或建议，请通过以下方式联系：
 - 项目地址: [GitHub Repository]
-- 邮箱: [Your Email]
+- 邮箱: 924157960@qq.com

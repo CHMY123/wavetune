@@ -1,3 +1,19 @@
+<!--
+  RegisterView.vue - WaveTune 用户注册页面组件
+  
+  功能说明：
+  - 用户注册功能
+  - 表单验证（用户名、学号、邮箱、手机号、密码）
+  - 密码确认验证
+  - 用户协议和隐私政策确认
+  - 系统特色介绍
+  
+  主要模块：
+  1. 注册表单区域：包含用户名、学号、邮箱、手机号、密码输入框
+  2. 系统介绍区域：展示系统特色和优势
+  3. 用户协议对话框：显示用户协议内容
+  4. 隐私政策对话框：显示隐私政策内容
+-->
 <template>
   <div class="register-view">
     <!-- 波形背景装饰 -->
@@ -22,6 +38,7 @@
             <p class="system-subtitle">创建您的账户</p>
           </div>
         
+        <!-- 注册表单 -->
         <el-form
           ref="registerFormRef"
           :model="registerForm"
@@ -31,6 +48,7 @@
           @submit.prevent="handleRegister"
         >
           <div class="form-input-group">
+            <!-- 用户名输入框 -->
             <el-form-item prop="username" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><User /></el-icon>
@@ -45,6 +63,7 @@
               </div>
             </el-form-item>
             
+            <!-- 学号输入框 -->
             <el-form-item prop="student_id" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><CreditCard /></el-icon>
@@ -59,6 +78,7 @@
               </div>
             </el-form-item>
             
+            <!-- 邮箱输入框（可选） -->
             <el-form-item prop="email" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><Message /></el-icon>
@@ -73,6 +93,7 @@
               </div>
             </el-form-item>
             
+            <!-- 手机号输入框（可选） -->
             <el-form-item prop="phone" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><Phone /></el-icon>
@@ -87,6 +108,7 @@
               </div>
             </el-form-item>
             
+            <!-- 密码输入框 -->
             <el-form-item prop="password" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><Lock /></el-icon>
@@ -103,6 +125,7 @@
               </div>
             </el-form-item>
             
+            <!-- 确认密码输入框 -->
             <el-form-item prop="confirmPassword" class="form-item-custom">
               <div class="input-container">
                 <el-icon class="input-icon"><Lock /></el-icon>
@@ -121,6 +144,7 @@
             </el-form-item>
           </div>
           
+          <!-- 用户协议和隐私政策确认 -->
           <el-form-item prop="agreement" class="options-row">
             <el-checkbox v-model="registerForm.agreement" class="agreement-checkbox">
               <span class="checkbox-label">我已阅读并同意</span>
@@ -130,6 +154,7 @@
             </el-checkbox>
           </el-form-item>
           
+          <!-- 注册按钮 -->
           <el-form-item>
             <el-button
               type="primary"
@@ -142,6 +167,7 @@
             </el-button>
           </el-form-item>
           
+          <!-- 登录链接 -->
           <el-form-item class="login-link">
             <span class="login-text">已有账户？</span>
             <el-link type="primary" class="login-button-link" @click="$router.push('/login')">
@@ -161,6 +187,7 @@
             并提供个性化轻音乐干预方案，帮助用户缓解疲劳、提升专注力。
           </p>
           
+          <!-- 特色功能列表 -->
           <div class="feature-list">
             <div class="feature-item">
               <div class="feature-icon-container">
@@ -274,6 +301,18 @@
 </template>
 
 <script>
+/**
+ * RegisterView 用户注册页面组件
+ * 
+ * 使用 Vue 3 组合式 API 实现
+ * 主要功能：
+ * - 用户注册
+ * - 表单验证
+ * - 密码确认验证
+ * - 用户协议和隐私政策确认
+ */
+
+// 导入依赖
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -300,10 +339,24 @@ export default {
     Loading
   },
   setup() {
+    // 获取路由实例
     const router = useRouter()
+    
+    // 表单引用
     const registerFormRef = ref()
     
-    // 注册表单数据
+    // ==================== 响应式数据 ====================
+    
+    /**
+     * 注册表单数据
+     * @property {string} username - 用户名
+     * @property {string} student_id - 学号
+     * @property {string} email - 邮箱（可选）
+     * @property {string} phone - 手机号（可选）
+     * @property {string} password - 密码
+     * @property {string} confirmPassword - 确认密码
+     * @property {boolean} agreement - 是否同意用户协议和隐私政策
+     */
     const registerForm = reactive({
       username: '',
       student_id: '',
@@ -319,7 +372,14 @@ export default {
     const userAgreementVisible = ref(false)
     const privacyPolicyVisible = ref(false)
     
-    // 自定义验证器
+    // ==================== 自定义验证器 ====================
+    
+    /**
+     * 验证确认密码
+     * @param {Object} rule - 验证规则
+     * @param {string} value - 输入值
+     * @param {Function} callback - 回调函数
+     */
     const validateConfirmPassword = (rule, value, callback) => {
       if (value === '') {
         callback(new Error('请再次输入密码'))
@@ -330,6 +390,12 @@ export default {
       }
     }
     
+    /**
+     * 验证用户协议同意状态
+     * @param {Object} rule - 验证规则
+     * @param {boolean} value - 输入值
+     * @param {Function} callback - 回调函数
+     */
     const validateAgreement = (rule, value, callback) => {
       if (!value) {
         callback(new Error('请阅读并同意用户协议和隐私政策'))
@@ -338,7 +404,11 @@ export default {
       }
     }
     
-    // 注册表单验证规则
+    // ==================== 表单验证规则 ====================
+    
+    /**
+     * 注册表单验证规则
+     */
     const registerRules = {
       username: [
         { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -366,11 +436,17 @@ export default {
       ]
     }
     
-    // 处理注册
+    // ==================== 方法 ====================
+    
+    /**
+     * 处理注册
+     * 验证表单 -> 准备注册数据 -> 发送注册请求 -> 跳转到登录页
+     */
     const handleRegister = async () => {
       if (!registerFormRef.value) return
       
       try {
+        // 验证表单
         const valid = await registerFormRef.value.validate()
         if (!valid) return
         
@@ -391,7 +467,7 @@ export default {
           registerData.phone = registerForm.phone
         }
         
-        // 使用 axios 封装发起注册请求
+        // 发送注册请求
         let result
         try {
           result = await requestMethod.post('/auth/register', registerData)
@@ -403,6 +479,7 @@ export default {
           return
         }
 
+        // 处理注册成功
         if (result && result.code === 200) {
           ElMessage.success('注册成功！请登录')
           router.push('/login')
@@ -417,16 +494,21 @@ export default {
       }
     }
     
-    // 显示用户协议
+    /**
+     * 显示用户协议对话框
+     */
     const showUserAgreement = () => {
       userAgreementVisible.value = true
     }
     
-    // 显示隐私政策
+    /**
+     * 显示隐私政策对话框
+     */
     const showPrivacyPolicy = () => {
       privacyPolicyVisible.value = true
     }
     
+    // 返回需要在模板中使用的数据和方法
     return {
       registerFormRef,
       registerForm,
@@ -443,7 +525,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 变量定义
+// ==================== CSS 变量定义 ====================
+
 :root {
   // 颜色变量
   --wave-blue: #667eea;
@@ -511,6 +594,8 @@ export default {
   }
 }
 
+// ==================== 注册页面整体样式 ====================
+
 .register-view {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--wave-blue) 0%, var(--wave-purple) 100%);
@@ -522,7 +607,8 @@ export default {
   overflow: hidden;
 }
 
-// 波形背景装饰
+// ==================== 波形背景装饰 ====================
+
 .wave-background {
   position: absolute;
   bottom: 0;
@@ -575,6 +661,8 @@ export default {
   }
 }
 
+// ==================== 注册容器 ====================
+
 .register-container {
   display: flex;
   gap: var(--spacing-xl);
@@ -586,6 +674,8 @@ export default {
   z-index: 1;
   backdrop-filter: blur(10px);
 }
+
+// ==================== 注册卡片 ====================
 
 .register-card {
   flex: 0 0 450px;
@@ -604,6 +694,8 @@ export default {
 .register-card-inner {
   padding: var(--spacing-xl);
 }
+
+// ==================== 注册头部 ====================
 
 .register-header {
   text-align: center;
@@ -665,6 +757,8 @@ export default {
   }
 }
 
+// ==================== 表单输入组 ====================
+
 .form-input-group {
   display: flex;
   flex-direction: column;
@@ -719,6 +813,8 @@ export default {
   }
 }
 
+// ==================== 选项行 ====================
+
 .options-row {
   display: flex;
   justify-content: space-between;
@@ -743,6 +839,8 @@ export default {
 .checkbox-label {
   color: var(--text-secondary);
 }
+
+// ==================== 注册按钮 ====================
 
 .register-button {
   width: 100%;
@@ -789,6 +887,8 @@ export default {
   }
 }
 
+// ==================== 登录链接 ====================
+
 .login-link {
   text-align: center;
   margin-top: var(--spacing-lg);
@@ -811,7 +911,8 @@ export default {
   }
 }
 
-// 系统介绍部分
+// ==================== 系统介绍部分 ====================
+
 .system-intro {
   flex: 1;
   max-width: 500px;
@@ -906,6 +1007,8 @@ export default {
   }
 }
 
+// ==================== 协议内容样式 ====================
+
 .agreement-content {
   max-height: 400px;
   overflow-y: auto;
@@ -927,7 +1030,8 @@ export default {
   }
 }
 
-// 响应式适配
+// ==================== 响应式适配 ====================
+
 @media (max-width: 768px) {
   .register-container {
     flex-direction: column;

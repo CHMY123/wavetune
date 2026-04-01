@@ -189,7 +189,7 @@
           <component :is="SuccessFilled" />
         </el-icon>
         <p>数据上传成功！</p>
-        <p>训练任务已在后台启动，您可以在贡献记录中查看进度。</p>
+        <p>训练时长较长，请耐心等待</p>
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -233,9 +233,9 @@ export default {
     const trainingProgress = ref(0)
     const progressStatus = ref('')
     const progressDetail = ref('')
-    const currentTrainingId = ref(null)
+    const currentTrainingId = ref(localStorage.getItem('currentTrainingId') || null)
     const pollingInterval = ref(null)
-    const trainingLogs = ref([])
+    const trainingLogs = ref(JSON.parse(localStorage.getItem('trainingLogs') || '[]'))
 
     // 处理文件选择
     const handleFileChange = (file) => {
@@ -264,22 +264,38 @@ export default {
         const response = await requestMethod.postForm('/federated/upload-data', formData)
 
         if (response.code === 200) {
-          successDialogVisible.value = true
-          // 显示进度条
+          // 立即显示进度条
           showProgress.value = true
           trainingProgress.value = 0
           progressStatus.value = ''
-          progressDetail.value = '准备训练...'
+          progressDetail.value = '准备上传...'
           currentTrainingId.value = response.data.training_id
           // 初始化训练日志
           trainingLogs.value = [{
             time: new Date().toLocaleTimeString(),
-            content: '训练任务已启动，正在准备训练环境...'
+            content: '训练任务已启动，正在上传数据到云存储...'
+          }, {
+            time: new Date().toLocaleTimeString(),
+            content: '正在从云存储下载数据到后端...'
+          }, {
+            time: new Date().toLocaleTimeString(),
+            content: '正在准备训练环境...'
           }]
+          // 保存到本地存储
+          localStorage.setItem('currentTrainingId', response.data.training_id)
+          localStorage.setItem('trainingLogs', JSON.stringify(trainingLogs.value))
+          localStorage.setItem('showProgress', 'true')
           // 开始轮询训练状态
           pollTrainingStatus(response.data.training_id)
           // 重新加载训练记录
           loadTrainingRecords()
+          
+          // 严格3秒后显示成功对话框
+          setTimeout(() => {
+            successDialogVisible.value = true
+            // 播放提示音
+            playNotificationSound()
+          }, 3000)
         } else {
           ElMessage.error(response.msg || '提交失败')
         }
@@ -378,6 +394,10 @@ export default {
               if (trainingLogs.value.length > 20) {
                 trainingLogs.value = trainingLogs.value.slice(-20)
               }
+              // 保存到本地存储
+              localStorage.setItem('trainingLogs', JSON.stringify(trainingLogs.value))
+              localStorage.setItem('trainingProgress', currentProgress.toString())
+              localStorage.setItem('progressDetail', currentMessage)
               lastProgress = currentProgress
               lastMessage = currentMessage
             }
@@ -390,9 +410,17 @@ export default {
                 time: new Date().toLocaleTimeString(),
                 content: '训练完成！模型训练成功。'
               })
+              // 保存到本地存储
+              localStorage.setItem('trainingLogs', JSON.stringify(trainingLogs.value))
               clearInterval(pollingInterval.value)
               setTimeout(() => {
                 showProgress.value = false
+                // 清除本地存储
+                localStorage.removeItem('currentTrainingId')
+                localStorage.removeItem('trainingLogs')
+                localStorage.removeItem('showProgress')
+                localStorage.removeItem('trainingProgress')
+                localStorage.removeItem('progressDetail')
                 // 显示全局通知
                 showTrainingCompleteNotification()
               }, 1000)
@@ -403,9 +431,17 @@ export default {
                 time: new Date().toLocaleTimeString(),
                 content: '训练失败！请检查日志了解详情。'
               })
+              // 保存到本地存储
+              localStorage.setItem('trainingLogs', JSON.stringify(trainingLogs.value))
               clearInterval(pollingInterval.value)
               setTimeout(() => {
                 showProgress.value = false
+                // 清除本地存储
+                localStorage.removeItem('currentTrainingId')
+                localStorage.removeItem('trainingLogs')
+                localStorage.removeItem('showProgress')
+                localStorage.removeItem('trainingProgress')
+                localStorage.removeItem('progressDetail')
               }, 1000)
             }
           }
@@ -421,6 +457,29 @@ export default {
           }
         }
       }, 2000)
+    }
+
+    // 播放提示音
+    const playNotificationSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+        
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+        
+        oscillator.frequency.value = 600
+        oscillator.type = 'sine'
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+        
+        oscillator.start(audioContext.currentTime)
+        oscillator.stop(audioContext.currentTime + 0.3)
+      } catch (error) {
+        console.warn('播放提示音失败:', error)
+      }
     }
 
     // 显示训练完成通知
@@ -459,9 +518,23 @@ export default {
       })
     }
 
-    // 组件挂载时加载训练记录
+    // 组件挂载时加载训练记录和恢复进度条状态
     onMounted(() => {
       loadTrainingRecords()
+      
+      // 从本地存储恢复进度条状态
+      const savedTrainingId = localStorage.getItem('currentTrainingId')
+      const savedShowProgress = localStorage.getItem('showProgress')
+      
+      if (savedTrainingId && savedShowProgress === 'true') {
+        showProgress.value = true
+        currentTrainingId.value = savedTrainingId
+        trainingProgress.value = parseInt(localStorage.getItem('trainingProgress') || '0')
+        progressDetail.value = localStorage.getItem('progressDetail') || '准备上传...'
+        trainingLogs.value = JSON.parse(localStorage.getItem('trainingLogs') || '[]')
+        // 继续轮询训练状态
+        pollTrainingStatus(savedTrainingId)
+      }
     })
 
     // 组件销毁时停止轮询

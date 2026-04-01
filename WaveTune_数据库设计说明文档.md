@@ -8,7 +8,7 @@
 
 - **数据库名称**: `wavetune`
 - **字符集**: `utf8mb4`
-- **排序规则**: `utf8mb4_unicode_ci`
+- **排序规则**: `utf8mb4_0900_ai_ci`
 - **存储引擎**: `InnoDB`
 - **支持外键**: 是
 
@@ -20,19 +20,19 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 用户ID |
 | username | varchar(50) | NOT NULL | 用户名 |
 | student_id | varchar(20) | UNIQUE, NOT NULL | 学号 |
 | password_hash | varchar(255) | NULL | 密码哈希 |
 | email | varchar(100) | UNIQUE | 邮箱 |
 | phone | varchar(20) | NULL | 手机号 |
 | avatar | varchar(255) | DEFAULT '' | 头像路径 |
-| detection_count | int(11) | DEFAULT 0 | 检测次数 |
-| intervention_count | int(11) | DEFAULT 0 | 干预次数 |
+| detection_count | int | DEFAULT 0 | 检测次数 |
+| intervention_count | int | DEFAULT 0 | 干预次数 |
 | last_login_time | datetime | NULL | 最后登录时间 |
 | is_active | tinyint(1) | DEFAULT 1 | 是否激活 |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 注册时间 |
-| update_time | datetime | ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
 
 **索引设计**:
 - 主键: `id`
@@ -51,11 +51,11 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 反馈ID |
-| user_id | int(11) | FK, NOT NULL | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 反馈ID |
+| user_id | int | FK, NOT NULL | 用户ID |
 | feedback_type | varchar(20) | NOT NULL | 反馈类型 |
 | content | text | NOT NULL | 反馈内容 |
-| score | int(11) | NOT NULL | 满意度评分 |
+| score | int | NOT NULL | 满意度评分 |
 | status | varchar(20) | DEFAULT 'pending' | 处理状态 |
 | admin_reply | text | NULL | 管理员回复 |
 | submit_time | datetime | DEFAULT CURRENT_TIMESTAMP | 提交时间 |
@@ -80,7 +80,7 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 音乐ID |
+| id | int | PK, AUTO_INCREMENT | 音乐ID |
 | title | varchar(100) | NOT NULL | 音乐标题 |
 | artist | varchar(100) | NULL | 艺术家/创作者 |
 | duration | varchar(10) | NULL | 时长 |
@@ -89,15 +89,17 @@
 | reason | text | NULL | 推荐理由 |
 | music_type | varchar(20) | NULL | 音乐类型 |
 | fatigue_level | varchar(50) | NULL | 适配疲劳等级 |
-| match_rate | int(11) | DEFAULT 0 | 匹配度 |
-| play_count | int(11) | DEFAULT 0 | 播放次数 |
+| match_rate | int | DEFAULT 0 | 匹配度 |
+| play_count | int | DEFAULT 0 | 播放次数 |
+| scenes | varchar(100) | DEFAULT NULL | 适用场景，多个场景用逗号分隔 |
 | is_active | tinyint(1) | DEFAULT 1 | 是否启用 |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| update_time | datetime | ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
 
 **索引设计**:
 - 主键: `id`
 - 普通索引: `music_type`, `fatigue_level`, `match_rate`, `is_active`
+- 普通索引: `scenes`
 
 **业务规则**:
 - 音乐类型: natural(自然音效), piano(钢琴), whitenoise(白噪音), mix(混合)
@@ -111,15 +113,15 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 场景ID |
-| user_id | int(11) | FK, NOT NULL | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 场景ID |
+| user_id | int | FK, NOT NULL | 用户ID |
 | scene_name | varchar(50) | NOT NULL | 场景名称 |
 | music_type | varchar(20) | NOT NULL | 音乐类型 |
 | description | text | NULL | 场景描述 |
 | is_default | tinyint(1) | DEFAULT 0 | 是否默认场景 |
 | is_active | tinyint(1) | DEFAULT 1 | 是否启用 |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| update_time | datetime | ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
 
 **外键关系**:
 - `user_id` → `user.id` (CASCADE DELETE)
@@ -141,12 +143,12 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 统计ID |
+| id | int | PK, AUTO_INCREMENT | 统计ID |
 | stat_name | varchar(50) | UNIQUE, NOT NULL | 统计名称 |
 | stat_value | varchar(20) | NOT NULL | 统计值 |
 | stat_unit | varchar(10) | NULL | 单位 |
 | description | varchar(255) | NULL | 描述 |
-| update_time | datetime | ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
 
 **索引设计**:
 - 主键: `id`
@@ -162,8 +164,8 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 会话ID |
-| user_id | int(11) | FK, NOT NULL | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 会话ID |
+| user_id | int | FK, NOT NULL | 用户ID |
 | session_token | varchar(255) | UNIQUE, NOT NULL | 会话令牌 |
 | device_info | varchar(255) | NULL | 设备信息 |
 | ip_address | varchar(45) | NULL | IP地址 |
@@ -171,7 +173,7 @@
 | is_active | tinyint(1) | DEFAULT 1 | 是否活跃 |
 | expire_time | datetime | NOT NULL | 过期时间 |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| last_activity | datetime | ON UPDATE CURRENT_TIMESTAMP | 最后活动时间 |
+| last_activity | datetime | DEFAULT CURRENT_TIMESTAMP | 最后活动时间 |
 
 **外键关系**:
 - `user_id` → `user.id` (CASCADE DELETE)
@@ -193,12 +195,12 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 偏好ID |
-| user_id | int(11) | FK, NOT NULL | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 偏好ID |
+| user_id | int | FK, NOT NULL | 用户ID |
 | preference_key | varchar(50) | NOT NULL | 偏好键 |
 | preference_value | text | NULL | 偏好值 |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
-| update_time | datetime | ON UPDATE CURRENT_TIMESTAMP | 更新时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
 
 **外键关系**:
 - `user_id` → `user.id` (CASCADE DELETE)
@@ -218,17 +220,17 @@
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| id | int(11) | PK, AUTO_INCREMENT | 日志ID |
-| user_id | int(11) | FK, NULL | 用户ID |
+| id | int | PK, AUTO_INCREMENT | 日志ID |
+| user_id | int | FK, NULL | 用户ID |
 | operation_type | varchar(50) | NOT NULL | 操作类型 |
 | operation_desc | varchar(255) | NULL | 操作描述 |
 | request_method | varchar(10) | NULL | 请求方法 |
 | request_url | varchar(255) | NULL | 请求URL |
 | request_params | text | NULL | 请求参数 |
-| response_status | int(11) | NULL | 响应状态码 |
+| response_status | int | NULL | 响应状态码 |
 | ip_address | varchar(45) | NULL | IP地址 |
 | user_agent | text | NULL | 用户代理 |
-| execution_time | int(11) | NULL | 执行时间(ms) |
+| execution_time | int | NULL | 执行时间(ms) |
 | create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
 
 **外键关系**:
@@ -244,6 +246,111 @@
 - 记录详细的请求和响应信息
 - 用于系统审计和性能分析
 
+### 9. 2-back 实验表 (two_back)
+
+**功能**: 存储2-back实验相关数据
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | int | PK, AUTO_INCREMENT | 实验ID |
+| user_id | int | FK, NOT NULL | 用户ID |
+| experiment_config | json | NULL | 实验配置 |
+| experiment_data | json | NULL | 实验数据 |
+| result_score | int | NULL | 实验得分 |
+| result_analysis | text | NULL | 结果分析 |
+| create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
+
+**外键关系**:
+- `user_id` → `user.id` (CASCADE DELETE)
+
+**索引设计**:
+- 主键: `id`
+- 外键索引: `user_id`
+- 普通索引: `create_time`
+
+**业务规则**:
+- 存储用户的2-back实验数据
+- 支持实验配置和结果分析
+
+### 10. 联邦学习训练表 (federated_training)
+
+**功能**: 存储联邦学习训练任务信息
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | int | PK, AUTO_INCREMENT | 训练ID |
+| user_id | int | FK, NOT NULL | 用户ID |
+| client_id | varchar(100) | NOT NULL | 客户端ID |
+| round_number | int | DEFAULT 1 | 训练轮次 |
+| status | varchar(20) | DEFAULT 'pending' | 训练状态 |
+| fatigue_status | varchar(50) | NULL | 疲劳状态 |
+| accuracy | float | NULL | 训练准确率 |
+| loss | float | NULL | 训练损失 |
+| training_time | datetime | DEFAULT CURRENT_TIMESTAMP | 训练时间 |
+
+**外键关系**:
+- `user_id` → `user.id` (CASCADE DELETE)
+
+**索引设计**:
+- 主键: `id`
+- 外键索引: `user_id`
+- 普通索引: `client_id`, `status`, `training_time`
+
+**业务规则**:
+- 训练状态: pending(等待中), training(训练中), completed(已完成), failed(失败)
+- 记录每次联邦学习训练的详细信息和结果
+
+### 11. 联邦学习设备表 (federated_device)
+
+**功能**: 存储联邦学习参与设备信息
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | int | PK, AUTO_INCREMENT | 设备ID |
+| user_id | int | FK, NOT NULL | 用户ID |
+| device_id | varchar(100) | NOT NULL | 设备标识 |
+| device_type | varchar(20) | DEFAULT 'local' | 设备类型 |
+| status | varchar(20) | DEFAULT 'online' | 设备状态 |
+| training_count | int | DEFAULT 0 | 训练次数 |
+| contribution | float | DEFAULT 0 | 贡献值 |
+| last_participate | datetime | NULL | 最后参与时间 |
+| create_time | datetime | DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+**外键关系**:
+- `user_id` → `user.id` (CASCADE DELETE)
+
+**索引设计**:
+- 主键: `id`
+- 外键索引: `user_id`
+- 普通索引: `device_id`, `status`
+
+**业务规则**:
+- 设备类型: local(本地), remote(远程)
+- 设备状态: online(在线), offline(离线), busy(忙碌)
+- 记录设备的训练贡献和参与情况
+
+### 12. 联邦学习统计表 (federated_stats)
+
+**功能**: 存储联邦学习全局统计数据
+
+| 字段名 | 类型 | 约束 | 说明 |
+|--------|------|------|------|
+| id | int | PK, AUTO_INCREMENT | 统计ID |
+| total_participants | int | DEFAULT 0 | 总参与人数 |
+| total_rounds | int | DEFAULT 0 | 总训练轮次 |
+| total_devices | int | DEFAULT 0 | 总设备数 |
+| average_accuracy | float | DEFAULT 0 | 平均准确率 |
+| average_loss | float | DEFAULT 0 | 平均损失 |
+| update_time | datetime | DEFAULT CURRENT_TIMESTAMP | 更新时间 |
+
+**索引设计**:
+- 主键: `id`
+
+**业务规则**:
+- 记录联邦学习的全局统计数据
+- 支持实时更新统计信息
+
 ## 关系设计
 
 ### 主要关系图
@@ -254,6 +361,9 @@ user (1) ←→ (N) scene
 user (1) ←→ (N) user_session
 user (1) ←→ (N) user_preference
 user (1) ←→ (N) operation_log
+user (1) ←→ (N) two_back
+user (1) ←→ (N) federated_training
+user (1) ←→ (N) federated_device
 ```
 
 ### 关系说明
@@ -263,6 +373,9 @@ user (1) ←→ (N) operation_log
 3. **用户与会话**: 一对多关系，一个用户可以同时有多个活跃会话
 4. **用户与偏好**: 一对多关系，一个用户可以有多个偏好设置
 5. **用户与日志**: 一对多关系，一个用户的操作会生成多条日志记录
+6. **用户与2-back实验**: 一对多关系，一个用户可以进行多次2-back实验
+7. **用户与联邦学习训练**: 一对多关系，一个用户可以参与多次联邦学习训练
+8. **用户与联邦学习设备**: 一对多关系，一个用户可以使用多个设备参与联邦学习
 
 ## 索引策略
 
@@ -286,93 +399,88 @@ user (1) ←→ (N) operation_log
 - 状态字段索引: 支持状态筛选
 - 分类字段索引: 支持分类查询
 
-## 初始数据
+## 视图设计
 
-### 测试用户数据
-- 李同学 (学号: 2022001001)
-- 张同学 (学号: 2022001002)
-- 王同学 (学号: 2022001003)
+### 1. 音乐统计视图 (music_stats_view)
 
-### 音乐库数据
-- 10首不同类型的音乐
-- 涵盖自然音效、钢琴、白噪音等类型
-- 适配不同疲劳等级
+**功能**: 提供音乐库的统计信息
 
-### 系统默认场景
-- 学习场景 (钢琴音乐)
-- 办公场景 (白噪音)
-- 休息场景 (自然音效)
+**字段**:
+- id: 音乐ID
+- title: 音乐标题
+- artist: 艺术家
+- music_type: 音乐类型
+- fatigue_level: 疲劳等级
+- match_rate: 匹配度
+- play_count: 播放次数
+- is_active: 是否启用
+- scene_usage_count: 场景使用次数
 
-### 系统统计数据
-- 检测次数: 1,234次
-- 干预次数: 856次
-- 参与设备: 12台
-- 模型准确率: 89.2%
+**用途**: 用于音乐管理页面的数据统计和展示
 
-## 性能优化建议
+## 存储过程和触发器
 
-### 1. 查询优化
-- 使用适当的索引提高查询性能
+### 1. 音乐更新时间触发器 (update_music_time)
+
+**触发时机**: BEFORE UPDATE ON music
+**功能**: 自动更新音乐的 update_time 字段
+
+```sql
+CREATE TRIGGER `update_music_time` 
+BEFORE UPDATE ON `music` 
+FOR EACH ROW 
+BEGIN
+    SET NEW.`update_time` = CURRENT_TIMESTAMP;
+END
+```
+
+## 数据备份策略
+
+### 备份方式
+- **完全备份**: 每周日凌晨2点执行
+- **增量备份**: 每天凌晨2点执行
+- **实时备份**: 关键表使用TiDB Cloud的自动备份功能
+
+### 备份内容
+- 所有表结构和数据
+- 存储过程和触发器
+- 用户权限和配置
+
+### 备份保留
+- 完全备份: 保留4周
+- 增量备份: 保留7天
+- 实时备份: 由TiDB Cloud管理
+
+## 性能优化
+
+### 查询优化
+- 使用EXPLAIN分析慢查询
+- 为常用查询字段建立复合索引
 - 避免全表扫描
-- 合理使用 LIMIT 分页
 
-### 2. 存储优化
-- 定期清理过期的会话数据
-- 归档历史操作日志
-- 压缩大文本字段
+### 写入优化
+- 批量插入代替单条插入
+- 使用事务保证数据一致性
+- 合理设置连接池大小
 
-### 3. 缓存策略
-- 系统统计数据可以缓存
-- 用户偏好设置可以缓存
-- 音乐库数据可以缓存
+### 存储优化
+- 定期清理过期数据
+- 归档历史数据
+- 优化大字段存储
 
-### 4. 分区策略
-- 操作日志表可以按时间分区
-- 用户会话表可以按用户ID分区
+## 安全设计
 
-## 安全考虑
+### 数据加密
+- 敏感字段使用加密存储
+- 传输过程使用SSL/TLS
+- 数据库连接使用SSL证书
 
-### 1. 数据加密
-- 密码使用哈希存储
-- 敏感信息加密存储
+### 访问控制
+- 最小权限原则
+- 角色基础的访问控制
+- 操作日志记录
 
-### 2. 访问控制
-- 使用外键约束保证数据完整性
-- 实现行级安全控制
-
-### 3. 审计日志
-- 记录所有重要操作
-- 支持安全审计和问题追踪
-
-## 维护建议
-
-### 1. 定期维护
-- 定期更新统计信息
-- 清理过期数据
-- 优化索引性能
-
-### 2. 备份策略
-- 定期备份数据库
-- 测试恢复流程
-- 保留多个备份版本
-
-### 3. 监控告警
-- 监控数据库性能
-- 设置存储空间告警
-- 监控慢查询
-
-## 扩展性考虑
-
-### 1. 水平扩展
-- 支持读写分离
-- 支持分库分表
-- 支持分布式部署
-
-### 2. 功能扩展
-- 预留扩展字段
-- 支持插件化架构
-- 支持多租户模式
-
-这个数据库设计为 WaveTune 系统提供了完整的数据存储解决方案，支持用户管理、音乐推荐、场景配置、反馈管理等核心功能，同时具备良好的性能、安全性和扩展性。
-
-
+### 审计追踪
+- 记录所有数据变更
+- 保留操作历史
+- 支持数据恢复

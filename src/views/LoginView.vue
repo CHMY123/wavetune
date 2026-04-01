@@ -1,3 +1,17 @@
+<!--
+  LoginView.vue - WaveTune 登录页面组件
+  
+  功能说明：
+  - 用户登录功能
+  - 表单验证
+  - 忘记密码功能
+  - 系统特色介绍
+  
+  主要模块：
+  1. 登录表单区域：包含学号、密码输入框，记住我选项，登录按钮
+  2. 系统介绍区域：展示系统特色和优势
+  3. 忘记密码对话框：重置密码功能
+-->
 <template>
   <div class="login-view">
     <!-- 波形背景装饰 -->
@@ -32,6 +46,7 @@
             @submit.prevent="handleLogin"
           >
             <div class="form-input-group">
+              <!-- 学号输入框 -->
               <el-form-item prop="student_id" class="form-item-custom">
                 <div class="input-container">
                   <el-icon class="input-icon"><User /></el-icon>
@@ -46,6 +61,7 @@
                 </div>
               </el-form-item>
               
+              <!-- 密码输入框 -->
               <el-form-item prop="password" class="form-item-custom">
                 <div class="input-container">
                   <el-icon class="input-icon"><Lock /></el-icon>
@@ -64,6 +80,7 @@
               </el-form-item>
             </div>
             
+            <!-- 记住我和忘记密码 -->
             <el-form-item class="options-row">
               <el-checkbox v-model="loginForm.remember" class="remember-checkbox">
                 <span class="checkbox-label">记住我</span>
@@ -73,6 +90,7 @@
               </el-link>
             </el-form-item>
             
+            <!-- 登录按钮 -->
             <el-form-item>
               <el-button
                 type="primary"
@@ -83,11 +101,13 @@
               >
                 登录
               </el-button>
+              <!-- 测试账号提示 -->
               <p class="demo-account-info" v-if="!loginLoading">
                 测试账号: <span class="account-text">20232005118</span> / <span class="password-text">123456</span>
               </p>
             </el-form-item>
             
+            <!-- 注册链接 -->
             <el-form-item class="register-link">
               <span class="register-text">还没有账户？</span>
               <el-link type="primary" class="register-button" @click="$router.push('/register')">
@@ -108,6 +128,7 @@
             帮助您恢复精力，提高学习和工作效率。
           </p>
           
+          <!-- 特色功能列表 -->
           <div class="feature-list">
             <div class="feature-item" v-for="(feature, index) in features" :key="index">
               <div class="feature-icon-container">
@@ -165,7 +186,19 @@
 </template>
 
 <script>
-import { ref, reactive, computed } from 'vue'
+/**
+ * LoginView 登录页面组件
+ * 
+ * 使用 Vue 3 组合式 API 实现
+ * 主要功能：
+ * - 用户登录认证
+ * - 表单验证
+ * - 忘记密码处理
+ * - 登录状态持久化
+ */
+
+// 导入依赖
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { requestMethod } from '@/utils/request'
@@ -184,18 +217,32 @@ export default {
     Loading
   },
   setup() {
+    // 获取路由实例
     const router = useRouter()
+    
+    // 表单引用
     const loginFormRef = ref()
     const forgotFormRef = ref()
     
-    // 登录表单数据
+    // ==================== 响应式数据 ====================
+    
+    /**
+     * 登录表单数据
+     * @property {string} student_id - 学号
+     * @property {string} password - 密码
+     * @property {boolean} remember - 是否记住我
+     */
     const loginForm = reactive({
       student_id: '',
       password: '',
       remember: false
     })
     
-    // 忘记密码表单数据
+    /**
+     * 忘记密码表单数据
+     * @property {string} student_id - 学号
+     * @property {string} email - 邮箱
+     */
     const forgotForm = reactive({
       student_id: '',
       email: ''
@@ -206,7 +253,11 @@ export default {
     const forgotPasswordVisible = ref(false)
     const forgotLoading = ref(false)
     
-    // 登录表单验证规则
+    // ==================== 表单验证规则 ====================
+    
+    /**
+     * 登录表单验证规则
+     */
     const loginRules = {
       student_id: [
         { required: true, message: '请输入学号', trigger: 'blur' },
@@ -218,7 +269,9 @@ export default {
       ]
     }
     
-    // 忘记密码表单验证规则
+    /**
+     * 忘记密码表单验证规则
+     */
     const forgotRules = {
       student_id: [
         { required: true, message: '请输入学号', trigger: 'blur' }
@@ -229,7 +282,9 @@ export default {
       ]
     }
     
-    // 系统特色功能列表
+    /**
+     * 系统特色功能列表
+     */
     const features = [
       {
         icon: TrendCharts,
@@ -253,17 +308,23 @@ export default {
       }
     ]
     
-    // 处理登录
+    // ==================== 方法 ====================
+    
+    /**
+     * 处理登录
+     * 验证表单 -> 发送登录请求 -> 保存用户信息 -> 跳转到首页
+     */
     const handleLogin = async () => {
       if (!loginFormRef.value) return
       
       try {
+        // 验证表单
         const valid = await loginFormRef.value.validate()
         if (!valid) return
         
         loginLoading.value = true
         
-        // 使用 axios 封装发起登录请求
+        // 发送登录请求
         let result
         try {
           result = await requestMethod.post('/auth/login', {
@@ -279,8 +340,9 @@ export default {
           return
         }
 
+        // 处理登录成功
         if (result && result.code === 200) {
-          // 保存用户信息和会话令牌
+          // 保存用户信息和会话令牌到本地存储
           localStorage.setItem('user', JSON.stringify(result.data.user))
           localStorage.setItem('session_token', result.data.session_token)
 
@@ -302,27 +364,34 @@ export default {
       }
     }
     
-    // 显示忘记密码对话框
+    /**
+     * 显示忘记密码对话框
+     */
     const showForgotPassword = () => {
       forgotPasswordVisible.value = true
     }
     
-    // 处理忘记密码
+    /**
+     * 处理忘记密码
+     * 验证表单 -> 发送重置请求 -> 显示成功提示
+     */
     const handleForgotPassword = async () => {
       if (!forgotFormRef.value) return
       
       try {
+        // 验证表单
         const valid = await forgotFormRef.value.validate()
         if (!valid) return
         
         forgotLoading.value = true
         
-        // 使用 axios 封装发送重置请求
+        // 发送重置请求
         try {
           const result = await requestMethod.post('/auth/reset-password', forgotForm)
           if (result && result.code === 200) {
             ElMessage.success('重置邮件已发送，请查收邮箱')
             forgotPasswordVisible.value = false
+            // 清空表单
             forgotForm.student_id = ''
             forgotForm.email = ''
           } else {
@@ -340,6 +409,7 @@ export default {
       }
     }
     
+    // 返回需要在模板中使用的数据和方法
     return {
       loginFormRef,
       forgotFormRef,
@@ -368,6 +438,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ==================== Element Plus 样式穿透修复 ====================
+
 // 修复 el-card 样式穿透
 :deep(.el-card) {
   border-radius: var(--radius-lg);
@@ -386,7 +458,8 @@ export default {
   border-radius: var(--radius-md);
 }
 
-// 登录页面容器
+// ==================== 登录页面整体样式 ====================
+
 .login-view {
   min-height: 100vh;
   background: linear-gradient(135deg, var(--brand-primary) 0%, var(--wave-purple) 100%);
@@ -398,7 +471,8 @@ export default {
   overflow: hidden;
 }
 
-// 波形背景动画
+// ==================== 波形背景动画 ====================
+
 .wave-background {
   position: absolute;
   width: 100%;
@@ -448,7 +522,8 @@ export default {
   }
 }
 
-// 登录容器
+// ==================== 登录容器 ====================
+
 .login-container {
   display: flex;
   gap: var(--spacing-xl);
@@ -461,7 +536,8 @@ export default {
   backdrop-filter: blur(10px);
 }
 
-// 登录卡片
+// ==================== 登录卡片 ====================
+
 .login-card {
   flex: 0 0 450px;
   border-radius: var(--radius-lg);
@@ -489,7 +565,8 @@ export default {
   padding: var(--spacing-xl);
 }
 
-// 登录头部
+// ==================== 登录头部 ====================
+
 .login-header {
   text-align: center;
   margin-bottom: var(--spacing-xl);
@@ -538,7 +615,8 @@ export default {
   }
 }
 
-// 渐变文本效果
+// ==================== 渐变文本效果 ====================
+
 .gradient-text {
   background: linear-gradient(90deg, var(--wave-blue), var(--wave-purple), var(--wave-pink));
   -webkit-background-clip: text;
@@ -547,7 +625,8 @@ export default {
   display: inline-block;
 }
 
-// 登录表单
+// ==================== 登录表单 ====================
+
 .login-form {
   .form-item-custom {
     margin-bottom: var(--spacing-md);
@@ -694,7 +773,8 @@ export default {
   }
 }
 
-// 系统介绍部分
+// ==================== 系统介绍部分 ====================
+
 .system-intro {
   flex: 1;
   max-width: 500px;
@@ -789,7 +869,8 @@ export default {
   }
 }
 
-// 自定义对话框
+// ==================== 自定义对话框 ====================
+
 :deep(.custom-dialog) {
   .el-dialog__header {
     background: linear-gradient(90deg, var(--wave-blue), var(--wave-purple));
@@ -814,7 +895,8 @@ export default {
   }
 }
 
-// 响应式设计
+// ==================== 响应式设计 ====================
+
 @media (max-width: 1024px) {
   .login-container {
     gap: var(--spacing-lg);
@@ -904,7 +986,8 @@ export default {
   }
 }
 
-// 深色模式适配
+// ==================== 深色模式适配 ====================
+
 @media (prefers-color-scheme: dark) {
   .login-card {
     background: rgba(30, 30, 30, 0.95);
@@ -942,25 +1025,27 @@ export default {
 </style>
 
 <style lang="scss">
+// ==================== 全局样式覆盖 ====================
+
 .login-container {
   display: flex;
   gap: var(--spacing-xl);
   max-width: 1100px;
   width: 100%;
   align-items: center;
-  justify-content: center; /* 改为居中，避免空间不足时重叠 */
+  justify-content: center;
   position: relative;
   z-index: 1;
   backdrop-filter: blur(10px);
 }
 
 .login-card {
-  flex: 0 0 450px; /* 固定宽度，避免被压缩 */
+  flex: 0 0 450px;
 }
 
 .system-intro {
   flex: 1;
   max-width: 500px;
-  min-width: 300px; /* 最小宽度，避免内容挤压 */
+  min-width: 300px;
 }
 </style>

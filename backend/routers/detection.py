@@ -2,11 +2,15 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Body
 import pandas as pd
 import io
 import os
+import uuid
+import time
+import requests
 from typing import Tuple, Dict, Any
 
 from utils.quick_detect import detect_from_csv
 from services.two_back_service import two_back_service
 from services.data_storage import data_storage_service
+from utils.s3_helper import upload_bytes, generate_presigned_get_url
 
 router = APIRouter()
 
@@ -15,12 +19,40 @@ router = APIRouter()
 async def upload_and_detect(file: UploadFile = File(...)):
     """接收 CSV 文件，解析为多模态数据并运行检测，返回疲劳等级与概率。"""
     try:
-
-        # 保存临时文件
-        temp_file_path = f"temp_{file.filename}"
-        with open(temp_file_path, 'wb') as f:
-            content = await file.read()
-            f.write(content)
+        # 1. 读取文件内容
+        content = await file.read()
+        
+        # 2. 上传到缤纷云存储桶
+        file_id = str(uuid.uuid4())
+        timestamp = int(time.time())
+        s3_key = f"detection/data/{file_id}_{timestamp}.csv"
+        
+        try:
+            # 上传文件到缤纷云
+            upload_bytes(content, s3_key)
+            print(f"[信号检测] 数据文件已上传到缤纷云存储桶: {s3_key}")
+        except Exception as e:
+            print(f"[信号检测] 上传文件到缤纷云失败: {str(e)}")
+            # 回退到本地存储
+            temp_file_path = f"temp_{file.filename}"
+            with open(temp_file_path, 'wb') as f:
+                f.write(content)
+        else:
+            # 3. 从缤纷云下载到本地临时目录
+            temp_file_path = f"temp_{file.filename}"
+            try:
+                # 生成预签名URL并下载
+                presigned_url = generate_presigned_get_url(s3_key)
+                response = requests.get(presigned_url)
+                response.raise_for_status()
+                with open(temp_file_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"[信号检测] 数据文件已从缤纷云下载到本地: {temp_file_path}")
+            except Exception as e:
+                print(f"[信号检测] 从缤纷云下载文件失败: {str(e)}")
+                # 回退到使用原始内容
+                with open(temp_file_path, 'wb') as f:
+                    f.write(content)
         
         # 使用新的检测逻辑
         result = detect_from_csv(temp_file_path)
@@ -206,11 +238,42 @@ async def process_csv(file: UploadFile = File(...)):
         import numpy as np
         from utils.processing_fNIRS_new import get_processing_from_origin_data_48_ch, process_origin_to_fNIRS
         
-        # 保存上传的文件到临时目录
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
-            content = await file.read()
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+        # 1. 读取文件内容
+        content = await file.read()
+        
+        # 2. 上传到缤纷云存储桶
+        file_id = str(uuid.uuid4())
+        timestamp = int(time.time())
+        s3_key = f"detection/process/{file_id}_{timestamp}.csv"
+        
+        try:
+            # 上传文件到缤纷云
+            upload_bytes(content, s3_key)
+            print(f"[信号检测] 处理文件已上传到缤纷云存储桶: {s3_key}")
+        except Exception as e:
+            print(f"[信号检测] 上传处理文件到缤纷云失败: {str(e)}")
+            # 回退到本地存储
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+                temp_file.write(content)
+                temp_file_path = temp_file.name
+        else:
+            # 3. 从缤纷云下载到本地临时目录
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+                temp_file_path = temp_file.name
+            
+            try:
+                # 生成预签名URL并下载
+                presigned_url = generate_presigned_get_url(s3_key)
+                response = requests.get(presigned_url)
+                response.raise_for_status()
+                with open(temp_file_path, 'wb') as f:
+                    f.write(response.content)
+                print(f"[信号检测] 处理文件已从缤纷云下载到本地: {temp_file_path}")
+            except Exception as e:
+                print(f"[信号检测] 从缤纷云下载处理文件失败: {str(e)}")
+                # 回退到使用原始内容
+                with open(temp_file_path, 'wb') as f:
+                    f.write(content)
         
         # 加载并处理数据
         print(f"📁 处理文件: {temp_file_path}")

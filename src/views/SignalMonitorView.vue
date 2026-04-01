@@ -5,8 +5,19 @@
       <div class="header-content">
         <el-page-header content="多模态生理信号实时监测" class="page-title" />
         <div class="status-info">
-          <el-tag type="success" size="large">监测中</el-tag>
-          <span class="device-status">设备已连接</span>
+          <el-tag :type="deviceConnected ? 'success' : 'info'" size="large">监测中</el-tag>
+          <span class="device-status" :class="deviceConnected ? 'connected' : 'disconnected'">
+            {{ deviceConnected ? '设备已连接' : '设备未连接' }}
+          </span>
+          <el-button 
+            :type="deviceConnected ? 'warning' : 'primary'" 
+            size="small" 
+            style="margin-left: 12px"
+            @click="connectDevice"
+            :loading="connecting"
+          >
+            {{ deviceConnected ? '断开连接' : '连接设备' }}
+          </el-button>
         </div>
       </div>
       <p class="monitor-info">
@@ -276,7 +287,10 @@ export default {
         { label: 'PNG 格式', value: 'png' },
         { label: 'JPEG 格式', value: 'jpeg' },
         { label: 'WebP 格式', value: 'webp' }
-      ]
+      ],
+      // 设备连接相关
+      deviceConnected: false,
+      connecting: false
     }
   },
   watch: {
@@ -384,19 +398,25 @@ export default {
         try {
           console.log('%c [SignalMonitorView] 开始上传CSV文件并执行检测，请求地址：/detection/upload', 'color: #1890ff;')
           
-          this.uploadStatus = '正在上传文件'
+          this.uploadStatus = '正在上传到云存储'
           // 使用 request.js 的 postForm 发送 multipart/form-data
           const res = await requestMethod.postForm('/detection/upload', form, {
             onUploadProgress: (progressEvent) => {
               // 更新上传进度
               if (progressEvent.total) {
                 const uploadProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                // 上传占25-50%
-                this.uploadProgress = 25 + Math.min(uploadProgress * 0.25, 25);
+                // 上传到云存储占25-40%
+                this.uploadProgress = 25 + Math.min(uploadProgress * 0.15, 15);
               }
             },
             timeout: 120000 // 关键：延长超时时间，解决60秒超时问题
           });
+          
+          // 上传到云存储完成，开始从云存储下载到后端
+          this.uploadStatus = '正在从云存储下载到后端'
+          await this.updateProgressWithDelay(45, 500)
+          this.uploadStatus = '正在准备检测'
+          await this.updateProgressWithDelay(50, 300)
           
           // 上传完成，开始检测 (50%)
           this.uploadProgress = 50;
@@ -508,6 +528,27 @@ export default {
           this.comfortWordInterval = null
         }
         this.currentComfortWord = ''
+      },
+      
+      // 设备连接方法
+      connectDevice() {
+        if (this.deviceConnected) {
+          // 断开连接
+          this.deviceConnected = false
+          ElMessage.info('设备已断开连接')
+          return
+        }
+        
+        this.connecting = true
+        
+        // 模拟设备连接过程
+        setTimeout(() => {
+          // 默认连接失败，因为暂时无法实现此功能
+          ElMessage.error('未检测到设备')
+          // 不影响其他功能
+          
+          this.connecting = false
+        }, 1500)
       },
       
       // 详细的检测进度模拟
@@ -1310,15 +1351,23 @@ export default {
     }
     
     .status-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      
-      .device-status {
-        font-size: 14px;
-        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        
+        .device-status {
+          font-size: 14px;
+          color: var(--text-secondary);
+          
+          &.connected {
+            color: #67c23a; /* 绿色 */
+          }
+          
+          &.disconnected {
+            color: #909399; /* 灰色 */
+          }
+        }
       }
-    }
   }
   
   .monitor-info {
